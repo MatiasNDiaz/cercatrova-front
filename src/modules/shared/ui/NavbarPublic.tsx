@@ -30,7 +30,7 @@ export const NavbarPublic = () => {
   };
 
   return (
-    <nav className="relative flex flex-row p-2 justify-between md:justify-start items-center bg-white shadow-lg rounded-full mt-2 w-full z-50">
+    <nav className=" fixed top-1 left-0 right-0 z-100   mx-auto  md:ml-8 w-[95%] m-auto flex flex-row p-2.5 justify-between md:justify-start items-center bg-white shadow-lg rounded-full mt-0.5 ">
       {/* LOGO */}
       <div className="flex items-center">
         <Image
@@ -380,7 +380,7 @@ export const NavbarPublic = () => {
 
               <LogIn
                 size={22}
-                className="mr-3 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                className="mr-1 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
               />
 
               <span className="tracking-wide">iniciar sesión</span>
