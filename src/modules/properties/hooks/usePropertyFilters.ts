@@ -5,7 +5,9 @@ import { OperationType } from '../interfaces/operation-type';
 import { StatusProperty } from '../interfaces/status-property';
 
 export const usePropertyFilters = () => {
+  // funciona como los Links de Nextjs, basicamente con router.push(/) te lleva a otra sección o pagina
   const router = useRouter();
+  // lee los parametros de la URL
   const searchParams = useSearchParams();
 
   // 1. EL LECTOR (useMemo): Transforma la URL en un objeto tipado
@@ -55,7 +57,7 @@ export const usePropertyFilters = () => {
       // Booleanos
       garage: getBool('garage'),
       patio: getBool('patio'),
-      hasDeed: getBool('hasDeed'),
+      property_deed: getBool('property_deed'),
 
       // Enums
       operationType: searchParams.get('operationType') as OperationType || undefined,
@@ -64,8 +66,10 @@ export const usePropertyFilters = () => {
 
   // 2. EL ESCRITOR (useCallback): Actualiza la URL manteniendo los filtros existentes
   const setFilters = useCallback((newFilters: Partial<PropertyFilters>) => {
+    // typeOfProperty=casa
     const params = new URLSearchParams(searchParams.toString());
-    
+
+
     Object.entries(newFilters).forEach(([key, value]) => {
       // Si el valor es null, undefined o vacío, eliminamos el parámetro para limpiar la URL
       if (value === undefined || value === '' || value === null) {

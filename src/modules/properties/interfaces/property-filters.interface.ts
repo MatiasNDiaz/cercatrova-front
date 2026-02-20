@@ -34,7 +34,7 @@ export interface PropertyFilters {
   // El Hook se encargará de convertirlos a string 'true'/'false' para la URL.
   garage?: boolean;
   patio?: boolean;
-  hasDeed?: boolean;
+  property_deed?: boolean;
 
   // --- ENUMS ---
   operationType?: OperationType; 

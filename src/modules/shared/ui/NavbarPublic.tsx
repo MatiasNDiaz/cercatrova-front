@@ -36,9 +36,9 @@ export const NavbarPublic = () => {
         <Image
           src="/LogoInmobiliaria.png"
           alt="Logo"
-          width={140}
+          width={115}
           height={130}
-          className="bg-white w-30 2object-contain border md:w-36 ml-4 md:ml-8 rounded-full"
+          className="bg-white w-30 2object-contain border md:w-30 ml-4 md:ml-8 rounded-full"
         />
       </div>
 
@@ -55,7 +55,7 @@ export const NavbarPublic = () => {
       <ul className="hidden md:flex flex-row gap-4 items-center ml-auto mr-8">
         <li>
           <Link
-            href="/login"
+            href="/?page=1&limit=10"
             className="group relative px-3 pb-6 py-2 text-lg font-semibold text-[#0b7a4b] transition-colors duration-300"
             >
   {/* Texto del link */}
@@ -79,23 +79,23 @@ export const NavbarPublic = () => {
           <ul className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200  border-gray-100">
             <li>
               <Link
-              href="/propiedades/venta"
+              href="/?page=1&limit=10&operationType=venta#propiedades"
               className="block px-4 py-3 text-[#0b7a4b] border-l-4 border-transparent hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10 transition-all duration-300 rounded-tl-xl rounded-tr-xl"
             >
-              Comprar
+              Venta
             </Link>
             </li>
             <li>
               <Link
-                href="/propiedades/alquiler"
+                href="/?page=1&limit=10&operationType=alquiler#propiedades"
                  className="block px-4 py-3 text-[#0b7a4b] border-l-4 border-transparent hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10 transition-all duration-300  "
               >
-                Alquilar
+                Alquiler
               </Link>
             </li>
             <li>
               <Link
-                href="/propiedades/terrenos"
+                href="/?page=1&limit=10&typeOfPropertyId=5#propiedades"
                 className="block px-4 py-3 text-[#0b7a4b] border-l-4 border-transparent hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10 transition-all duration-300 "
               >
                 Terrenos
@@ -122,7 +122,7 @@ export const NavbarPublic = () => {
           <ul className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200  border-gray-100">
             <li>
               <Link
-                href="/propiedades/venta"
+                href="#venta"
                  className="block px-4 py-3 text-[#0b7a4b] border-l-4 border-transparent hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10 transition-all duration-300 rounded-tl-xl rounded-tr-xl"
               >
                 Venta de Propiedades
@@ -130,7 +130,7 @@ export const NavbarPublic = () => {
             </li>
             <li>
               <Link
-                href="/propiedades/alquiler"
+                href="#alquiler"
                  className="block px-4 py-3 text-[#0b7a4b] border-l-4 border-transparent hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10 transition-all duration-300 "
               >
                 Alquiler de Propiedades
@@ -138,18 +138,34 @@ export const NavbarPublic = () => {
             </li>
             <li>
               <Link
-                href="/propiedades/alquiler"
+                href="#tasaciones"
                  className="block px-4 py-3 text-[#0b7a4b] border-l-4 border-transparent hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10 transition-all duration-300 "
               >
-                Agregamos tu propiedad aqui
+                Tasaciones de Propiedades
               </Link>
             </li>
             <li>
               <Link
-                href="/valuacion"
+                href="#asesoramiento"
+                 className="block px-4 py-3 text-[#0b7a4b] border-l-4 border-transparent hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10 transition-all duration-300 "
+              >
+                Asesoramiento Profesional
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="#comercializacion"
+                 className="block px-4 py-3 text-[#0b7a4b] border-l-4 border-transparent hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10 transition-all duration-300  "
+              >
+                Publicamos tu propiedad
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="#legal"
                  className="block px-4 py-3 text-[#0b7a4b] border-l-4 border-transparent hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10 transition-all duration-300 rounded-b-xl "
               >
-                Valuación de propiedad
+               Gestión Legal y Documental
               </Link>
             </li>
           </ul>
@@ -157,9 +173,9 @@ export const NavbarPublic = () => {
 
         <li>
           <Link
-  href="/login"
-  className="group relative px-3 pb-6 py-2 text-lg font-semibold text-[#0b7a4b] transition-colors duration-300"
->
+            href="#nosotros"
+            className="group relative px-3 pb-6 py-2 text-lg font-semibold text-[#0b7a4b] transition-colors duration-300"
+          >
   {/* Texto del link */}
   <span className=" group-hover:text-[#0f8b57] transition-colors  duration-300">
     <Users size={18} className="inline mr-2 mb-0.5" />
@@ -174,7 +190,7 @@ export const NavbarPublic = () => {
 
         <li>
           <Link
-  href="/login"
+  href="#faq"
   className="group relative px-3 pb-6 py-2 text-lg font-semibold text-[#0b7a4b] transition-colors duration-300"
 >
   {/* Texto del link */}
@@ -198,6 +214,8 @@ export const NavbarPublic = () => {
           <ul className="absolute left-0 mt-2 w-72 bg-white rounded-xl text-l shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200  border-gray-100">
             <li>
               <a
+                aria-label="telefono"
+                target="_blank"
                 href="https://wa.me/543513872817"
                 className="flex px-4 py-3 text-[#0b7a4b] border-l-4 border-transparent hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10 transition-all duration-300 rounded-tl-xl rounded-tr-xl"
               >
@@ -207,7 +225,8 @@ export const NavbarPublic = () => {
             </li>
             <li>
               <a
-                href="#"
+                target="_blank"
+                href="https://www.instagram.com/inmobiliariacercatrova/"
                className="flex px-4 py-3 text-[#0b7a4b] border-l-4 border-transparent hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10 transition-all duration-300 "
               >
                 <Instagram className="mr-2" /> Instagram
@@ -215,6 +234,7 @@ export const NavbarPublic = () => {
             </li>
             <li>
               <a
+                target="_blank"
                 href="mailto:info@ejemplo.com"
                 className="flex  px-4 py-3 text-[#0b7a4b] border-l-4 border-transparent hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10 transition-all duration-300 rounded-b-xl "
               >
@@ -278,7 +298,7 @@ export const NavbarPublic = () => {
             <ul className="space-y-7 ">
               <li>
                 <Link
-                  href="/login"
+                  href="/?page=1&limit=10"
                   onClick={toggleMenu}
                   className="flex items-center p-4 text-xl font-medium text-[#0b7a4b] hover:bg-[#0f8b57]/10 rounded-xl transition-colors border-b"
                 >
@@ -410,7 +430,7 @@ export const NavbarPublic = () => {
                   <>
                     <li>
                       <Link
-                        href="/propiedades/venta"
+                        href="#venta"
                         className="block p-4 text-lg text-[#0b7a4b] -700 hover:bg-[#0f8b57]/10 rounded-xl border-l-4 border-[#0b7a4b]"
                       >
                         Comprar

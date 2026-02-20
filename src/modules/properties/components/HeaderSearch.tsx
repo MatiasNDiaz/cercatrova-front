@@ -2,36 +2,45 @@
 
 import { useState } from 'react';
 import { SlidersHorizontal, X } from 'lucide-react';
-import { FiltersPanel } from './FiltersPanel ';
+import FiltersPanel from './FiltersPanel '; 
 import { SearchBar } from './SearchBar';
 
 export const HeaderSearch = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 mt-10">
-      {/* BOTÓN DISPARADOR: Alineado a la derecha como en tu imagen */}
-      <div className="flex justify-center items-center gap-5 mb-6 ">
-        <SearchBar/>
+    <div className="w-full max-w-5xl mx-auto px-4 mt-10">
+      
+      {/* SEARCH + BOTÓN FILTROS */}
+      <div className="flex items-center gap-3 mb-6 w-full">
+        
+        {/* SEARCH BAR */}
+        <div className="flex-1">
+          <SearchBar />
+        </div>
+
+        {/* BOTÓN FILTROS */}
         <button
+          type="button"
           onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 h-12 px-7 rounded-xl transition-all duration-400 font-bold shadow-sm
-            ${showFilters 
-              ? 'bg-[#0b7a4b] text-white hover:bg-[#085031]' 
-              : 'bg-[#0b7a4b] text-white hover:bg-[#085031] shadow-green-900/10'
-            }`}
+          className={`flex items-center gap-3 h-12 px-7 py-6  rounded-4xl font-bold transition-all duration-300 shadow-sm
+            bg-[#0b7a4b] text-white hover:bg-[#085031]
+          `}
         >
           {showFilters ? <X size={20} /> : <SlidersHorizontal size={20} />}
           <span>{showFilters ? 'Cerrar' : 'Filtros'}</span>
         </button>
       </div>
 
-      {/* PANEL ÚNICO: Aquí adentro vive la SearchBar y los filtros */}
-      <div className={`overflow-hidden transition-all duration-700 ease-in-out ${
-        showFilters ? 'max-h-300 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
-      }`}>
+      {/* PANEL DE FILTROS */}
+      <div
+        className={`overflow-hidden transition-all duration-700 ease-in-out
+          ${showFilters ? 'max-h-300 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}
+        `}
+      >
         <FiltersPanel />
       </div>
+
     </div>
   );
 };

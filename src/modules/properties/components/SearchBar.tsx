@@ -25,16 +25,17 @@ export const SearchBar = () => {
     return () => clearTimeout(timer); // Limpiamos el timer si el usuario sigue escribiendo
   }, [inputValue, setFilters, filters.search]);
 
+    
   // Sincronizar el input si la URL cambia (por ejemplo, al limpiar filtros)
   useEffect(() => {
     setInputValue(filters.search || '');
   }, [filters.search]);
 
   return (
-    <div className="relative w-full mt-6 max-w-2xl ">
-      <div className="relative flex items-center  w-full h-12 rounded-lg focus-within:shadow-lg bg-white overflow-hidden border border-[#0b7a4b]">
+    <div className="relative w-full mt-6 max-w-4xl ">
+      <div className="relative flex items-center  w-full h-12 rounded-4xl focus-within:shadow-lg bg-white overflow-hidden border border-[#0b7a4b]">
         <div className="grid place-items-center h-full w-12 text-gray-300">
-          <Search size={20}  className='text-[#0e925b]'/>
+          <Search size={22}  className='text-[#0e925b]'/>
         </div>
 
         <input
@@ -50,7 +51,7 @@ export const SearchBar = () => {
           <button 
           aria-label='a'
             onClick={() => setInputValue('')}
-            className="grid place-items-center h-full w-12 text-gray-600 hover:text-red-500 transition-colors"
+            className="grid place-items-center h-full w-12 pr-4 text-gray-600 hover:text-red-500 transition-colors"
           >
             <X size={18} />
           </button>

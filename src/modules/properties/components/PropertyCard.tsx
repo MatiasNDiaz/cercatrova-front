@@ -5,81 +5,168 @@ import { Bed, Maximize, MapPin, Heart, Toilet, Hourglass } from 'lucide-react';
 import { Property, PropertyImage } from '../interfaces/propertyInterface';
 
 export const PropertyCard = ({ property }: { property: Property }) => {
-  const { 
-    title, price, rooms, bathrooms, m2, 
-    localidad, barrio, images, typeOfProperty, operationType, antiquity, 
+  const {
+    title,
+    price,
+    rooms,
+    bathrooms,
+    m2,
+    localidad,
+    barrio,
+    images,
+    typeOfProperty,
+    operationType,
+    antiquity,
   } = property;
 
-  const coverImage = images?.find((img: PropertyImage) => img.isCover)?.url || images?.[0]?.url || '/placeholder-house.jpg';
+  const coverImage =
+    images?.find((img: PropertyImage) => img.isCover)?.url ||
+    images?.[0]?.url ||
+    '/placeholder-house.jpg';
 
   return (
-    /* Ajuste estructural: 'w-full' para que el padre controle el ancho, 
-       y 'flex-1' para que todas las cards en una misma fila estiren igual 
-    */
-    <div className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden  border-green-100 flex flex-col h-full w-full">
+    <div className="w-[95%] mx-auto py-3 ">
       
-      {/* Imagen: Contenedor con altura fija para mantener alineación horizontal */}
-      <div className="relative h-56 w-full overflow-hidden shrink-0">
-        <Image
-          src={coverImage}
-          alt={title}
-          fill
-          className="object-cover group-hover:scale-110 transition-transform duration-500"
-        />
+      <div
+        className="
+  group relative rounded-3xl overflow-hidden bg-white
+  border border-[#0b7a4b]/80
+  shadow-[0_8px_30px_rgba(0,0,0,0.06)]
+  hover:shadow-[0_20px_40px_rgba(11,122,75,0.2)]
+  transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]
+  hover:-translate-y-2
+  flex flex-col h-full
 
-        {/* Badge */}
-        <div className="absolute top-3 left-3 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase shadow">
-          {operationType}
+
+"
+
+      >
+        {/* IMAGE */}
+        <div className="relative h-60 sm:h-72 w-full overflow-hidden ">
+          <Image
+            src={coverImage}
+            alt={title}
+            fill
+            className="object-cover transition-transform duration-1200 ease-out group-hover:scale-105"
+          />
+
+          {/* Dark gradient */}
+          <div className="absolute inset-0 bg-linear-to-t from-black/50 via-black/20 to-transparent" />
+
+          {/* Operation badge */}
+          <div className="absolute top-5 left-5">
+            <span className="
+              bg-[#179144] text-white text-xs font-semibold
+              px-4 py-1.5 rounded-full uppercase tracking-[0.15em]
+              shadow-md
+            ">
+              {operationType}
+            </span>
+          </div>
+
+          {/* Favorite button */}
+          <button
+            aria-label="boton de favoritos"
+            className="
+              absolute top-3.5 right-5
+              p-3
+              bg-white/90 backdrop-blur-sm
+              rounded-full
+              text-[#0b7a4b]
+              shadow-md
+              transition-all duration-300
+              hover:scale-110
+              hover:text-red-500
+              hover:shadow-lg
+            "
+          >
+            <Heart size={18} />
+          </button>
+
+          {/* Price over image */}
+          <div className="absolute inset-0 flex items-end mb-3 justify-center">
+  <p className="
+    text-2xl sm:text-3xl font-bold
+    text-white
+    drop-shadow-lg
+    tracking-tight
+    [text-shadow:2px_2px_8px_rgba(0,0,0,1)]
+  ">
+    {price.toLocaleString()} USD
+  </p>
+</div>
+
         </div>
 
-        {/* Favoritos */}
-        <button
-          aria-label="boton de favoritos"
-          className="absolute top-3 right-3 p-2 bg-white/80 backdrop-blur-sm rounded-full text-green-700 hover:text-red-500 transition-colors shadow"
-        >
-          <Heart size={18} />
-        </button>
-      </div>
+        {/* CONTENT */}
+        <div className="p-6 flex flex-col grow">
 
-      {/* Contenido: grow permite que este bloque empuje los iconos hacia abajo */}
-      <div className="p-5 flex flex-col grow">
-        <div className="flex justify-between items-start mb-2">
-          <span className="text-green-600 text-xs font-semibold uppercase tracking-wider">
-            {typeOfProperty?.name || 'Propiedad'}
+          {/* Type */}
+          <span className="text-[#0b7a4b] text-xs font-semibold uppercase tracking-[0.12em] mb-1.5">
+            <span>tipo: </span>{typeOfProperty?.name || 'Propiedad'}
           </span>
-          <p className="text-xl font-bold text-green-800">
-            USD {price.toLocaleString()}
-          </p>
+
+          {/* Title */}
+          <h3 className="
+            text-xl font-semibold text-gray-800
+            line-clamp-1
+            mb-2
+            group-hover:text-[#0b7a4b]
+            transition-colors duration-300
+          ">
+            {title}
+          </h3>
+
+          {/* Location */}
+          <div className="flex items-center text-gray-600 text-sm mb-4">
+            <MapPin size={16} className="mr-2 text-[#0b7a4b] shrink-0" />
+            <span className="line-clamp-1 ">
+              {localidad}, {barrio}
+            </span>
+          </div>
+
+          {/* Feature Cards */}
+          <div className="mt-auto grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { icon: Bed, value: rooms, label: 'Hab.' },
+              { icon: Toilet, value: bathrooms, label: 'Baños' },
+              { icon: Hourglass, value: antiquity, label: 'Años.' },
+              { icon: Maximize, value: `${m2} m²`, label: 'Superficie' },
+            ].map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={index}
+                  className="
+                    flex flex-col items-center justify-center
+                    bg-[#0b7a4b]/10
+                    rounded-2xl
+                    py-3
+                    transition-all duration-300
+                    hover:bg-[#0b7a4b]/20
+                    hover:shadow-md
+                  "
+                >
+                  <Icon size={18} className="text-[#0b7a4b] mb-1" />
+                  <span className="text-sm font-semibold text-[#0b7a4b]">
+                    {item.value}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider text-gray-500">
+                    {item.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        <h3 className="text-lg font-semibold text-gray-800 line-clamp-1 mb-1">
-          {title}
-        </h3>
-
-        <div className="flex items-center text-gray-500 text-sm mb-4">
-          <MapPin size={14} className="mr-1 text-green-600 shrink-0" />
-          <span className="line-clamp-1">{barrio}, {localidad}</span>
-        </div>
-
-        {/* Características: mt-auto garantiza que siempre estén al fondo de la card */}
-        <div className="mt-auto pt-4 border-t border-green-100 flex justify-between items-center text-green-700">
-          <div className="flex items-center gap-1">
-            <Bed size={16} />
-            <span className="text-sm font-medium">{rooms}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Toilet size={16} />
-            <span className="text-sm font-medium">{bathrooms}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Hourglass size={16} />
-            <span className="text-sm font-medium">{antiquity}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Maximize size={16} />
-            <span className="text-sm font-medium">{m2} m²</span>
-          </div>
-        </div>
+        {/* Animated bottom gradient line */}
+        <div className="
+          absolute bottom-0 left-0 h-0.75 w-0
+          bg-[#0b7a4b]
+          group-hover:w-full
+          transition-all duration-1000 ease-out
+        " />
       </div>
     </div>
   );

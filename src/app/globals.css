@@ -15,3 +15,6 @@ body {
 @source "../src/**/*.{js,ts,jsx,tsx}";
 
 
+html {
+  scroll-behavior: smooth !important;
+}
