@@ -16,5 +16,102 @@ body {
 
 
 html {
-  scroll-behavior: smooth !important;
+  /* scroll-behavior: smooth !important; */
+}
+
+
+.button {
+  position: fixed;
+  bottom: 50px;
+  /* En lugar de right, usamos left + transform para centrar el eje de expansión */
+  right: 70px; 
+  
+  width: 60px;
+  height: 60px;
+  z-index: 9999;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  
+  /* Mantenemos tu efecto de burbuja 3D */
+  /* background: linear-gradient(135deg, #10b981 0%, #059669 100%); */
+  background: linear-gradient(135deg, #11b06d 0%, #0b7a4b 100%);
+  
+  box-shadow: 
+    0 10px 20px rgba(0, 0, 0, 0.2),
+    inset 0 4px 6px rgba(255, 255, 255, 0.4),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.3);
+  
+  /* IMPORTANTE: El transform-origin al centro asegura que crezca parejo */
+  transform-origin: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+/* Brillo de cristal */
+.button::after {
+  content: "";
+  position: absolute;
+  top: 10%;
+  left: 15%;
+  width: 70%;
+  height: 35%;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.5), transparent);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.svgIcon {
+  width: 18px;
+  z-index: 2;
+  transition: 0.3s;
+}
+
+.svgIcon path {
+  fill: #ffffff;
+}
+
+/* --- ESTA ES LA PARTE QUE SOLUCIONA TU PROBLEMA --- */
+.button:hover {
+  width: 150px;
+  border-radius: 40px;
+  /* Ajustamos el margen negativo a la mitad del incremento de ancho */
+  /* Si el ancho sube de 60px a 150px (sube 90px), movemos -45px a la derecha */
+  margin-right: -45px; 
+  transform: translateY(-5px);
+}
+
+.button:hover .svgIcon {
+  transform: translateY(-200%);
+  opacity: 0;
+}
+
+.button::before {
+  position: absolute;
+  bottom: -20px;
+  content: "IR ARRIBA";
+  color: #ffffff;
+  font-size: 0px;
+  font-weight: 700;
+  transition: 0.3s;
+}
+
+.button:hover::before {
+  font-size: 13px;
+  opacity: 1;
+  bottom: 22px; 
+}
+
+/* Animación de flotado sutil */
+@keyframes floating {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.button:not(:hover) {
+  animation: floating 3s ease-in-out infinite;
 }

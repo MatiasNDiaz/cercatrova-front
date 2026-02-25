@@ -47,7 +47,7 @@ const RealEstateFAQ = () => {
 
   return (
     <section className="py-20 px-4 max-w-4xl mx-auto font-sans overflow-hidden">
-      <div className="text-center mb-16">
+      <div className="text-center mb-12">
         <span className="text-sm tracking-[0.2em] uppercase text-[#0b7a4b] font-medium">preguntas frecuentes</span>
         <h2 id="faq" className="text-4xl md:text-5xl font-semibold mt-4 text-gray-900">Aclaramos tus dudas </h2>
         <div className="w-28 h-0.5 bg-[#0b7a4b] mx-auto mt-8"></div>
@@ -95,11 +95,11 @@ const RealEstateFAQ = () => {
               </button>
               
               <div 
-                className={`transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden ${
-                  isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                className={`transition-all duration-500 ease-in-out overflow-hidden ${
+                  isOpen ? 'max-h-125 opacity-100' : 'max-h-0 opacity-0'
                 }`}
               >
-                <div className="p-8 pt-0 ml-[76px] text-[#4b5563]">
+                <div className="p-8 pt-0 ml-19 text-[#4b5563]">
                   <p className="bg-gray-50/80 p-6 rounded-2xl border-l-4 border-[#0b7a4b] text-base leading-relaxed font-medium">
                     {item.answer}
                   </p>

@@ -1,4 +1,5 @@
 "use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -7,157 +8,159 @@ import {
   LayoutDashboard,
   Heart,
   User,
-  ClipboardCheck, // Nombre profesional para solicitudes
+  ClipboardCheck,
   Building2,
   LogOut,
-  Bell
+  Bell,
 } from "lucide-react";
 import { useState } from "react";
+
+// ── DATA: links centralizados ─────────────────────────────────────────────────
+const navItems = [
+  { href: "/properties", label: "catálogo", icon: <Building2 size={18} /> },
+  { href: "/mis-solicitudes", label: "mis solicitudes", icon: <ClipboardCheck size={18} /> },
+  { href: "/favoritos", label: "favoritos", icon: <Heart size={18} /> },
+  { href: "/perfil", label: "perfil", icon: <User size={18} /> },
+  { href: "/dashboard", label: "panel de control", icon: <LayoutDashboard size={18} /> },
+];
 
 export const NavbarPrivate = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-
-  // Estilo común para los links de la Navbar Desktop
-  const navLinkStyle = "group relative px-2 py-2 text-[15px] lg:text-lg font-semibold text-[#0b7a4b] transition-colors duration-300 flex items-center gap-1.5 ";
-  const underlineStyle = "absolute -bottom-5  left-0 w-full h-0.5 bg-gradient-to-r from-[#0f8b57] to-[#14a366] origin-right scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100 group-hover:origin-left";
+  const toggleMenu = () => setIsMenuOpen((prev) => !prev);
+  const closeMenu = () => setIsMenuOpen(false);
 
   return (
-    <nav className="relative flex flex-row p-2 h-21 justify-between items-center  bg-white shadow-lg rounded-full mt-2 w-full z-50">
-      
-      {/* 1. LOGO */}
+    <nav className="fixed top-1 left-0 right-0 z-50 mx-auto w-[95%] flex flex-row p-2.5 justify-between items-center bg-white shadow-lg rounded-full mt-0.5">
+
+      {/* ── LOGO ── */}
       <div className="flex items-center">
-        <Image
-          src="/LogoInmobiliaria.png"
-          alt="Logo"
-          width={140}
-          height={130}
-          className="bg-white w-30 md:w-32 ml-4 md:ml-7 rounded-full object-contain"
-        />
+        <Link href="/dashboard">
+          <Image
+            src="/LogoInmobiliaria.png"
+            alt="Logo Cerca Trova"
+            width={115}
+            height={130}
+            className="bg-white w-30 object-contain border md:w-30 ml-4 md:ml-8 rounded-full"
+          />
+        </Link>
       </div>
 
-      {/* BOTÓN HAMBURGUESA (Móvil) */}
-      <button aria-label="menu" onClick={toggleMenu} className="md:hidden p-2 mr-2 text-[#0b7a4b] rounded-2xl hover:bg-[#0f8b57]/10">
+      {/* ── HAMBURGUESA MOBILE ── */}
+      <button
+        onClick={toggleMenu}
+        aria-label="Abrir navegación"
+        className="md:hidden p-2 rounded-2xl mr-2 text-[#0b7a4b] hover:bg-[#0f8b57]/10 active:scale-95 transition-transform"
+      >
         <Menu size={30} />
       </button>
 
-      {/* 2. NAVEGACIÓN DESKTOP (Todo uno al lado del otro) */}
-      <ul className="hidden md:flex flex-row gap-1 lg:gap-4 items-center ml-auto mr-4">
-        
-        <li>
-          <Link href="/propiedades" className={navLinkStyle}>
-            <Building2 size={18} />
-            <span className="relative group-hover:text-[#0f8b57]  ">catálogo</span>
-            <span className={underlineStyle} />
-          </Link>
-        </li>
+      {/* ── DESKTOP NAV ── */}
+      <ul className="hidden md:flex flex-row gap-1 lg:gap-3 items-center ml-auto mr-4">
+        {navItems.map((item) => (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              className="group relative px-3 py-2 text-[15px] lg:text-lg font-semibold text-[#0b7a4b] transition-colors duration-300 flex items-center gap-1.5"
+            >
+              {item.icon}
+              <span className="relative group-hover:text-[#0f8b57] transition-colors duration-300">
+                {item.label}
+              </span>
+              <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-linear-to-r from-[#0f8b57] to-[#14a366] origin-right scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100 group-hover:origin-left" />
+            </Link>
+          </li>
+        ))}
 
-        <li>
-          <Link href="/mis-solicitudes" className={navLinkStyle}>
-            <ClipboardCheck size={18} />
-            <span className="relative group-hover:text-[#0f8b57]">mis solicitudes</span>
-            <span className={underlineStyle} />
-          </Link>
-        </li>
-
-        <li>
-          <Link href="/favoritos" className={navLinkStyle}>
-            <Heart size={18} />
-            <span className="relative group-hover:text-[#0f8b57]">favoritos</span>
-            <span className={underlineStyle} />
-          </Link>
-        </li>
-
-        <li>
-          <Link href="/perfil" className={navLinkStyle}>
-            <User size={18} />
-            <span className="relative group-hover:text-[#0f8b57]">perfil</span>
-            <span className={underlineStyle} />
-          </Link>
-        </li>
-<li>
-          <Link href="/dashboard" className={navLinkStyle} >
-            <LayoutDashboard size={18} />
-            <span className="relative group-hover:text-[#0f8b57]">panel de control</span>
-            <span className={underlineStyle} />
-          </Link>
-        </li>
-
-        {/* Notificaciones (Icono solo) */}
-        <li className="ml-2 mr-2">
-          <Link href="/notificaciones" className="text-[#0b7a4b] hover:text-[#0f8b57] transition-colors">
+        {/* Notificaciones */}
+        <li className="ml-1 mr-1">
+          <Link
+            href="/notificaciones"
+            aria-label="Notificaciones"
+            className="relative p-2 flex items-center text-[#0b7a4b] hover:text-[#0f8b57] hover:bg-[#0f8b57]/10 rounded-full transition-all duration-300"
+          >
             <Bell size={22} />
           </Link>
         </li>
 
-        {/* 3. BOTÓN CERRAR SESIÓN */}
+        {/* Cerrar sesión */}
         <li>
-           <Link
+          <Link
             href="/login"
-            className="
-                    relative overflow-hidden flex justify-center items-center px-6 py-2.5 
-                    text-lg font-bold text-white 
-                    bg-linear-to-r from-[#0f8b57] to-[#14a366] 
-                    hover:from-[#0d7a4d] hover:to-[#0f8b57] 
-                    rounded-full 
-                    active:scale-95 transition-all duration-300
-                    group mr-3.5
-                    "
+            className="relative overflow-hidden flex justify-center items-center px-6 py-2.5 text-lg font-bold text-white bg-linear-to-r from-[#0f8b57] to-[#14a366] hover:from-[#0d7a4d] hover:to-[#0f8b57] rounded-full active:scale-95 transition-all duration-300 group mr-3"
           >
-            {/* Efecto de brillo (Shine) */}
-            <div className="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out " />
-
-            <LogOut
-              size={20}
-              className="inline mr-2 transition-transform group-hover:-translate-y-0.5 "
-            />
-
+            <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+            <LogOut size={20} className="inline mr-2 transition-transform group-hover:-translate-y-0.5" />
             <span className="relative">cerrar sesión</span>
           </Link>
         </li>
       </ul>
 
-      {/* --- MOBILE SIDEBAR --- */}
-      <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm shadow transition-opacity duration-300 md:hidden z-60 ${isMenuOpen ? "opacity-100 visible " : "opacity-0 invisible"}`} onClick={toggleMenu} />
+      {/* ── MOBILE: Overlay ── */}
+      <div
+        className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 md:hidden z-60 ${isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`}
+        onClick={closeMenu}
+      />
 
-      <div className={`fixed top-0 right-0 h-full w-72  bg-white rounded-2xl rounded-tr-none shadow-2xl transform transition-transform duration-300 ease-out md:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
-        <div className="flex flex-col h-full p-6 shadow-2xl w-full pb-11">
-          <div className="flex items-center justify-between mb-8 ">
-            <span className="font-bold text-[#0b7a4b] text-xl ">Mi Cuenta</span>
-            <button aria-label="menu"  onClick={toggleMenu} className="p-2 text-white bg-[#0d9f62] rounded-full"><X size={20} /></button>
+      {/* ── MOBILE: Drawer ── */}
+      <div
+        className={`fixed top-0 right-0 h-full w-75 rounded-2xl rounded-tr-none bg-white shadow-2xl transform transition-transform duration-300 ease-out md:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}
+      >
+        <div className="flex flex-col h-full">
+
+          {/* Header drawer */}
+          <div className="flex items-center justify-between p-6 border-b-2 border-gray-200 shadow-md">
+            <span className="font-bold text-[#0b7a4b] text-xl">Mi Cuenta</span>
+            <button
+              onClick={closeMenu}
+              aria-label="Cerrar navegación"
+              className="p-2 text-white bg-[#0d9f62] hover:bg-[#0b7a4b] transition-colors rounded-full"
+            >
+              <X size={25} />
+            </button>
           </div>
 
-          <ul className="flex-1 space-y-7 ">
-            <li><Link href="/dashboard" onClick={toggleMenu} className="flex text-lg items-center p-3 text-[#0b7a4b] border-b hover:bg-[#0f8b57]/10 rounded-xl"><LayoutDashboard className="mr-4" /> Panel General</Link></li>
-            <li><Link href="/propiedades" onClick={toggleMenu} className="flex text-lg items-center p-3 text-[#0b7a4b] border-b hover:bg-[#0f8b57]/10 rounded-xl"><Building2 className="mr-4" /> Catálogo</Link></li>
-            <li><Link href="/mis-solicitudes" onClick={toggleMenu} className="flex text-lg items-center p-3 text-[#0b7a4b] border-b hover:bg-[#0f8b57]/10 rounded-xl"><ClipboardCheck className="mr-4" /> Mis Solicitudes</Link></li>
-            <li><Link href="/favoritos" onClick={toggleMenu} className="flex text-lg items-center p-3 text-[#0b7a4b] border-b hover:bg-[#0f8b57]/10 rounded-xl"><Heart className="mr-4" /> Favoritos</Link></li>
-            <li><Link href="/perfil" onClick={toggleMenu} className="flex text-lg items-center p-3 text-[#0b7a4b] border-b hover:bg-[#0f8b57]/10 rounded-xl"><User className="mr-4" /> Mi Perfil</Link></li>
-          </ul>
+          {/* Links mobile */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <ul className="space-y-3">
+              {navItems.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={closeMenu}
+                    className="flex items-center p-4 text-xl font-medium text-[#0b7a4b] hover:bg-[#0f8b57]/10 rounded-xl transition-colors border-b"
+                  >
+                    <span className="text-[#0b7a4b] shrink-0">{item.icon}</span>
+                    <span className="ml-4">{item.label}</span>
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link
+                  href="/notificaciones"
+                  onClick={closeMenu}
+                  className="flex items-center p-4 text-xl font-medium text-[#0b7a4b] hover:bg-[#0f8b57]/10 rounded-xl transition-colors border-b"
+                >
+                  <Bell size={24} className="text-[#0b7a4b] shrink-0" />
+                  <span className="ml-4">notificaciones</span>
+                </Link>
+              </li>
+            </ul>
+          </div>
 
-           <Link
-            href="/login"
-            className="
-                    relative overflow-hidden flex justify-center items-center px-6 py-2.5 
-                    text-lg font-bold text-white 
-                    bg-linear-to-r from-[#0f8b57] to-[#14a366] 
-                    hover:from-[#0d7a4d] hover:to-[#0f8b57] 
-                    rounded-full 
-                    active:scale-95 transition-all duration-300
-                    group
-                    "
-          >
-            {/* Efecto de brillo (Shine) */}
-            <div className="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+          {/* Botón cerrar sesión mobile */}
+          <div className="flex justify-center items-center p-6 border-t border-gray-100">
+            <Link
+              href="/login"
+              onClick={closeMenu}
+              className="relative overflow-hidden w-full flex items-center justify-center py-4 bg-linear-to-r from-[#0f8b57] to-[#14a366] hover:from-[#0d7a4d] hover:to-[#0f8b57] text-white font-bold text-lg rounded-2xl shadow-lg active:scale-[0.97] transition-all duration-300 group"
+            >
+              <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+              <LogOut size={22} className="mr-2 transition-transform group-hover:-translate-y-0.5" />
+              <span className="tracking-wide">cerrar sesión</span>
+            </Link>
+          </div>
 
-            <LogOut
-              size={20}
-              className="inline mr-2 transition-transform group-hover:-translate-y-0.5"
-            />
-
-            <span className="relative">Cerrar sesión</span>
-          </Link>
         </div>
       </div>
     </nav>

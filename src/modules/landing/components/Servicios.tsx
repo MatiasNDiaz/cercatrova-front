@@ -51,13 +51,13 @@ const services = [
 
 export default function ServiciosPremium3D() {
   return (
-    <section id="servicios" className="py-28 bg-gray-50 overflow-hidden">
+    <section id="servicios" className="py-20 bg-gray-50 overflow-hidden">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="text-center mb-24">
+        <div className="text-center mb-12">
           <span className="text-sm tracking-[0.2em] uppercase text-[#0b7a4b] font-medium">
             Servicios Inmobiliarios
           </span>
-          <h2 className="text-4xl md:text-5xl font-semibold mt-6 text-gray-900 leading-tight">
+          <h2 className="text-4xl md:text-5xl font-semibold mt-4 text-gray-900 leading-tight">
             Hacemos que todo sea <span className="text-[#0b7a4b]">más simple para vos.</span>
           </h2>
           <div className="w-28 h-0.5 bg-[#0b7a4b] mx-auto mt-8"></div>
@@ -133,52 +133,74 @@ export default function ServiciosPremium3D() {
           align-items: center;
           justify-content: center;
           gap: 12px;
-          transform: translate3d(0, 0, 60px); /* Botones más hacia adelante */
+          transform: translate3d(0, 0, 60px);
         }
 
-        .view-more-btn {
+        /* --- BOTONES ESTILO BURBUJA 3D --- */
+        .view-more-btn, .whatsapp-btn {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
+          gap: 8px;
           color: white;
-          background-color: #042f2e; /* Color sólido oscuro para contraste */
-          border: 1px solid rgba(255, 255, 255, 0.2);
           padding: 10px 18px;
           border-radius: 100px;
           font-weight: 700;
           font-size: 13px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          border: none;
+          cursor: pointer;
+          position: relative;
+          overflow: hidden;
+          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          
+          /* Sombras para volumen 3D (Efecto esfera) */
+          box-shadow: 
+            0 8px 15px rgba(0, 0, 0, 0.2),
+            inset 0 4px 6px rgba(255, 255, 255, 0.35),
+            inset 0 -4px 10px rgba(0, 0, 0, 0.2);
         }
 
-        .whatsapp-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          color: white;
-          background-color: #16A34A; /* Verde oficial WhatsApp sólido */
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          padding: 10px 18px;
-          border-radius: 100px;
-          font-weight: 700;
-          font-size: 13px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4); /* Brillo verde */
+        /* Reflejo superior de cristal */
+        .view-more-btn::after, .whatsapp-btn::after {
+          content: "";
+          position: absolute;
+          top: 10%;
+          left: 15%;
+          width: 70%;
+          height: 35%;
+          background: linear-gradient(to bottom, rgba(255,255,255,0.45), transparent);
+          border-radius: 50% 50% 45% 45%;
+          pointer-events: none;
+          transition: all 0.3s ease;
         }
 
-        .view-more-btn:hover {
-          transform: scale(1.08) translate3d(0, 0, 15px);
-          background-color: white;
-          color: #042f2e;
+        .view-more-btn { background: linear-gradient(135deg, #042f2e 0%, #064e3b 100%); }
+        .whatsapp-btn { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+
+        /* --- HOVER BURBUJA CLARA (Mantiene volumen) --- */
+        .view-more-btn:hover, .whatsapp-btn:hover {
+          padding: 10px 30px;
+          transform: scale(1.05) translate3d(0, 0, 20px);
+          /* Mantenemos el margen negativo para expansión simétrica */
+          margin-left: -12px;
+          margin-right: -12px;
+          
+          /* Cambiamos a un degradado casi blanco pero conservamos sombras inset */
+          background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+          box-shadow: 
+            0 12px 25px rgba(0, 0, 0, 0.15),
+            inset 0 4px 6px rgba(255, 255, 255, 1),
+            inset 0 -4px 10px rgba(0, 0, 0, 0.05);
         }
 
-        .whatsapp-btn:hover {
-          transform: scale(1.08) translate3d(0, 0, 15px);
-          background-color: white;
-          color: #25D366;
-          box-shadow: 0 8px 25px rgba(37, 211, 102, 0.5);
+        .view-more-btn:hover { color: #042f2e; }
+        .whatsapp-btn:hover { color: #059669; }
+
+        /* Ajuste del brillo en hover para que sea sutil sobre el fondo claro */
+        .view-more-btn:hover::after, .whatsapp-btn:hover::after {
+          background: linear-gradient(to bottom, rgba(255,255,255,0.8), transparent);
+          width: 85%;
+          left: 7.5%;
         }
 
         .card-logo-container {
@@ -204,6 +226,7 @@ export default function ServiciosPremium3D() {
           width: 45px; transform: translate3d(0, 0, 100px); top: 30px; right: 30px; 
           display: grid; place-content: center; transition-delay: 0.4s;
           background: #0b7a4b; color: white;
+          box-shadow: inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.2);
         }
 
         .card-parent:hover .card-3d {
@@ -255,7 +278,10 @@ function ServiceCard({ service }) {
           >
             Consultar <BsWhatsapp size={14} />
           </a>
+
+          
         </div>
+        
       </div>
     </div>
   );

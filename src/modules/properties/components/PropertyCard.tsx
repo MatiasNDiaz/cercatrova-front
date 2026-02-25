@@ -29,18 +29,14 @@ export const PropertyCard = ({ property }: { property: Property }) => {
       
       <div
         className="
-  group relative rounded-3xl overflow-hidden bg-white
-  border border-[#0b7a4b]/80
-  shadow-[0_8px_30px_rgba(0,0,0,0.06)]
-  hover:shadow-[0_20px_40px_rgba(11,122,75,0.2)]
-  transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]
-  hover:-translate-y-2
-  flex flex-col h-full
-
-
-"
-
-      >
+          group relative rounded-3xl overflow-hidden bg-white
+          hover:border border-[#0b7a4b]/80
+          shadow-[0_8px_30px_rgba(0,0,0,0.06)]
+          hover:shadow-[0_20px_40px_rgba(11,122,75,0.2)]
+          transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]
+          hover:-translate-y-2
+          flex flex-col h-full">
+            
         {/* IMAGE */}
         <div className="relative h-60 sm:h-72 w-full overflow-hidden ">
           <Image

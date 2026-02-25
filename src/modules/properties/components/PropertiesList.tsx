@@ -45,7 +45,7 @@ export default function PropertiesList({ initialItems, initialTotal }: Props) {
   }, [filters]);
 
   return (
-    <div className="container rounded-2xl mb-10 w-[95%] mt-20 mx-auto">
+    <div className="container rounded-2xl mb-10 w-[95%] min-h-screen mt-20 mx-auto">
       <div id="propiedades" className="text-center mb-20">
           <span className="text-sm tracking-widest uppercase text-[#0b7a4b] font-medium">
             propiedades destacadas
