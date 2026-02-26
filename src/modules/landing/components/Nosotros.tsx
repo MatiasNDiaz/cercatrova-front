@@ -37,7 +37,7 @@ export default function Nosotros() {
         <span className="text-sm tracking-[0.2em] uppercase text-[#0b7a4b] font-medium">
           Nuestra Historia
         </span>
-        <h2 className="text-4xl md:text-5xl font-semibold mt-4 text-gray-900">
+        <h2 className="text-4xl md:text-5xl font-semibold mt-3 text-gray-900">
           Tu aliado en cada <span className="text-[#0b7a4b]">inversión</span>
         </h2>
         <div className="w-28 h-0.5 bg-[#0b7a4b] mx-auto mt-8" />

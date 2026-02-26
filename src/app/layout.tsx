@@ -4,6 +4,7 @@ import { NavbarPublic } from "@/modules/shared/ui/NavbarPublic";
 
 import { Metadata } from 'next';
 import { FooterPublic } from "@/modules/landing/components/FooterPublic";
+import { BackToTopButton } from "@/modules/landing/components/BackToTopButton";
 
 export const metadata: Metadata = {
   title: 'Cerca Trova - Inmobiliaria',
@@ -35,6 +36,7 @@ export default function RootLayout({
         className={`${inter.variable} ${playfair.variable}`}>
         <NavbarPublic />
         {children}
+        <BackToTopButton />
         <FooterPublic/>
       </body>
     </html>

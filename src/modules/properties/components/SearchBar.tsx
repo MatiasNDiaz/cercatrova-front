@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePropertyFilters } from '../hooks/usePropertyFilters';
-import { Search, X } from 'lucide-react'; // Usamos lucide-react para los iconos
+import { Search, X } from 'lucide-react';
 
 export const SearchBar = () => {
   const { filters, setFilters } = usePropertyFilters();
@@ -13,7 +13,14 @@ export const SearchBar = () => {
   // =========================================================
   // --- LÓGICA DE DEBOUNCE ---
   // =========================================================
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
     // Si el valor del input es igual al que ya está en la URL, no hacemos nada
     if (inputValue === filters.search) return;
 
@@ -22,10 +29,9 @@ export const SearchBar = () => {
       setFilters({ search: inputValue });
     }, 600);
 
-    return () => clearTimeout(timer); // Limpiamos el timer si el usuario sigue escribiendo
+    return () => clearTimeout(timer);
   }, [inputValue, setFilters, filters.search]);
 
-    
   // Sincronizar el input si la URL cambia (por ejemplo, al limpiar filtros)
   useEffect(() => {
     setInputValue(filters.search || '');
@@ -33,9 +39,9 @@ export const SearchBar = () => {
 
   return (
     <div className="relative w-full mt-6 max-w-4xl ">
-      <div className="relative flex items-center  w-full h-12 rounded-4xl focus-within:shadow-lg bg-white overflow-hidden border border-[#0b7a4b]">
+      <div className="relative flex items-center w-full h-12 rounded-4xl focus-within:shadow-lg bg-white overflow-hidden border border-[#0b7a4b]">
         <div className="grid place-items-center h-full w-12 text-gray-300">
-          <Search size={22}  className='text-[#0e925b]'/>
+          <Search size={22} className='text-[#0e925b]'/>
         </div>
 
         <input
@@ -49,7 +55,7 @@ export const SearchBar = () => {
 
         {inputValue && (
           <button 
-          aria-label='a'
+            aria-label='a'
             onClick={() => setInputValue('')}
             className="grid place-items-center h-full w-12 pr-4 text-gray-600 hover:text-red-500 transition-colors"
           >
@@ -58,8 +64,8 @@ export const SearchBar = () => {
         )}
       </div>
       
-      <p className="mt-2 text-xs text-white px-1">
-        Prueba con: <span className="italic text-blue-300 cursor-pointer" onClick={() => setInputValue('departamento en mina clavero')}>departamento en mina clavero</span>
+      <p className="mt-2 text-xs text-[#0b7a4b] px-1">
+        Prueba con: <span className="italic text-blue-500 cursor-pointer" onClick={() => setInputValue('departamento en mina clavero')}>departamento en mina clavero</span>
       </p>
     </div>
   );

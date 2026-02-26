@@ -106,6 +106,8 @@ export const PropertySlider = () => {
         </div>
       </div>
 
+  
+
       {/* Navegación */}
       <button 
         aria-label='Anterior' 

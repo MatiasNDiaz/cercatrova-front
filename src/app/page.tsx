@@ -4,7 +4,7 @@ import Servicios from '@/modules/landing/components/Servicios';
 import Resenas from '@/modules/landing/components/Reseñas';
 import Nosotros from '@/modules/landing/components/Nosotros';
 import RealEstateFAQ from '@/modules/landing/components/RealEstateFAQ';
-import { BackToTopButton } from '@/modules/landing/components/BackToTopButton';
+
 
 export default async function PropertiesPage() {
 
@@ -16,7 +16,7 @@ export default async function PropertiesPage() {
       <Resenas />
       <Nosotros/> 
       <RealEstateFAQ/>
-      <BackToTopButton />
+      
     </main>
   );
 }
