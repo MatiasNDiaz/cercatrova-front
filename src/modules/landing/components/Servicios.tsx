@@ -19,7 +19,7 @@ const services = [
   },
   {
     id: "alquiler",
-    title: "Alquiler de Propiedades",
+    title: "Alquileres",
     description: "Gestión completa: evaluación de inquilinos, redacción contractual y seguimiento.",
     icon: Key,
   },
@@ -31,13 +31,13 @@ const services = [
   },
   {
     id: "asesoramiento",
-    title: "Asesoramiento Profesional",
+    title: "Asesoramiento Inmobiliario",
     description: "Acompañamiento estratégico para decisiones informadas y seguras en cada etapa.",
     icon: Briefcase,
   },
   {
     id: "comercializacion",
-    title: "Publicación y Comercialización",
+    title: "Publicamos tu Propiedad ",
     description: "Evaluamos su propiedad e iniciamos el proceso de comercialización de inmediato.",
     icon: Megaphone,
   },
@@ -63,7 +63,7 @@ export default function ServiciosPremium3D() {
           <div className="w-28 h-0.5 bg-[#0b7a4b] mx-auto mt-8"></div>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-y-20 gap-x-10 justify-items-center">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-y-13 gap-x-12 justify-items-center">
           {services.map((service) => (
             <ServiceCard key={service.id} service={service} />
           ))}
@@ -107,7 +107,7 @@ export default function ServiciosPremium3D() {
 
         .card-3d-title {
           display: block;
-          color: #042f2e;
+          color: #04382b;
           font-weight: 900;
           font-size: 1.25rem;
           line-height: 1.2;
@@ -266,9 +266,9 @@ function ServiceCard({ service }) {
         </div>
 
         <div className="card-bottom">
-          <button className="view-more-btn">
-            Info <ChevronDown size={14} strokeWidth={3} />
-          </button>
+          <a href={`/servicios/${service.id}`} className="view-more-btn">
+            + Info <ChevronDown size={14} strokeWidth={3} />
+          </a>
           
           <a 
             href={whatsappUrl}

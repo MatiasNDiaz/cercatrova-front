@@ -19,21 +19,15 @@ export const FiltersPanel = () => {
   const { filters, setFilters, clearFilters } = usePropertyFilters();
   const [isClearingFilters, setIsClearingFilters] = useState(false);
 
-  // Filtros locales para la landing (no tocan la URL hasta que se hace click en Ver Resultados)
   const [landingFilters, setLandingFilters] = useState<Partial<PropertyFilters>>({});
 
-  // Contador de resultados
   const [resultCount, setResultCount] = useState<number | null>(null);
   const [loadingCount, setLoadingCount] = useState(false);
 
-  // Dropdowns
   const [openLoc, setOpenLoc] = useState(false);
   const [openZone, setOpenZone] = useState(false);
   const [openBarrio, setOpenBarrio] = useState(false);
 
-  /* =========================================================
-      LOCAL STATE PARA INPUTS NUMÉRICOS (ANTI-LAG)
-  ========================================================= */
   const [localNumbers, setLocalNumbers] = useState<{
     rooms: string; bathrooms: string; minPrice: string;
     maxPrice: string; minM2: string; maxM2: string; maxAntiquity: string;
@@ -47,12 +41,8 @@ export const FiltersPanel = () => {
     maxAntiquity: filters.maxAntiquity?.toString() || '',
   });
 
-  // Los filtros a mostrar en la UI dependen de si estamos en landing o catálogo
   const displayFilters = isLanding ? landingFilters : filters;
 
-  /* =========================================================
-      FUNCIÓN UNIFICADA PARA APLICAR FILTROS
-  ========================================================= */
   const applyFilter = useCallback((newFilters: Partial<PropertyFilters>) => {
     if (isLanding) {
       setLandingFilters(prev => {
@@ -71,9 +61,6 @@ export const FiltersPanel = () => {
     }
   }, [isLanding, setFilters]);
 
-  /* =========================================================
-      FETCH CONTADOR DE RESULTADOS
-  ========================================================= */
   const isFirstCountRender = useRef(true);
 
   useEffect(() => {
@@ -111,9 +98,6 @@ export const FiltersPanel = () => {
     return () => clearTimeout(timeout);
   }, [landingFilters, filters, isLanding]);
 
-  /* =========================================================
-      SYNC INPUTS NUMÉRICOS → FILTROS (con debounce)
-  ========================================================= */
   const isFirstRender = useRef(true);
 
   useEffect(() => {
@@ -140,21 +124,18 @@ export const FiltersPanel = () => {
   }, [localNumbers, applyFilter, isClearingFilters]);
 
   /* =========================================================
-      MEMO STYLES
+      MEMO STYLES — SOLO ESTA SECCIÓN CAMBIÓ
   ========================================================= */
   const styles = useMemo(() => ({
-    groupLabel: 'flex items-center gap-2 text-[11px] font-black text-[#0b7a4b] uppercase mb-4 tracking-wider',
-    input: 'w-full h-11 pl-10 pr-3 rounded-xl border border-gray-200 bg-white text-sm text-[#0b7a4b] placeholder:text-[#0b7a4b]/60 focus:border-[#0b7a4b] focus:ring-2 focus:ring-[#0b7a4b]/20 outline-none transition-all duration-200 hover:border-[#0b7a4b]/60',
-    select: 'w-full h-14 pl-12 pr-10 bg-white rounded-2xl border border-gray-200 text-[#0b7a4b] font-medium focus:ring-2 focus:ring-[#0b7a4b]/20 focus:border-[#0b7a4b] outline-none transition-all duration-200 hover:border-[#0b7a4b]/60 flex items-center text-left relative cursor-pointer overflow-hidden whitespace-nowrap text-ellipsis',
+    groupLabel: 'flex items-center gap-2 text-[10px] font-black text-[#0b7a4b] uppercase mb-4 tracking-[0.18em] pb-2.5 border-b border-[#0b7a4b]/10',
+    input: 'w-full h-11 pl-10 pr-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 placeholder:text-gray-400 focus:border-[#0b7a4b] focus:ring-2 focus:ring-[#0b7a4b]/10 outline-none transition-all duration-200 hover:border-[#0b7a4b]/40',
+    select: 'w-full h-14 pl-12 pr-10 bg-white rounded-2xl border border-gray-200 text-gray-700 font-medium focus:ring-2 focus:ring-[#0b7a4b]/10 focus:border-[#0b7a4b] outline-none transition-all duration-200 hover:border-[#0b7a4b]/40 flex items-center text-left relative cursor-pointer overflow-hidden whitespace-nowrap text-ellipsis',
     checkbox: 'w-4 h-4 accent-[#0b7a4b] transition-all text-[#0b7a4b] duration-200 cursor-pointer',
-    iconStyle: 'absolute left-4 top-1/2 -translate-y-1/2 text-[#0b7a4b] pointer-events-none group-focus-within:scale-110 transition-transform duration-200 z-10',
-    dropdownList: 'absolute z-[60] mt-2 w-full bg-white border border-gray-100 rounded-xl shadow-2xl max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-[#0b7a4b]/20',
-    dropdownItem: 'w-full text-left px-5 py-3 text-sm text-[#0b7a4b] hover:bg-[#0b7a4b]/5 transition-colors duration-150 border-b border-gray-50 last:border-none'
+    iconStyle: 'absolute left-4 top-1/2 -translate-y-1/2 text-[#0b7a4b] pointer-events-none transition-all duration-200 z-10',
+    dropdownList: 'absolute z-[60] mt-2 w-full bg-white border border-gray-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-[#0b7a4b]/20',
+    dropdownItem: 'w-full text-left px-5 py-3 text-sm text-gray-700 hover:bg-[#0b7a4b]/5 hover:text-[#0b7a4b] transition-colors duration-150 border-b border-gray-50 last:border-none font-medium'
   }), []);
 
-  /* =========================================================
-      HANDLERS
-  ========================================================= */
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const { name, value, type } = e.target;
@@ -172,33 +153,29 @@ export const FiltersPanel = () => {
     (op: OperationType) => applyFilter({ operationType: op }),
     [applyFilter]
   );
-const activeFiltersCount = useMemo(() => {
-  const f = isLanding ? landingFilters : filters;
-  return Object.entries(f).filter(
-    ([key, value]) => 
-      key !== 'page' && 
-      key !== 'limit' && 
-      value !== undefined && 
-      value !== null && 
-      value !== ''
-  ).length;
-}, [isLanding, landingFilters, filters]);
 
-  /* =========================================================
-      BOTÓN VER RESULTADOS
-  ========================================================= */
+  const activeFiltersCount = useMemo(() => {
+    const f = isLanding ? landingFilters : filters;
+    return Object.entries(f).filter(
+      ([key, value]) =>
+        key !== 'page' &&
+        key !== 'limit' &&
+        value !== undefined &&
+        value !== null &&
+        value !== ''
+    ).length;
+  }, [isLanding, landingFilters, filters]);
+
   const handleVerResultados = useCallback(() => {
     if (isLanding) {
       const params = new URLSearchParams();
       params.set('page', '1');
       params.set('limit', '10');
-      // Filtros de dropdowns/checkboxes
       Object.entries(landingFilters).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
           params.set(key, String(value));
         }
       });
-      // Filtros numéricos locales
       if (localNumbers.rooms) params.set('rooms', localNumbers.rooms);
       if (localNumbers.bathrooms) params.set('bathrooms', localNumbers.bathrooms);
       if (localNumbers.minPrice) params.set('minPrice', localNumbers.minPrice);
@@ -230,25 +207,43 @@ const activeFiltersCount = useMemo(() => {
   }, []);
 
   return (
-    <div className="rounded-4xl border border-[#0b7a4b]/30 bg-linear-to-br from-[#4ac579] to-[#4ac579] shadow-xl p-5 w-full max-w-6xl mx-auto transition-all duration-100">
+    /* ── Contenedor principal ─────────────────────────────── */
+    <div
+      className="rounded-3xl p-6 w-full max-w-6xl mx-auto transition-all duration-100"
+      style={{
+        background: "rgba(255,255,255,0.98)",
+        border: "1px solid rgba(11,122,75,0.12)",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.10), 0 1px 0 rgba(255,255,255,1) inset",
+      }}
+    >
 
-      {/* ================= TOP (LOCALIDAD, ZONA, BARRIO) ================= */}
-      <div className="flex flex-col md:flex-row gap-4 mb-12 items-end">
+      {/* ── TOP: Localidad / Zona / Barrio / Operación ────────── */}
+      <div className="flex flex-col md:flex-row gap-3 mb-6 items-end">
 
         {/* LOCALIDAD */}
         <div className="flex-1 w-full relative">
-          <label className="block text-[10px] font-bold text-[#0b7a4b] uppercase mb-2 ml-4">localidad</label>
+          <label className="block text-[10px] font-black text-[#0b7a4b] uppercase tracking-[0.18em] mb-2 ml-1">
+            Localidad
+          </label>
           <div className="relative group">
-            <MapPin className={styles.iconStyle} size={18} />
-            <button type="button" onClick={() => { setOpenLoc(!openLoc); setOpenZone(false); setOpenBarrio(false); }} className={styles.select}>
-              {displayFilters.localidad || <span className="text-[#0b7a4b]/60">Buscar localidad...</span>}
-              <ChevronDown className="absolute right-4 text-[#0b7a4b]/40" size={16} />
+            <MapPin className={styles.iconStyle} size={16} />
+            <button
+              type="button"
+              onClick={() => { setOpenLoc(!openLoc); setOpenZone(false); setOpenBarrio(false); }}
+              className={styles.select}
+            >
+              {displayFilters.localidad || <span className="text-gray-400 font-normal">Buscar localidad...</span>}
+              <ChevronDown className="absolute right-4 text-gray-400" size={15} />
             </button>
             {openLoc && (
               <div className={styles.dropdownList}>
-                <button onClick={() => { applyFilter({ localidad: undefined }); setOpenLoc(false); }} className={styles.dropdownItem}>Todas las localidades</button>
+                <button onClick={() => { applyFilter({ localidad: undefined }); setOpenLoc(false); }} className={styles.dropdownItem}>
+                  Todas las localidades
+                </button>
                 {locationOptions.localidades.map((loc) => (
-                  <button key={loc} onClick={() => { applyFilter({ localidad: loc }); setOpenLoc(false); }} className={styles.dropdownItem}>{loc}</button>
+                  <button key={loc} onClick={() => { applyFilter({ localidad: loc }); setOpenLoc(false); }} className={styles.dropdownItem}>
+                    {loc}
+                  </button>
                 ))}
               </div>
             )}
@@ -257,18 +252,28 @@ const activeFiltersCount = useMemo(() => {
 
         {/* ZONA */}
         <div className="flex-1 w-full relative">
-          <label className="block text-[10px] font-bold text-[#0b7a4b] uppercase mb-2 ml-4">Zona</label>
+          <label className="block text-[10px] font-black text-[#0b7a4b] uppercase tracking-[0.18em] mb-2 ml-1">
+            Zona
+          </label>
           <div className="relative group">
-            <MapPin className={styles.iconStyle} size={18} />
-            <button type="button" onClick={() => { setOpenZone(!openZone); setOpenLoc(false); setOpenBarrio(false); }} className={styles.select}>
-              {displayFilters.zone || <span className="text-[#0b7a4b]/60">Buscar zona...</span>}
-              <ChevronDown className="absolute right-4 text-[#0b7a4b]/40" size={16} />
+            <MapPin className={styles.iconStyle} size={16} />
+            <button
+              type="button"
+              onClick={() => { setOpenZone(!openZone); setOpenLoc(false); setOpenBarrio(false); }}
+              className={styles.select}
+            >
+              {displayFilters.zone || <span className="text-gray-400 font-normal">Buscar zona...</span>}
+              <ChevronDown className="absolute right-4 text-gray-400" size={15} />
             </button>
             {openZone && (
               <div className={styles.dropdownList}>
-                <button onClick={() => { applyFilter({ zone: undefined }); setOpenZone(false); }} className={styles.dropdownItem}>Todas las zonas</button>
+                <button onClick={() => { applyFilter({ zone: undefined }); setOpenZone(false); }} className={styles.dropdownItem}>
+                  Todas las zonas
+                </button>
                 {locationOptions.zones.map((z) => (
-                  <button key={z} onClick={() => { applyFilter({ zone: z }); setOpenZone(false); }} className={styles.dropdownItem}>{z}</button>
+                  <button key={z} onClick={() => { applyFilter({ zone: z }); setOpenZone(false); }} className={styles.dropdownItem}>
+                    {z}
+                  </button>
                 ))}
               </div>
             )}
@@ -277,18 +282,28 @@ const activeFiltersCount = useMemo(() => {
 
         {/* BARRIO */}
         <div className="flex-1 w-full relative">
-          <label className="block text-[10px] font-bold text-[#0b7a4b] uppercase mb-2 ml-4">Barrio</label>
+          <label className="block text-[10px] font-black text-[#0b7a4b] uppercase tracking-[0.18em] mb-2 ml-1">
+            Barrio
+          </label>
           <div className="relative group">
-            <MapPin className={styles.iconStyle} size={18} />
-            <button type="button" onClick={() => { setOpenBarrio(!openBarrio); setOpenLoc(false); setOpenZone(false); }} className={styles.select}>
-              {displayFilters.barrio || <span className="text-[#0b7a4b]/60">Buscar barrio...</span>}
-              <ChevronDown className="absolute right-4 text-[#0b7a4b]/40" size={16} />
+            <MapPin className={styles.iconStyle} size={16} />
+            <button
+              type="button"
+              onClick={() => { setOpenBarrio(!openBarrio); setOpenLoc(false); setOpenZone(false); }}
+              className={styles.select}
+            >
+              {displayFilters.barrio || <span className="text-gray-400 font-normal">Buscar barrio...</span>}
+              <ChevronDown className="absolute right-4 text-gray-400" size={15} />
             </button>
             {openBarrio && (
               <div className={styles.dropdownList}>
-                <button onClick={() => { applyFilter({ barrio: undefined }); setOpenBarrio(false); }} className={styles.dropdownItem}>Todos los barrios</button>
+                <button onClick={() => { applyFilter({ barrio: undefined }); setOpenBarrio(false); }} className={styles.dropdownItem}>
+                  Todos los barrios
+                </button>
                 {locationOptions.barrios.map((b) => (
-                  <button key={b} onClick={() => { applyFilter({ barrio: b }); setOpenBarrio(false); }} className={styles.dropdownItem}>{b}</button>
+                  <button key={b} onClick={() => { applyFilter({ barrio: b }); setOpenBarrio(false); }} className={styles.dropdownItem}>
+                    {b}
+                  </button>
                 ))}
               </div>
             )}
@@ -296,18 +311,20 @@ const activeFiltersCount = useMemo(() => {
         </div>
 
         {/* OPERACIÓN */}
-        <div>
-          <label className="block text-[10px] font-bold text-[#0b7a4b] uppercase mb-2 ml-4">Operación</label>
-          <div className="flex bg-white rounded-2xl p-1 border border-gray-200 shadow-sm h-14 items-center px-2 gap-2">
+        <div className="shrink-0">
+          <label className="block text-[10px] font-black text-[#0b7a4b] uppercase tracking-[0.18em] mb-2 ml-1">
+            Operación
+          </label>
+          <div className="flex bg-gray-50 rounded-2xl p-1 border border-gray-200 h-14 items-center gap-1">
             {['venta', 'alquiler'].map((op) => (
               <button
                 key={op}
                 type="button"
                 onClick={() => handleOperationChange(op as OperationType)}
-                className={`flex-1 md:w-28 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all transition-text duration-240
+                className={`w-28 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all duration-200
                   ${displayFilters.operationType === op
-                    ? 'bg-[#0b7a4b] text-white shadow-md'
-                    : 'text-[#0b7a4b] hover:bg-[#0b7a4b] hover:text-white'
+                    ? 'bg-[#0b7a4b] text-white shadow-md shadow-[#0b7a4b]/25'
+                    : 'text-gray-500 hover:text-[#0b7a4b] hover:bg-white hover:shadow-sm'
                   }`}
               >
                 {op === 'venta' ? 'Venta' : 'Alquiler'}
@@ -317,15 +334,21 @@ const activeFiltersCount = useMemo(() => {
         </div>
       </div>
 
-      {/* ================= GRID ================= */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-14">
+      {/* ── Separador ─────────────────────────────────────────── */}
+      <div className="w-full h-px bg-gray-100 mb-6" />
+
+      {/* ── GRID 3 COLUMNAS ───────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
         {/* TIPO Y ESPACIOS */}
         <div>
-          <h3 className={styles.groupLabel}><Home size={16} /> Tipo y Espacios</h3>
-          <div className="space-y-4">
+          <h3 className={styles.groupLabel}>
+            <Home size={14} />
+            Tipo y Espacios
+          </h3>
+          <div className="space-y-3">
             <div className="relative group">
-              <Home className={styles.iconStyle} size={18} />
+              <Home className={styles.iconStyle} size={16} />
               <select
                 aria-label='tipo'
                 name="typeOfPropertyId"
@@ -343,61 +366,117 @@ const activeFiltersCount = useMemo(() => {
               </select>
             </div>
             <div className="relative group">
-              <Bed className={styles.iconStyle} size={18} />
-              <input type="number" value={localNumbers.rooms} onChange={(e) => setLocalNumbers((prev) => ({ ...prev, rooms: e.target.value }))} className={styles.input} placeholder="Habitaciones" />
+              <Bed className={styles.iconStyle} size={16} />
+              <input
+                type="number"
+                value={localNumbers.rooms}
+                onChange={(e) => setLocalNumbers((prev) => ({ ...prev, rooms: e.target.value }))}
+                className={styles.input}
+                placeholder="Habitaciones"
+              />
             </div>
             <div className="relative group">
-              <Bath className={styles.iconStyle} size={18} />
-              <input type="number" value={localNumbers.bathrooms} onChange={(e) => setLocalNumbers((prev) => ({ ...prev, bathrooms: e.target.value }))} className={styles.input} placeholder="Baños" />
+              <Bath className={styles.iconStyle} size={16} />
+              <input
+                type="number"
+                value={localNumbers.bathrooms}
+                onChange={(e) => setLocalNumbers((prev) => ({ ...prev, bathrooms: e.target.value }))}
+                className={styles.input}
+                placeholder="Baños"
+              />
             </div>
           </div>
         </div>
 
         {/* PRESUPUESTO Y ÁREA */}
         <div>
-          <h3 className={styles.groupLabel}><DollarSign size={16} /> Presupuesto y Área</h3>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+          <h3 className={styles.groupLabel}>
+            <DollarSign size={14} />
+            Presupuesto y Área
+          </h3>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
               <div className="relative group">
-                <DollarSign className={styles.iconStyle} size={18} />
-                <input type="number" value={localNumbers.minPrice} onChange={(e) => setLocalNumbers((prev) => ({ ...prev, minPrice: e.target.value }))} className={styles.input} placeholder="Mínimo" />
+                <DollarSign className={styles.iconStyle} size={16} />
+                <input
+                  type="number"
+                  value={localNumbers.minPrice}
+                  onChange={(e) => setLocalNumbers((prev) => ({ ...prev, minPrice: e.target.value }))}
+                  className={styles.input}
+                  placeholder="Mínimo"
+                />
               </div>
               <div className="relative group">
-                <DollarSign className={styles.iconStyle} size={18} />
-                <input type="number" value={localNumbers.maxPrice} onChange={(e) => setLocalNumbers((prev) => ({ ...prev, maxPrice: e.target.value }))} className={styles.input} placeholder="Máximo" />
+                <DollarSign className={styles.iconStyle} size={16} />
+                <input
+                  type="number"
+                  value={localNumbers.maxPrice}
+                  onChange={(e) => setLocalNumbers((prev) => ({ ...prev, maxPrice: e.target.value }))}
+                  className={styles.input}
+                  placeholder="Máximo"
+                />
               </div>
             </div>
             <div className="relative group">
-              <Maximize className={styles.iconStyle} size={18} />
-              <input type="number" value={localNumbers.minM2} onChange={(e) => setLocalNumbers((prev) => ({ ...prev, minM2: e.target.value }))} className={styles.input} placeholder="M² mínimos" />
+              <Maximize className={styles.iconStyle} size={16} />
+              <input
+                type="number"
+                value={localNumbers.minM2}
+                onChange={(e) => setLocalNumbers((prev) => ({ ...prev, minM2: e.target.value }))}
+                className={styles.input}
+                placeholder="M² mínimos"
+              />
             </div>
             <div className="relative group">
-              <Maximize className={styles.iconStyle} size={18} />
-              <input type="number" value={localNumbers.maxM2} onChange={(e) => setLocalNumbers((prev) => ({ ...prev, maxM2: e.target.value }))} className={styles.input} placeholder="M² máximos" />
+              <Maximize className={styles.iconStyle} size={16} />
+              <input
+                type="number"
+                value={localNumbers.maxM2}
+                onChange={(e) => setLocalNumbers((prev) => ({ ...prev, maxM2: e.target.value }))}
+                className={styles.input}
+                placeholder="M² máximos"
+              />
             </div>
             <div className="relative group">
-              <Calendar className={styles.iconStyle} size={18} />
-              <input type="number" value={localNumbers.maxAntiquity} onChange={(e) => setLocalNumbers((prev) => ({ ...prev, maxAntiquity: e.target.value }))} className={styles.input} placeholder="Antigüedad máx. (años)" />
+              <Calendar className={styles.iconStyle} size={16} />
+              <input
+                type="number"
+                value={localNumbers.maxAntiquity}
+                onChange={(e) => setLocalNumbers((prev) => ({ ...prev, maxAntiquity: e.target.value }))}
+                className={styles.input}
+                placeholder="Antigüedad máx. (años)"
+              />
             </div>
           </div>
         </div>
 
         {/* ADICIONALES */}
         <div>
-          <h3 className={styles.groupLabel}><Car size={16} /> Adicionales</h3>
-          <div className="space-y-4">
+          <h3 className={styles.groupLabel}>
+            <Car size={14} />
+            Adicionales
+          </h3>
+          <div className="space-y-3">
             {[
-              { label: 'Cochera', name: 'garage', icon: <Car size={16} /> },
-              { label: 'Patio', name: 'patio', icon: <TreePine size={16} /> },
-              { label: 'Escritura', name: 'property_deed', icon: <FileText size={16} /> }
+              { label: 'Cochera', name: 'garage', icon: <Car size={15} /> },
+              { label: 'Patio', name: 'patio', icon: <TreePine size={15} /> },
+              { label: 'Escritura', name: 'property_deed', icon: <FileText size={15} /> },
             ].map((item) => (
               <label
                 key={item.name}
-                className="flex items-center text-[#0b7a4b] justify-between h-11 px-4 bg-white rounded-xl border border-gray-200 cursor-pointer transition-all duration-200 hover:border-[#0b7a4b] hover:shadow-sm group"
+                className={`flex items-center justify-between h-11 px-4 bg-white rounded-xl border cursor-pointer transition-all duration-200 group
+                  ${(displayFilters as Record<string, unknown>)[item.name]
+                    ? 'border-[#0b7a4b]/40 bg-[#0b7a4b]/5 shadow-sm'
+                    : 'border-gray-200 hover:border-[#0b7a4b]/30 hover:shadow-sm'
+                  }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-[#0b7a4b] group-hover:scale-110 transition-transform duration-200">{item.icon}</span>
-                  <span className="text-sm font-medium">{item.label}</span>
+                  <span className={`transition-colors duration-200 ${(displayFilters as Record<string, unknown>)[item.name] ? 'text-[#0b7a4b]' : 'text-gray-400 group-hover:text-[#0b7a4b]'}`}>
+                    {item.icon}
+                  </span>
+                  <span className={`text-sm font-medium transition-colors duration-200 ${(displayFilters as Record<string, unknown>)[item.name] ? 'text-[#0b7a4b] font-semibold' : 'text-gray-600'}`}>
+                    {item.label}
+                  </span>
                 </div>
                 <input
                   type="checkbox"
@@ -409,8 +488,8 @@ const activeFiltersCount = useMemo(() => {
               </label>
             ))}
 
-            {/* BOTONES */}
-            <div className="flex w-full mt-4 h-10.5 relative overflow-hidden">
+            {/* ── BOTONES ───────────────────────────────────────── */}
+            <div className="flex w-full mt-5 gap-2 relative overflow-hidden">
 
               {/* LIMPIAR FILTROS */}
               <button
@@ -427,39 +506,39 @@ const activeFiltersCount = useMemo(() => {
                   setTimeout(() => setIsClearingFilters(false), 0);
                 }}
                 className={`
-                  flex items-center justify-center gap-2 text-xs font-bold text-white py-3 rounded-xl shadow-md 
+                  flex items-center justify-center gap-2 text-xs font-bold py-3 rounded-xl
                   transition-all duration-500 ease-in-out whitespace-nowrap
                   ${activeFiltersCount > 0
-                    ? 'w-[48%] bg-red-600 hover:bg-red-700'
-                    : 'w-full bg-red-600/80 hover:bg-red-700'
+                    ? 'w-[46%] bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'w-full bg-gray-100 text-gray-400 hover:bg-gray-200 border border-gray-200'
                   }
                 `}
               >
-                <Trash2 size={14} className="shrink-0" />
-                <span className="truncate">Limpiar Filtros ({activeFiltersCount})</span>
+                <Trash2 size={13} className="shrink-0" />
+                <span className="truncate">Limpiar ({activeFiltersCount})</span>
               </button>
 
-              {/* VER RESULTADOS con contador */}
+              {/* VER RESULTADOS */}
               <button
                 type="button"
                 onClick={handleVerResultados}
                 className={`
-                  flex items-center justify-center gap-2 text-xs font-bold text-white py-3 rounded-xl shadow-md cursor-pointer
-                  transition-all duration-500 ease-in-out bg-[#0c7332] hover:bg-[#065021]
+                  flex items-center justify-center gap-2 text-xs font-bold text-white py-3 rounded-xl
+                  transition-all duration-500 ease-in-out bg-[#0b7a4b] hover:bg-[#084f30] shadow-md shadow-[#0b7a4b]/25 cursor-pointer
                   ${activeFiltersCount > 0
-                    ? 'w-[48%] ml-[4%] opacity-100 scale-100'
-                    : 'w-0 ml-0 opacity-0 scale-95 pointer-events-none'
+                    ? 'w-[54%] opacity-100 scale-100'
+                    : 'w-0 opacity-0 scale-95 pointer-events-none'
                   }
                 `}
               >
-                <Search size={14} className="shrink-0" />
+                <Search size={13} className="shrink-0" />
                 <span className="whitespace-nowrap">
-                  Ver Resultados{' '}
+                  Ver{' '}
                   {loadingCount
-                    ? '(...)'
+                    ? '...'
                     : resultCount !== null
-                      ? `(${resultCount})`
-                      : ''
+                      ? `${resultCount} resultados`
+                      : 'Resultados'
                   }
                 </span>
               </button>

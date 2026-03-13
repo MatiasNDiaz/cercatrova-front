@@ -1,13 +1,5 @@
-import axios from 'axios';
 import { PropertyFilters } from '../interfaces/property-filters.interface';
-
-// Base URL desde variable de entorno
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-// Creamos una instancia de axios
-const api = axios.create({
-  baseURL: API_URL,
-});
+import  api  from "../../shared/lib/axios";
 
 export const propertiesService = {
 

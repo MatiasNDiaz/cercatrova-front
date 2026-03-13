@@ -17,10 +17,13 @@ const reviews = [
 
 export default function Resenas() {
   return (
-    <section className="py-20 w-full bg-gray-200  overflow-hidden flex flex-col items-center">
+    <section id="reseñas" className="py-20 w-full bg-gray-200  overflow-hidden flex flex-col items-center">
       <div className="text-center mb-12">
         <span className="text-sm tracking-[0.2em] uppercase text-[#0b7a4b] font-medium">Testimonios</span>
-        <h2 className="text-4xl md:text-5xl font-semibold mt-4 text-gray-900">Lo que dicen nuestros clientes</h2>
+        <h2 className="text-4xl md:text-5xl font-semibold mt-4 text-gray-900">Lo que dicen&nbsp;  
+          <span className=" text-[#0b7a4b]">
+              nuestros clientes
+          </span>.</h2>
         <div className="w-28 h-0.5 bg-[#0b7a4b] mx-auto mt-8"></div>
       </div>
       

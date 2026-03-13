@@ -49,8 +49,13 @@ const RealEstateFAQ = () => {
     <section className="py-20 px-4 max-w-4xl mx-auto font-sans overflow-hidden">
       <div className="text-center mb-12">
         <span className="text-sm tracking-[0.2em] uppercase text-[#0b7a4b] font-medium">preguntas frecuentes</span>
-        <h2 id="faq" className="text-4xl md:text-5xl font-semibold mt-4 text-gray-900">Aclaramos tus dudas </h2>
+        <h2 id="faq" className="text-4xl md:text-5xl font-semibold mt-4 text-gray-900">Aclaramos <span className=" text-[#0b7a4b]">
+              tus dudas
+          </span>
+          </h2>
+          
         <div className="w-28 h-0.5 bg-[#0b7a4b] mx-auto mt-8"></div>
+
       </div>
 
       <div className="space-y-5">

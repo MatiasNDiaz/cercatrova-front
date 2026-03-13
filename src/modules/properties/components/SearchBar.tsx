@@ -38,7 +38,7 @@ export const SearchBar = () => {
   }, [filters.search]);
 
   return (
-    <div className="relative w-full mt-6 max-w-4xl ">
+    <div className="relative w-full mt-1 max-w-4xl ">
       <div className="relative flex items-center w-full h-12 rounded-4xl focus-within:shadow-lg bg-white overflow-hidden border border-[#0b7a4b]">
         <div className="grid place-items-center h-full w-12 text-gray-300">
           <Search size={22} className='text-[#0e925b]'/>
@@ -64,9 +64,6 @@ export const SearchBar = () => {
         )}
       </div>
       
-      <p className="mt-2 text-xs text-[#0b7a4b] px-1">
-        Prueba con: <span className="italic text-blue-500 cursor-pointer" onClick={() => setInputValue('departamento en mina clavero')}>departamento en mina clavero</span>
-      </p>
     </div>
   );
 };

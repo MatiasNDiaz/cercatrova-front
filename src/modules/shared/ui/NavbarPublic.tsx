@@ -4,8 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ChevronDown,
-  Mail,
-  Instagram,
   Menu,
   X,
   ArrowLeft,
@@ -17,7 +15,7 @@ import {
   LogIn,
   MessageCircle,
 } from "lucide-react";
-import { BsWhatsapp } from "react-icons/bs";
+import { BsFacebook, BsInstagram, BsWhatsapp } from "react-icons/bs";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -133,14 +131,13 @@ export const NavbarPublic = () => {
     { label: "Alquiler de Propiedades", href: "/servicios/alquiler" },
     { label: "Tasaciones de Propiedades", href: "/servicios/tasaciones" },
     { label: "Asesoramiento Profesional", href: "/servicios/asesoramiento" },
-    { label: "Publicamos tu propiedad", href: "/servicios/publicacion" },
-    { label: "Gestión Legal y Documental", href: "/servicios/gestion-legal" },
+    { label: "Publicamos tu propiedad", href: "/servicios/comercializacion" },
   ];
 
   const contactoLinks = [
-    { label: "+54 9 351387-2817", href: "https://wa.me/543513872817", icon: <BsWhatsapp className="mr-2 text-xl" />, external: true },
-    { label: "Instagram", href: "https://www.instagram.com/inmobiliariacercatrova/", icon: <Instagram className="mr-2" />, external: true },
-    { label: "Email", href: "mailto:info@cercatrova.com", icon: <Mail className="mr-2" />, external: true },
+    { label: "WhatsApp", href: "https://wa.me/543513872817", icon: <BsWhatsapp className="mr-2 text-xl" />, external: true },
+    { label: "Instagram", href: "https://www.instagram.com/inmobiliariacercatrova/", icon: <BsInstagram className="mr-2" size={20}/>, external: true },
+    { label: "Facebook", href: "https://web.facebook.com/profile.php?id=100095365100918", icon: <BsFacebook className="mr-2 "  size={20}/>, external: true },
   ];
 
   return (
