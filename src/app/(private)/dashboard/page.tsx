@@ -12,35 +12,35 @@ const sections = [
     icon: User,
     label: 'Mi Perfil',
     description: 'Editá tus datos personales y foto de perfil',
-    color: 'bg-blue-50 text-blue-600',
+    color: 'bg-blue-100 text-blue-600',
   },
   {
     href: '/dashboard/favoritos',
     icon: Heart,
     label: 'Favoritos',
     description: 'Las propiedades que guardaste',
-    color: 'bg-red-50 text-red-500',
+    color: 'bg-red-100 text-red-500',
   },
   {
     href: '/dashboard/preferencias',
     icon: Settings,
     label: 'Preferencias',
     description: 'Configurá tus preferencias de búsqueda',
-    color: 'bg-purple-50 text-purple-600',
+    color: 'bg-purple-200 text-purple-600',
   },
   {
     href: '/dashboard/mis-solicitudes',
     icon: FileText,
     label: 'Mis Solicitudes',
     description: 'Seguí el estado de tus propiedades publicadas',
-    color: 'bg-amber-50 text-amber-600',
+    color: 'bg-amber-100 text-amber-600',
   },
   {
     href: '/dashboard/notificaciones',
     icon: Bell,
     label: 'Notificaciones',
     description: 'Tus notificaciones y alertas recientes',
-    color: 'bg-[#0b7a4b]/8 text-[#0b7a4b]',
+    color: 'bg-[#0b7a4b]/20 text-[#0b7a4b]',
   },
 ];
 
@@ -48,22 +48,22 @@ export default function DashboardPage() {
   const { user } = useAuth();
 
   return (
-    <div className="flex flex-col gap-8  w-full ">
+    <div className="flex flex-col gap-3  w-full ">
 
       {/* Bienvenida */}
 <div
-  className="relative flex flex-col items-center justify-center rounded-tr-3xl rounded-tl-3xl h-80 shadow-lg px-6"
+  className="relative flex flex-col items-center justify-center rounded-tr-3xl rounded-tl-3xl rounded-br-xl rounded-bl-xl h-74 shadow-lg px-6"
   style={{
     backgroundImage: 'url(/BannerInmo.png)',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
   }}
 >
-  
+  <div className="absolute z-0 inset-0 bg-black/50  rounded-tr-3xl rounded-tl-3xl rounded-br-xl rounded-bl-xl"></div>
   {/* Mensaje de bienvenida (movido un poco a la derecha para no chocar con el nombre si es largo) */}
-  <h2 className="text-white text-4xl font-bold tracking-tight max-w-2xl leading-tight">
-    ¡Hola, {user?.name}! Qué bueno verte de nuevo. <br /> 
-    <span className="text-white text-lg ml-6 mt-0 font-medium">Tu próximo hogar te está esperando. 👋</span>
+  <h2 className="relative z-10 text-white text-4xl font-bold tracking-tight max-w-2xl leading-tight">
+    ¡Hola, {user?.name}! Qué bueno verte de nuevo! <br /> 
+    <span className="text-white text-2xl mt-0 font-medium">Tu próximo hogar te está esperando. 👋</span>
   </h2>
 
   {/* Contenedor del Avatar + Info a la derecha */}
@@ -90,9 +90,9 @@ export default function DashboardPage() {
       </h1>
       
       {/* El resto queda debajo, sobre el fondo claro de la página */}
-      <div className="mt-1 gap-1 text-left">
+      <div className="mt-2 gap-1 text-left">
         <p className="text-slate-600 text-sm -ml-1">{user?.email}</p>
-        <p className="text-[10px] mt-2 -ml-3.5 w-fit px-6 font-bold uppercase text-center tracking-wider text-[#0b7a4b] bg-[#0b7a4b]/12  py-1 rounded-full">
+        <p className="text-[10px] mt-1.5 -ml-3.5 w-fit px-6 font-bold uppercase text-center tracking-wider text-[#0b7a4b] bg-[#0b7a4b]/12  py-1 rounded-full">
            usuario desde 2026
         </p>
       </div>
@@ -113,9 +113,9 @@ export default function DashboardPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-gray-900">{label}</p>
-              <p className="text-sm text-gray-400 mt-0.5 truncate">{description}</p>
+              <p className="text-sm text-gray-600 mt-0.5 truncate">{description}</p>
             </div>
-            <ChevronRight size={16} className="text-gray-300 group-hover:text-[#0b7a4b] group-hover:translate-x-0.5 transition-all shrink-0" />
+            <ChevronRight size={16} className="text-gray-500 group-hover:text-[#0b7a4b] group-hover:translate-x-0.5 transition-all shrink-0" />
           </Link>
         ))}
       </div>

@@ -582,19 +582,19 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
       <div className="max-w-6xl mx-auto px-4 pt-28 pb-16">
 
         <div className="flex items-center gap-4 mb-6">
-          <Link href="/properties" className="inline-flex items-center gap-2 text-sm font-semibold text-[#179f64] hover:text-[#0f8c58] group transition-colors">
+          <Link href="/properties" className="inline-flex items-center gap-2 text-sm font-semibold text-[#179e66] hover:text-[#249868] group transition-colors">
             <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform mt-0.5" />Volver al catálogo
           </Link>
           <span className="text-gray-300">|</span>
-          <a href="#mapa-ubicacion" onClick={scrollToMap} className="inline-flex items-center gap-2 text-sm font-semibold text-[#179f64] hover:text-[#0f8c58] group transition-colors">
+          <a href="#mapa-ubicacion" onClick={scrollToMap} className="inline-flex items-center gap-2 text-sm font-semibold text-[#179e66] hover:text-[#249868] group transition-colors">
             <MapPin size={16} className="group-hover:scale-110 transition-transform" />Ver dirección exacta
           </a>
           <span className="text-gray-300">|</span>
-          <a href="#comentarios" onClick={scrollToComments} className="inline-flex items-center gap-2 text-sm font-semibold text-[#179f64] hover:text-[#0f8c58] group transition-colors">
+          <a href="#comentarios" onClick={scrollToComments} className="inline-flex items-center gap-2 text-sm font-semibold text-[#179e66] hover:text-[#249868] group transition-colors">
             <MessageCircleMore size={16} className="group-hover:scale-110 transition-transform" />Ver Comentarios
           </a>
           <span className="text-gray-300">|</span>
-          <a href="#valoracion" onClick={scrollToRatings} className="inline-flex items-center gap-2 text-sm font-semibold text-[#179f64] hover:text-[#0f8c58] group transition-colors">
+          <a href="#valoracion" onClick={scrollToRatings} className="inline-flex items-center gap-2 text-sm font-semibold text-[#179e66] hover:text-[#249868] group transition-colors">
             <Star size={16} className="group-hover:scale-110 transition-transform" />Ver Valoraciones
           </a>
         </div>

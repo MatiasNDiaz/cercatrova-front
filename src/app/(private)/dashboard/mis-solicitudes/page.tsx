@@ -7,6 +7,7 @@ import api from '@/modules/shared/lib/axios';
 import {
   ClipboardList, MapPin, Plus, ChevronDown, ChevronUp,
   Clock, CheckCircle, XCircle, Eye, Calendar,
+  ArrowLeft,
 } from 'lucide-react';
 
 interface PropertyRequest {
@@ -65,12 +66,15 @@ export default function MisSolicitudesPage() {
 
   return (
     <div className="flex flex-col gap-6">
+   <Link href="/dashboard" className="inline-flex  bg-white rounded-2xl p-2 border border-gray-300 px-2 w-fit items-center gap-2  text-sm font-semibold text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors">
+            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform mt-0.5" />
+          </Link>
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#0b7a4b]">Mis Solicitudes</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Estado de tus propiedades enviadas al agente</p>
+          <p className="text-sm text-gray-600 mt-0.5">Estado de tus propiedades enviadas al agente</p>
         </div>
         <Link href="/publicar"
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-white rounded-xl transition-all active:scale-95"
@@ -104,7 +108,7 @@ export default function MisSolicitudesPage() {
             <p className="font-bold text-gray-700">Todavía no enviaste solicitudes</p>
             <p className="text-sm text-gray-400 mt-1">Completá el formulario y un agente se va a contactar con vos</p>
           </div>
-          <Link href="/dashboard/mis-solicitudes/nueva"
+          <Link href="/publicar/"
             className="mt-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl transition-all"
             style={{ background: 'linear-gradient(135deg, #0f8b57, #14a366)' }}>
             Publicar mi propiedad
@@ -123,11 +127,10 @@ export default function MisSolicitudesPage() {
             return (
               <div key={req.id}
                 className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden transition-all">
-
                 {/* Fila principal */}
                 <button
                   onClick={() => setExpandedId(isExpanded ? null : req.id)}
-                  className="w-full flex items-center gap-4 p-5 text-left hover:bg-gray-50 transition-colors">
+                  className="w-full flex items-center gap-4 p-5 text-left hover:bg-green-50 transition-colors">
 
                   {/* Ícono tipo propiedad */}
                   <div className="w-11 h-11 rounded-2xl bg-[#0b7a4b]/10 flex items-center justify-center shrink-0">
@@ -136,10 +139,10 @@ export default function MisSolicitudesPage() {
 
                   {/* Info principal */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 line-clamp-1">
+                    <p className="font-bold text-[#0b7a4b] line-clamp-1">
                       {req.tipoPropiedad} — {req.direccion}
                     </p>
-                    <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-0.5">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
                       <MapPin size={10} className="text-[#0b7a4b]" />
                       {req.barrio}, {req.localidad}
                     </div>
@@ -174,8 +177,8 @@ export default function MisSolicitudesPage() {
                         req.orientacion ? { label: 'Orientación', value: req.orientacion } : null,
                         req.pisoDepto   ? { label: 'Piso/Depto',  value: req.pisoDepto }  : null,
                       ].filter(Boolean).map((item, i) => (
-                        <div key={i} className="bg-gray-50 rounded-2xl p-3">
-                          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{item!.label}</p>
+                        <div key={i} className="bg-gray-200 rounded-2xl p-3">
+                          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{item!.label}</p>
                           <p className="text-sm font-bold text-gray-700 mt-0.5">{item!.value}</p>
                         </div>
                       ))}
@@ -189,7 +192,7 @@ export default function MisSolicitudesPage() {
                           { label: 'Impuestos al día',value: req.impuestosAlDia },
                           { label: 'Apto crédito',    value: req.aptoCredito },
                         ].map((b, i) => (
-                          <span key={i} className={`text-xs font-semibold px-3 py-1 rounded-full ${b.value ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
+                          <span key={i} className={`text-xs font-semibold px-3 py-1 rounded-full ${b.value ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'}`}>
                             {b.value ? '✓' : '✗'} {b.label}
                           </span>
                         ))}
@@ -204,7 +207,7 @@ export default function MisSolicitudesPage() {
                       )}
 
                       {/* Fecha */}
-                      <div className="col-span-2 sm:col-span-3 flex items-center gap-1.5 text-xs text-gray-400">
+                      <div className="col-span-2 sm:col-span-3 flex items-center gap-1.5 text-xs text-gray-500">
                         <Calendar size={11} />
                         Enviado el {new Date(req.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
                       </div>

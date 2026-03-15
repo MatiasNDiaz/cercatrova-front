@@ -16,7 +16,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
-  const { login, user } = useAuth();
+  const { login,  } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -27,8 +27,8 @@ export function LoginForm() {
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     try {
-      await login(data);
-      toast.success(`¡Bienvenido de nuevo! ${user?.name || 'Usuario'} Has iniciado sesión exitosamente.`);
+      const loggedUser = await login(data);
+      toast.success(`¡Bienvenido de nuevo! ${loggedUser?.name || 'Usuario'} Has iniciado sesión exitosamente.`);
     } catch (e) {
       console.assert(e instanceof Error, 'Error desconocido');
       toast.error('Error al iniciar sesión. Verificá tus credenciales e intentá nuevamente.');

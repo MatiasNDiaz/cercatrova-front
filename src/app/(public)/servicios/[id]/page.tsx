@@ -283,7 +283,7 @@ export default function ServicioDetallePage({ params }: { params: { id: string }
                     Completá el formulario online con los datos de tu inmueble y nuestro agente lo evaluará en 24 a 48hs.
                   </p>
                   <Link
-                    href="/servicios/publicar"
+                    href="/publicar"
                     className="inline-flex items-center gap-2 text-white font-bold px-6 py-3 rounded-2xl text-sm shadow-md transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg"
                     style={{ background: `linear-gradient(135deg, ${s.g1}, ${s.g2})` }}
                   >

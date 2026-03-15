@@ -7,34 +7,29 @@ import { toast } from 'sonner';
 import api from '@/modules/shared/lib/axios';
 import {
   User, Camera, Save, Eye, EyeOff, Lock, Mail,
-  Phone, BadgeCheck, Pencil,
-  ArrowLeft,
+  Phone, BadgeCheck, Pencil, ArrowLeft,
 } from 'lucide-react';
 import Link from 'next/link';
 
-export default function PerfilPage() {
-  const { user, updateUser } = useAuth(); // ← agregamos updateUser
+export default function AdminPerfilPage() {
+  const { user, updateUser } = useAuth();
 
-  // ── DATOS PERSONALES ──
   const [name, setName] = useState(user?.name ?? '');
   const [surname, setSurname] = useState(user?.surname ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
   const [savingData, setSavingData] = useState(false);
 
-  // ── CONTRASEÑA ──
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
-  // ── FOTO ──
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── ACTUALIZAR DATOS ──
   const handleSaveData = async () => {
     if (!name.trim() || !surname.trim() || !email.trim()) {
       toast.error('Nombre, apellido y email son obligatorios');
@@ -43,7 +38,7 @@ export default function PerfilPage() {
     setSavingData(true);
     try {
       await api.patch(`/users/${user!.id}`, { name, surname, phone, email });
-      updateUser({ name, surname, phone, email }); // ← actualiza el contexto
+      updateUser({ name, surname, phone, email });
       toast.success('Datos actualizados correctamente');
     } catch {
       toast.error('No se pudieron actualizar los datos');
@@ -52,7 +47,6 @@ export default function PerfilPage() {
     }
   };
 
-  // ── ACTUALIZAR CONTRASEÑA ──
   const handleSavePassword = async () => {
     if (!newPassword || !confirmPassword) {
       toast.error('Completá todos los campos');
@@ -79,7 +73,6 @@ export default function PerfilPage() {
     }
   };
 
-  // ── SUBIR FOTO ──
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -95,7 +88,7 @@ export default function PerfilPage() {
       const { data: updated } = await api.patch(`/users/${user!.id}/photo`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      updateUser({ photo: updated.photo }); // ← actualiza la foto en todo el contexto
+      updateUser({ photo: updated.photo });
       toast.success('Foto actualizada');
     } catch {
       toast.error('No se pudo subir la foto');
@@ -109,19 +102,21 @@ export default function PerfilPage() {
 
   return (
     <div className="flex flex-col gap-6">
-   <Link href="/dashboard" className="inline-flex  bg-white rounded-2xl p-2 border border-gray-300 px-2 w-fit items-center gap-2  text-sm font-semibold text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors">
-            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform mt-0.5" />
-          </Link>
-      {/* ── HEADER ── */}
+
+      <Link href="/dashboardAdmin"
+        className="inline-flex bg-white rounded-2xl p-2 border border-gray-300 px-2 w-fit items-center gap-2 text-sm font-semibold text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors">
+        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform mt-0.5" />
+      </Link>
+
       <div>
-        <h1 className="text-2xl font-bold text-[#0b7a4b] not-prose">Mi Perfil</h1>
+        <h1 className="text-2xl font-bold text-[#0b7a4b]">Mi Perfil</h1>
         <p className="text-sm text-gray-600 mt-0.5">Administrá tu información personal y seguridad</p>
       </div>
 
-      {/* ── FOTO DE PERFIL ── */}
+      {/* ── FOTO ── */}
       <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
         <h2 className="text-sm font-bold text-[#0b7a4b] uppercase tracking-wider mb-5 flex items-center gap-2">
-          <Camera size={14} />Foto de perfil
+          <Camera size={14} /> Foto de perfil
         </h2>
         <div className="flex items-center gap-6">
           <div className="relative shrink-0">
@@ -137,7 +132,7 @@ export default function PerfilPage() {
                 <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               </div>
             )}
-            <button aria-label="Cambiar foto de perfil" onClick={() => fileInputRef.current?.click()}
+            <button aria-label="Cambiar foto" onClick={() => fileInputRef.current?.click()}
               className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-[#0b7a4b] text-white flex items-center justify-center shadow-md hover:bg-[#0f8b57] transition-colors">
               <Pencil size={13} />
             </button>
@@ -146,24 +141,22 @@ export default function PerfilPage() {
           <div>
             <p className="font-bold text-gray-900">{user?.name} {user?.surname}</p>
             <p className="text-sm text-gray-400 mt-0.5">{user?.email}</p>
-            <button onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingPhoto}
+            <button onClick={() => fileInputRef.current?.click()} disabled={uploadingPhoto}
               className="mt-3 flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#0b7a4b] bg-[#0b7a4b]/8 hover:bg-[#0b7a4b]/15 rounded-xl transition-colors disabled:opacity-50">
               <Camera size={14} />
               {uploadingPhoto ? 'Subiendo...' : 'Cambiar foto'}
             </button>
           </div>
-          <input aria-label="Foto de perfil" ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+          <input aria-label='a' ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
         </div>
       </div>
 
       {/* ── DATOS PERSONALES ── */}
       <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
         <h2 className="text-sm font-bold text-[#0b7a4b] uppercase tracking-wider mb-5 flex items-center gap-2">
-          <BadgeCheck size={14} />Datos personales
+          <BadgeCheck size={14} /> Datos personales
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-gray-500">Nombre</label>
             <div className="relative">
@@ -173,7 +166,6 @@ export default function PerfilPage() {
                 placeholder="Tu nombre" />
             </div>
           </div>
-
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-gray-500">Apellido</label>
             <div className="relative">
@@ -183,7 +175,6 @@ export default function PerfilPage() {
                 placeholder="Tu apellido" />
             </div>
           </div>
-
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-gray-500">Email</label>
             <div className="relative">
@@ -193,7 +184,6 @@ export default function PerfilPage() {
                 placeholder="tu@email.com" />
             </div>
           </div>
-
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-gray-500">Teléfono</label>
             <div className="relative">
@@ -203,7 +193,6 @@ export default function PerfilPage() {
                 placeholder="Tu teléfono" />
             </div>
           </div>
-
         </div>
         <div className="flex justify-end mt-5">
           <button onClick={handleSaveData} disabled={savingData}
@@ -218,10 +207,9 @@ export default function PerfilPage() {
       {/* ── CONTRASEÑA ── */}
       <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
         <h2 className="text-sm font-bold text-[#0b7a4b] uppercase tracking-wider mb-5 flex items-center gap-2">
-          <Lock size={14} />Cambiar contraseña
+          <Lock size={14} /> Cambiar contraseña
         </h2>
         <div className="flex flex-col gap-4 max-w-md">
-
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-gray-500">Nueva contraseña</label>
             <div className="relative">
@@ -236,7 +224,6 @@ export default function PerfilPage() {
               </button>
             </div>
           </div>
-
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-gray-500">Confirmar contraseña</label>
             <div className="relative">
@@ -251,13 +238,11 @@ export default function PerfilPage() {
               </button>
             </div>
           </div>
-
           {confirmPassword && (
             <p className={`text-xs font-semibold ${newPassword === confirmPassword ? 'text-emerald-500' : 'text-red-400'}`}>
               {newPassword === confirmPassword ? '✓ Las contraseñas coinciden' : '✗ Las contraseñas no coinciden'}
             </p>
           )}
-
         </div>
         <div className="flex justify-end mt-5">
           <button onClick={handleSavePassword} disabled={savingPassword}

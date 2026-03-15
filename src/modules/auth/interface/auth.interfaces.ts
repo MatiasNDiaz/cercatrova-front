@@ -29,6 +29,7 @@ export interface RegisterResponse {
 export interface LoginFormData {
   email: string;
   password: string;
+  user?: AuthUser; // opcional, para mostrar el nombre en el toast de bienvenida
 }
 
 // Los datos del formulario de registro

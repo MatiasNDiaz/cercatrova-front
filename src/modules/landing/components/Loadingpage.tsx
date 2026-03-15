@@ -19,13 +19,13 @@ const FACTS = [
 ];
 
 const CIRCLES = [
-  { size: 320, top: "-10%", left: "-8%",  opacity: 0.06, delay: "0s",   dur: "7s"  },
-  { size: 180, top: "5%",   left: "70%",  opacity: 0.08, delay: "1s",   dur: "5s"  },
-  { size: 240, top: "65%",  left: "78%",  opacity: 0.07, delay: "0.5s", dur: "6s"  },
-  { size: 140, top: "72%",  left: "-4%",  opacity: 0.09, delay: "1.5s", dur: "4.5s"},
-  { size: 90,  top: "40%",  left: "88%",  opacity: 0.06, delay: "2s",   dur: "5.5s"},
-  { size: 60,  top: "20%",  left: "15%",  opacity: 0.08, delay: "0.8s", dur: "6.5s"},
-  { size: 200, top: "80%",  left: "40%",  opacity: 0.05, delay: "1.2s", dur: "8s"  },
+  { size: 320, top: "-10%", left: "-8%",  opacity: 0.2, delay: "0s",   dur: "7s"  },
+  { size: 180, top: "5%",   left: "70%",  opacity: 0.2, delay: "1s",   dur: "5s"  },
+  { size: 240, top: "65%",  left: "78%",  opacity: 0.2, delay: "0.5s", dur: "6s"  },
+  { size: 140, top: "72%",  left: "-4%",  opacity: 0.2, delay: "1.5s", dur: "4.5s"},
+  { size: 90,  top: "40%",  left: "88%",  opacity: 0.2, delay: "2s",   dur: "5.5s"},
+  { size: 60,  top: "20%",  left: "15%",  opacity: 0.2, delay: "0.8s", dur: "6.5s"},
+  { size: 200, top: "80%",  left: "40%",  opacity: 0.2, delay: "1.2s", dur: "8s"  },
 ];
 
 export default function LoadingPage({ onComplete }: { onComplete?: () => void }) {
@@ -212,10 +212,10 @@ export default function LoadingPage({ onComplete }: { onComplete?: () => void })
           onClick={changeFact}
           style={{
             marginTop: 16,
-            width: "min(500px, 86vw)",
+            width: "min(500px, 96vw)",
             background: "#ffffff",
             border: "1.5px solid #e5e7eb",
-            borderRadius: 20,
+            borderRadius: 10,
             padding: 0,
             cursor: "pointer",
             textAlign: "left",
@@ -241,13 +241,13 @@ export default function LoadingPage({ onComplete }: { onComplete?: () => void })
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{
-                fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,0.7)",
+                fontSize: 10, fontWeight: 800, color: "#ffffff",
                 textTransform: "uppercase", letterSpacing: "0.16em",
               }}>
                 ¿Sabías que...?
               </span>
               <span style={{
-                fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.6)",
+                fontSize: 10, fontWeight: 700, color: "#ffffff",
                 background: "rgba(255,255,255,0.15)",
                 padding: "1px 7px", borderRadius: 999,
               }}>
@@ -265,7 +265,7 @@ export default function LoadingPage({ onComplete }: { onComplete?: () => void })
               background: "#f0fdf4",
               border: "1px solid #d1fae5",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 24,
+              fontSize: 28,
             }}>
               {fact.emoji}
             </div>

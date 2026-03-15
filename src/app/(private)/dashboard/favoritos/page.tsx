@@ -8,6 +8,7 @@ import api from '@/modules/shared/lib/axios';
 import { toast } from 'sonner';
 import {
   Heart, MapPin, Bed, Bath, Maximize, Trash2, Home, ArrowRight,
+  ArrowLeft,
 } from 'lucide-react';
 
 interface FavoriteProperty {
@@ -65,12 +66,14 @@ export default function FavoritosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-
+       <Link href="/dashboard" className="inline-flex  bg-white rounded-2xl p-2 border border-gray-300 px-2 w-fit items-center gap-2  text-sm font-semibold text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors">
+            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform mt-0.5" />
+          </Link>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#0b7a4b]">Favoritos</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Las propiedades que guardaste</p>
+          <p className="text-sm text-gray-600 mt-0.5">Las propiedades que te gustaron</p>
         </div>
         {!loading && favorites.length > 0 && (
           <span className="text-xs font-bold text-[#0b7a4b] bg-[#0b7a4b]/10 px-3 py-1.5 rounded-full">

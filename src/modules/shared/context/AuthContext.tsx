@@ -9,7 +9,7 @@ import type { AuthUser, LoginFormData, RegisterFormData } from '@/modules/auth/i
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (data: LoginFormData) => Promise<void>;
+  login: (data: LoginFormData) => Promise<AuthUser>;
   logout: () => Promise<void>;
   register: (data: RegisterFormData) => Promise<void>;
   updateUser: (data: Partial<AuthUser>) => void;
@@ -40,11 +40,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkSession();
   }, []);
 
-  const login = async (data: LoginFormData) => {
-    const response = await authService.login(data);
-    setUser(response.user);
-    router.push('/'); // redirige al home después del login
-  };
+
+const login = async (data: LoginFormData) => {
+  const response = await authService.login(data);
+  console.log('ROL QUE LLEGA:', response.user.role); // ← agregá esto
+  setUser(response.user);
+  if (response.user.role === 'admin') {
+    router.push('/dashboardAdmin/');
+  } else {
+    router.push('/dashboard');
+  }
+  return response.user;
+};
+
 
   const logout = async () => {
     await authService.logout();

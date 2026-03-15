@@ -80,7 +80,7 @@ export function RegisterForm() {
       </div>
 
       {/* ── PANEL DERECHO — formulario ── */}
-      <div className="w-full lg:w-1/2 bg-gray-100 flex items-center justify-center px-6 py-10">
+      <div className="w-full lg:w-1/2 bg-gray-100 mt-15 flex items-center justify-center px-6 py-10">
         <div className="bg-white w-full max-w-md rounded-2xl shadow-sm border border-gray-100 p-8">
 
           {/* Header */}
