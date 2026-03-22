@@ -163,9 +163,13 @@ export default function SolicitudesAdminPage() {
 
   return (
     <div className="flex flex-col gap-6">
-  <Link href="/dashboardAdmin"
-        className="inline-flex bg-white rounded-2xl p-2 border border-gray-300 px-2 w-fit items-center gap-2 text-sm font-semibold text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors">
-        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform mt-0.5" />
+ <Link
+        href="/dashboardAdmin"
+        className="inline-flex items-center gap-2 text-sm font-medium text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors w-fit"
+      >
+        <span className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
+          <ArrowLeft size={14} />
+        </span>
       </Link>
       {/* Header */}
       <div>
@@ -177,7 +181,7 @@ export default function SolicitudesAdminPage() {
 
       {/* Stat cards de estado */}
       {!loading && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2  sm:grid-cols-4 gap-3">
           {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
             const Icon = cfg.icon;
             return (
@@ -246,7 +250,7 @@ export default function SolicitudesAdminPage() {
 
       {/* Lista */}
       {!loading && filtered.length > 0 && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {filtered.map(r => {
             const isExpanded = expandedId === r.id;
             const isUpdating = updatingId === r.id;
@@ -370,7 +374,7 @@ export default function SolicitudesAdminPage() {
                           </a>
                           <a href={gmailUrl(r.user?.email, r.user?.name)}
                             target="_blank" rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all active:scale-95">
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-700 transition-all active:scale-95">
                             <Mail size={15} /> Gmail
                           </a>
                         </div>
@@ -462,7 +466,7 @@ export default function SolicitudesAdminPage() {
                     {/* Eliminar */}
                     <div className="flex justify-end pt-1">
                       <button onClick={() => handleDelete(r.id)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-all active:scale-95">
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-red-600 bg-red-100 hover:bg-red-200 transition-all active:scale-95">
                         <Trash2 size={15} /> Eliminar solicitud
                       </button>
                     </div>

@@ -66,9 +66,14 @@ export default function FavoritosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-       <Link href="/dashboard" className="inline-flex  bg-white rounded-2xl p-2 border border-gray-300 px-2 w-fit items-center gap-2  text-sm font-semibold text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors">
-            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform mt-0.5" />
-          </Link>
+       <Link
+        href="/dashboard"
+        className="inline-flex items-center gap-2 text-sm font-medium text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors w-fit"
+      >
+        <span className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
+          <ArrowLeft size={14} />
+        </span>
+      </Link>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

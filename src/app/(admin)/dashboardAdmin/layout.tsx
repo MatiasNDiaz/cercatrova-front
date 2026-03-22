@@ -16,6 +16,7 @@ const mainNavItems = [
   { href: '/dashboardAdmin/propiedades', label: 'Propiedades', icon: Building2 },
   { href: '/dashboardAdmin/solicitudes', label: 'Solicitudes', icon: FileText },
   { href: '/dashboardAdmin/usuarios',    label: 'Usuarios',    icon: Users },
+  { href: '/dashboardAdmin/notificaciones',    label: 'Notificaciones',    icon: Users }
 ];
 
 const accountNavItems = [
@@ -188,7 +189,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   if (!user || user.role !== 'admin') return null;
 
   return (
-    <div className="min-h-screen bg-[#ebeced] flex">
+    <div className="min-h-screen bg-[#cbd8cd] flex">
       <Sidebar />
       <main className="flex-1 h-screen overflow-y-auto pb-8">
         <div className="max-w-7xl mx-auto px-8 py-4">

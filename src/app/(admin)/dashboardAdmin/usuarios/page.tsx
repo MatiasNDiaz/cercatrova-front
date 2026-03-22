@@ -8,7 +8,7 @@ import Link from 'next/link';
 import {
   Users, Search, Trash2, Mail, FileText,
   User, Shield, ChevronDown, ChevronUp,
-  ArrowLeft,
+  ArrowLeft, Phone,
 } from 'lucide-react';
 
 interface UserType {
@@ -39,6 +39,175 @@ const WhatsappIcon = ({ size = 14 }: { size?: number }) => (
   </svg>
 );
 
+// ── UserCard FUERA del componente principal para evitar re-mount y scroll jump ──
+interface UserCardProps {
+  u: UserType;
+  isExpanded: boolean;
+  isDeleting: boolean;
+  onToggle: (id: number) => void;
+  onDelete: (id: number, name: string) => void;
+  whatsappUrl: (phone: string) => string;
+  gmailUrl: (email: string, name: string) => string;
+}
+
+function UserCard({ u, isExpanded, isDeleting, onToggle, onDelete, whatsappUrl, gmailUrl }: UserCardProps) {
+  return (
+    <div
+      className={`bg-white rounded-2xl mb-2 border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-sm hover:border-gray-200 ${
+        isDeleting ? 'opacity-40 pointer-events-none' : ''
+      }`}
+    >
+      {/* ── Fila principal ── */}
+      <div className="flex items-center  gap-5 px-5 py-4">
+
+        {/* Avatar */}
+        <div className="relative shrink-0">
+          <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center ring-1 ring-gray-100">
+            {u.photo ? (
+              <Image src={u.photo} alt={u.name} width={48} height={48} className="object-cover w-full h-full" />
+            ) : (
+              <User size={18} className="text-gray-300" />
+            )}
+          </div>
+          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-white rounded-full" />
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-bold text-gray-900 text-sm truncate">{u.name} {u.surname}</p>
+            {u.role === 'admin' && (
+              <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#0b7a4b]/10 text-[#0b7a4b] shrink-0">
+                <Shield size={9} /> Admin
+              </span>
+            )}
+            {u.profileIncomplete && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
+                Perfil incompleto
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-700 mt-0.5 truncate">{u.email}</p>
+          <p className="text-[11px] text-gray-500 mt-0.5">
+            Registrado {timeAgo(u.createdAt)} · ID #{u.id}
+          </p>
+        </div>
+
+        {/* Acciones rápidas */}
+        <div className="flex items-center gap-4 shrink-0">
+          <a
+            href={whatsappUrl(u.phone)}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`WhatsApp: ${u.phone}`}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-all active:scale-95 hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #25d366, #1ebe5d)' }}
+          >
+            <WhatsappIcon size={13} />
+            <span className="hidden sm:inline">{u.phone}</span>
+          </a>
+          <a
+            href={gmailUrl(u.email, u.name)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#0b7a4b] bg-[#0b7a4b]/8 hover:bg-[#0b7a4b]/14 transition-all active:scale-95"
+          >
+            <Mail size={13} />
+            <span className="hidden sm:inline">Email</span>
+          </a>
+          <button
+            onClick={() => onToggle(u.id)}
+            className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all border border-gray-100"
+          >
+            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+          {u.role !== 'admin' && (
+            <button
+              aria-label='a'
+              onClick={() => onDelete(u.id, `${u.name} ${u.surname}`)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 bg-red-50 hover:bg-red-100 transition-all active:scale-95"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Detalle expandido con transición CSS ── */}
+      <div
+        className={`grid transition-all duration-300 ease-in-out ${
+          isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="border-t border-gray-50 bg-[#fcfffd] px-8 py-6">
+
+            {/* Grid de datos */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-5 mb-6">
+              {[
+                { label: 'Nombre completo', value: `${u.name} ${u.surname}` },
+                { label: 'Email', value: u.email, truncate: true },
+                { label: 'Teléfono', value: u.phone || '—' },
+                {
+                  label: 'Miembro desde',
+                  value: new Date(u.createdAt).toLocaleDateString('es-AR', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                  }),
+                },
+              ].map(({ label, value, truncate }) => (
+                <div key={label} className="flex flex-col gap-1">
+                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{label}</p>
+                  <p className={`text-sm font-medium text-gray-700 ${truncate ? 'truncate' : ''}`}>{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex flex-wrap gap-5">
+              <a
+                href={whatsappUrl(u.phone)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all active:scale-95 hover:opacity-90 shadow-sm"
+                style={{ background: 'linear-gradient(135deg, #25d366, #1ebe5d)' }}
+              >
+                <WhatsappIcon size={15} />
+                Contactar por WhatsApp
+              </a>
+              <a
+                href={gmailUrl(u.email, u.name)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-500 hover:bg-red-700 transition-all active:scale-95"
+              >
+                <Mail size={15} />
+                Enviar email
+              </a>
+              <Link
+                href={`/dashboardAdmin/usuarios/${u.id}`}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-500 hover:bg-blue-700 border border-[#0b7a4b]/20 hover:border-[#0b7a4b]/40 transition-all active:scale-95"
+              >
+                <FileText size={15} />
+                Ver Detalle del Usuario
+              </Link>
+              {u.role !== 'admin' && (
+                <button
+                  onClick={() => onDelete(u.id, `${u.name} ${u.surname}`)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-500  bg-red-200 hover:bg-red-300 transition-all active:scale-95 ml-auto"
+                >
+                  <Trash2 size={15} />
+                  Eliminar usuario
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PÁGINA PRINCIPAL ──────────────────────────────────────────────────────────
 export default function UsuariosAdminPage() {
   const [users, setUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,19 +222,23 @@ export default function UsuariosAdminPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleToggle = (id: number) => {
+    setExpandedId(prev => (prev === id ? null : id));
+  };
+
   const handleDelete = (id: number, name: string) => {
     toast.custom((t) => (
-      <div className="flex flex-col gap-4 bg-white rounded-3xl px-7 py-6 w-96 shadow-[0_20px_50px_rgba(0,0,0,0.7)] border border-gray-100">
+      <div className="flex flex-col gap-4 bg-white rounded-2xl px-6 py-5 w-80 shadow-[0_16px_40px_rgba(0,0,0,0.12)] border border-gray-100">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
-            <Trash2 size={20} className="text-red-600" />
+          <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+            <Trash2 size={18} className="text-red-500" />
           </div>
           <div>
-            <p className="font-bold text-gray-900">¿Eliminar usuario?</p>
-            <p className="text-sm text-gray-500 mt-0.5">{name}</p>
+            <p className="font-semibold text-gray-900 text-sm">¿Eliminar usuario?</p>
+            <p className="text-xs text-gray-500 mt-0.5">{name}</p>
           </div>
         </div>
-        <p className="text-sm text-gray-600">
+        <p className="text-xs text-gray-500 leading-relaxed">
           Se eliminarán todos sus datos, favoritos y solicitudes. Esta acción no se puede deshacer.
         </p>
         <div className="flex gap-2">
@@ -83,19 +256,24 @@ export default function UsuariosAdminPage() {
                 setDeletingId(null);
               }
             }}
-            className="flex-1 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all active:scale-95"
+            className="flex-1 py-2.5 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all active:scale-95"
           >
-            Sí, eliminar
+            Eliminar
           </button>
           <button
             onClick={() => toast.dismiss(t)}
-            className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+            className="flex-1 py-2.5 text-sm font-medium text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all"
           >
             Cancelar
           </button>
         </div>
       </div>
-    ), { position: 'top-center', duration: 10000, unstyled: true, style: { background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 } });
+    ), {
+      position: 'top-center',
+      duration: 10000,
+      unstyled: true,
+      style: { background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 },
+    });
   };
 
   const filtered = users.filter(u =>
@@ -113,209 +291,124 @@ export default function UsuariosAdminPage() {
     return `https://mail.google.com/mail/?view=cm&to=${email}&su=${subject}`;
   };
 
-  const UserCard = ({ u }: { u: UserType }) => {
-    const isExpanded = expandedId === u.id;
-
-    return (
-        
-      <div className={`bg-white rounded-3xl border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md ${
-        deletingId === u.id ? 'opacity-50 pointer-events-none' : ''
-      }`}>
-
-        {/* ── Fila principal ── */}
-        <div className="flex items-center gap-4 p-4">
-
-          {/* Avatar */}
-          <div className="relative shrink-0">
-            <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center ring-2 ring-gray-100">
-              {u.photo ? (
-                <Image src={u.photo} alt={u.name} width={56} height={56} className="object-cover w-full h-full" />
-              ) : (
-                <User size={22} className="text-gray-400" />
-              )}
-            </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />
-          </div>
-
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-bold text-gray-900 truncate">{u.name} {u.surname}</p>
-              {u.role === 'admin' && (
-                <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-[#0b7a4b] text-white shrink-0">
-                  <Shield size={9} /> Admin
-                </span>
-              )}
-              {u.profileIncomplete && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">
-                  Perfil incompleto
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5 truncate">{u.email}</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">
-              Registrado {timeAgo(u.createdAt)} · ID #{u.id}
-            </p>
-          </div>
-
-          {/* Acciones rápidas */}
-          <div className="flex items-center gap-2 shrink-0">
-            <a href={whatsappUrl(u.phone)} target="_blank" rel="noopener noreferrer"
-              title={`WhatsApp: ${u.phone}`}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:brightness-110"
-              style={{ background: 'linear-gradient(135deg, #25d366, #1ebe5d)' }}>
-              <WhatsappIcon size={14} />
-              {u.phone}
-            </a>
-            <a href={gmailUrl(u.email, u.name)} target="_blank" rel="noopener noreferrer"
-              title={`Email: ${u.email}`}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all active:scale-95">
-              <Mail size={13} />
-              Email
-            </a>
-            <button onClick={() => setExpandedId(isExpanded ? null : u.id)}
-              className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-all">
-              {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </button>
-            {u.role !== 'admin' && (
-              <button aria-label='a' onClick={() => handleDelete(u.id, `${u.name} ${u.surname}`)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-all active:scale-95">
-                <Trash2 size={13} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Detalle expandido ── */}
-        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-  isExpanded ? 'max-h-125 opacity-100' : 'max-h-0 opacity-0'
-}`}>
-  <div className="border-t border-gray-100 bg-gray-50/50 px-10 py-6">
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8">
-      <div className="flex flex-col gap-2">
-        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Nombre completo</p>
-        <p className="text-sm font-semibold text-gray-800">{u.name} {u.surname}</p>
-      </div>
-      <div className="flex flex-col gap-2">
-        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Email</p>
-        <p className="text-sm font-semibold text-gray-800 truncate">{u.email}</p>
-      </div>
-      <div className="flex flex-col gap-2">
-        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Teléfono</p>
-        <p className="text-sm font-semibold text-gray-800">{u.phone || '—'}</p>
-      </div>
-      <div className="flex flex-col gap-2">
-        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Miembro desde</p>
-        <p className="text-sm font-semibold text-gray-800">
-          {new Date(u.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
-        </p>
-      </div>
-    </div>
-
-    <div className="flex flex-wrap gap-3">
-      <a href={whatsappUrl(u.phone)} target="_blank" rel="noopener noreferrer"
-        className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold text-white transition-all active:scale-95 hover:brightness-110 shadow-sm"
-        style={{ background: 'linear-gradient(135deg, #25d366, #1ebe5d)' }}>
-        <WhatsappIcon size={16} />
-        Contactar por WhatsApp
-      </a>
-
-      <a href={gmailUrl(u.email, u.name)} target="_blank" rel="noopener noreferrer"
-        className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold text-blue-600 bg-blue-100 hover:bg-blue-200 transition-all active:scale-95 shadow-sm">
-        <Mail size={16} />
-        Enviar email por Gmail
-      </a>
-
-      <Link
-        href={`/dashboardAdmin/usuarios/${u.id}`}
-        className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold text-[#0b7a4b] bg-[#0b7a4b]/13 hover:bg-[#0b7a4b]/20 transition-all active:scale-95 shadow-sm"
-      >
-        <FileText size={16} />
-        Ver solicitudes
-      </Link>
-
-      {u.role !== 'admin' && (
-        <button onClick={() => handleDelete(u.id, `${u.name} ${u.surname}`)}
-          className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold text-red-600 bg-red-100 hover:bg-red-100 transition-all active:scale-95 shadow-sm">
-          <Trash2 size={16} />
-          Eliminar usuario
-        </button>
-      )}
-    </div>
-  </div>
-</div>
-
-
-      </div>
-    );
-  };
-
   return (
     <div className="flex flex-col gap-6">
-  <Link href="/dashboardAdmin"
-        className="inline-flex bg-white rounded-full p-2 border border-gray-300 px-2 w-fit items-center gap-2 text-sm font-semibold text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors">
-        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform mt-0.5" />
+
+      {/* Back */}
+      <Link
+        href="/dashboardAdmin"
+        className="inline-flex items-center gap-2 text-sm font-medium text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors w-fit"
+      >
+        <span className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
+          <ArrowLeft size={14} />
+        </span>
       </Link>
-      <div>
-        <h1 className="text-2xl font-bold text-[#0b7a4b]">Usuarios</h1>
-        <p className="text-sm font-medium text-gray-600 mt-0.5">
-          {users.filter(u => u.role === 'user').length} usuarios registrados
-        </p>
+
+      {/* Header */}
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[#0b7a4b]">Usuarios</h1>
+          <p className="text-sm text-gray-600 font-semibold mt-0.5">
+            {users.filter(u => u.role === 'user').length} usuarios registrados
+          </p>
+        </div>
+        {/* Stats rápidas */}
+        <div className="flex gap-4">
+          <div className="text-center hidden sm:block">
+            <p className="text-lg font-semibold text-[#0b7a4b]">{users.filter(u => u.role === 'user').length}</p>
+            <p className="text-[11px] text-gray-500">Usuarios</p>
+          </div>
+          <div className="w-px bg-gray-100" />
+          <div className="text-center hidden sm:block">
+            <p className="text-lg font-semibold text-[#0b7a4b]">{users.filter(u => u.role === 'admin').length}</p>
+            <p className="text-[11px] text-gray-500">Admins</p>
+          </div>
+        </div>
       </div>
 
+      {/* Buscador */}
       <div className="relative">
-        <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input value={search} onChange={e => setSearch(e.target.value)}
+        <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
           placeholder="Buscar por nombre o email..."
-          className="w-full pl-11 pr-4 py-3 text-sm rounded-2xl border border-gray-200 bg-white focus:outline-none focus:border-[#0b7a4b] transition-all" />
+          className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-gray-100 bg-white focus:outline-none focus:border-[#0b7a4b]/30 focus:ring-2 focus:ring-[#0b7a4b]/8 transition-all placeholder:text-gray-400"
+        />
       </div>
 
+      {/* Loading skeleton */}
       {loading && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white rounded-3xl p-4 border border-gray-200 animate-pulse flex gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gray-200 shrink-0" />
+            <div key={i} className="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse flex gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gray-100 shrink-0" />
               <div className="flex-1 flex flex-col gap-2 justify-center">
-                <div className="h-4 bg-gray-200 rounded-full w-1/3" />
-                <div className="h-3 bg-gray-200 rounded-full w-1/2" />
+                <div className="h-3.5 bg-gray-100 rounded-full w-1/3" />
+                <div className="h-3 bg-gray-100 rounded-full w-1/2" />
               </div>
             </div>
           ))}
         </div>
       )}
 
+      {/* Empty state */}
       {!loading && filtered.length === 0 && (
-        <div className="bg-white rounded-3xl p-12 border border-gray-200 flex flex-col items-center gap-4 text-center">
-          <div className="w-16 h-16 rounded-full bg-[#0b7a4b]/10 flex items-center justify-center">
-            <Users size={28} className="text-[#0b7a4b]" />
+        <div className="bg-white rounded-2xl p-12 border  border-gray-100 flex flex-col items-center gap-4 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-[#0b7a4b]/8 flex items-center justify-center">
+            <Users size={24} className="text-[#0b7a4b]" />
           </div>
-          <p className="font-bold text-gray-800">
+          <p className="font-bold text-gray-600 text-sm">
             {search ? 'Sin resultados para esa búsqueda' : 'No hay usuarios todavía'}
           </p>
         </div>
       )}
 
+      {/* Lista usuarios regulares */}
       {!loading && regularUsers.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <Users size={14} className="text-[#0b7a4b]" />
-            <p className="text-xs font-black text-[#0b7a4b] uppercase tracking-wider">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-2 px-1">
+            <Users size={13} className="text-[#0b7a4b]" />
+            <p className="text-xs font-bold text-[#0b7a4b] uppercase tracking-wider">
               Usuarios ({regularUsers.length})
             </p>
           </div>
-          {regularUsers.map(u => <UserCard key={u.id} u={u} />)}
+          {regularUsers.map(u => (
+            <UserCard
+              key={u.id}
+              u={u}
+              isExpanded={expandedId === u.id}
+              isDeleting={deletingId === u.id}
+              onToggle={handleToggle}
+              onDelete={handleDelete}
+              whatsappUrl={whatsappUrl}
+              gmailUrl={gmailUrl}
+            />
+          ))}
         </div>
       )}
 
+      {/* Lista admins */}
       {!loading && adminUsers.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <Shield size={14} className="text-[#0b7a4b]" />
-            <p className="text-xs font-black text-[#0b7a4b] uppercase tracking-wider">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-2 px-1">
+            <Shield size={13} className="text-[#0b7a4b]" />
+            <p className="text-xs font-bold text-[#0b7a4b] uppercase tracking-wider">
               Administradores ({adminUsers.length})
             </p>
           </div>
-          {adminUsers.map(u => <UserCard key={u.id} u={u} />)}
+          {adminUsers.map(u => (
+            <UserCard
+              key={u.id}
+              u={u}
+              isExpanded={expandedId === u.id}
+              isDeleting={deletingId === u.id}
+              onToggle={handleToggle}
+              onDelete={handleDelete}
+              whatsappUrl={whatsappUrl}
+              gmailUrl={gmailUrl}
+            />
+          ))}
         </div>
       )}
 

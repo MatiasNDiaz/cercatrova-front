@@ -197,7 +197,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-[#ebeced] flex">
+    <div className="min-h-screen bg-[#dde3dd] flex">
       <Sidebar />
       <main className="flex-1 h-screen overflow-y-auto custom-scrollbar pb-8">
         <div className="max-w-7xl mx-auto px-8 py-4">

@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
 
       {/* Banner */}
       <div
-        className="relative flex flex-col justify-center   rounded-tr-3xl rounded-tl-3xl rounded-br-xl rounded-bl-xl h-64 shadow-lg px-10 overflow-hidden"
+        className="relative flex flex-col justify-center shadow-4xl rounded-tr-3xl rounded-tl-3xl rounded-br-xl rounded-bl-xl h-64  px-10 overflow-hidden"
         style={{ backgroundImage: 'url(/BannerInmo.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
       >
         <div className="absolute inset-0 bg-black/55 rounded-tr-3xl rounded-tl-3xl rounded-br-xl rounded-bl-xl" />

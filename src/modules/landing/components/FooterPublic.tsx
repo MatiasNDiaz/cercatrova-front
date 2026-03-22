@@ -86,7 +86,7 @@ export const FooterPublic = () => {
 
             <a href="https://wa.me/543513872817" target="_blank" rel="noopener noreferrer"
               className="group relative z-10 flex items-center gap-2.5 px-8 py-4 rounded-full font-bold text-base text-white shrink-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
-              style={{ background: "#25d366", boxShadow: "0 4px 18px rgba(37,211,102,0.4)" }}>
+              style={{ background: "rgba(37,211,102,0.85)", boxShadow: "0 4px 18px rgba(37,211,102,0.4)" }}>
               <BsWhatsapp size={20} />
               Contactar ahora
               <ArrowUpRight size={15} className="group-hover:rotate-45 transition-transform duration-300" />

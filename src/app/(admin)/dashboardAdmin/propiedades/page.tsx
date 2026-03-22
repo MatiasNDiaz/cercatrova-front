@@ -122,9 +122,13 @@ export default function PropiedadesAdminPage() {
 
   return (
     <div className="flex flex-col gap-6">
-  <Link href="/dashboardAdmin"
-        className="inline-flex bg-white rounded-2xl p-2 border border-gray-300 px-2 w-fit items-center gap-2 text-sm font-semibold text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors">
-        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform mt-0.5" />
+ <Link
+        href="/dashboardAdmin"
+        className="inline-flex items-center gap-2 text-sm font-medium text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors w-fit"
+      >
+        <span className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
+          <ArrowLeft size={14} />
+        </span>
       </Link>
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -203,7 +207,7 @@ export default function PropiedadesAdminPage() {
 
             return (
               <div key={p.id}
-                className={`bg-white rounded-3xl border border-gray-200 p-4 flex items-center gap-4 transition-all hover:shadow-md ${deletingId === p.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                className={`bg-white rounded-3xl  border border-gray-200 p-4 flex items-center gap-4 transition-all hover:shadow-md ${deletingId === p.id ? 'opacity-50 pointer-events-none' : ''}`}>
 
                 {/* Imagen */}
                 <div className="w-28 h-22 rounded-2xl overflow-hidden shrink-0 bg-gray-100 flex items-center justify-center">
@@ -218,7 +222,7 @@ export default function PropiedadesAdminPage() {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start gap-2 flex-wrap">
-                    <h3 className="font-bold text-gray-900 truncate">{p.title}</h3>
+                    <h3 className="font-bold text-gray-900 transition-all hover:text-[#0b7a4b] truncate">{p.title}</h3>
                     <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${status.color}`}>
                       {status.label}
                     </span>
