@@ -145,7 +145,7 @@ export const NavbarPublic = () => {
       className={`
         fixed top-0.5 left-0 right-0 z-50 mx-auto w-[95%] m-auto
         flex flex-row p-2.5 justify-between md:justify-start items-center
-        bg-white shadow-lg rounded-full mt-0.5
+        bg-white shadow-lg rounded-full mt-1
         transition-transform duration-300 ease-in-out
         ${isVisible ? "translate-y-0" : "-translate-y-[120%]"}
       `}

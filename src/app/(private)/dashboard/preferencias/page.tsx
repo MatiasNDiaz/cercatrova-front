@@ -107,12 +107,13 @@ function SummaryCard({ form, propertyTypes, onEdit }: SummaryCardProps) {
     }
 
     // Ubicación
-    const loc = [form.localidad, form.barrio].filter(Boolean).join(', ');
-    if (loc) {
-      parts.push(' en ', hi(loc, 'loc'));
-    } else if (form.zone) {
-      parts.push(' en la zona ', hi(form.zone, 'zone'));
-    }
+    const locParts = [form.localidad, form.barrio].filter(Boolean).join(', ');
+const zonePart = form.zone ? `zona ${form.zone}` : '';
+const fullLoc  = [locParts, zonePart].filter(Boolean).join(' · ');
+
+if (fullLoc) {
+  parts.push(' en ', hi(fullLoc, 'loc'));
+}
 
     // Características numéricas
     const chars: React.ReactNode[] = [];

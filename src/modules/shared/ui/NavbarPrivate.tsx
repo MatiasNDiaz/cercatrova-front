@@ -60,23 +60,23 @@ export const NavbarPrivate = () => {
 
   const isAdmin = user?.role === 'admin';
 
-  // Links condicionales según rol
   const dashboardHref = isAdmin ? '/dashboardAdmin' : '/dashboard';
   const perfilHref    = isAdmin ? '/dashboardAdmin/perfil' : '/dashboard/perfil';
-  const notifHref     = isAdmin ? '/dashboardAdmin' : '/dashboard/notificaciones';
 
-  useEffect(() => {
-    if (!user) return;
-    const fetchUnread = async () => {
-      try {
-        const { data } = await api.get('/notifications');
-        setUnreadCount(data.filter((n: { read: boolean }) => !n.read).length);
-      } catch { /* silencioso */ }
-    };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 60000);
-    return () => clearInterval(interval);
-  }, [user]);
+  // 👇 fetch según rol
+ useEffect(() => {
+  if (!user) return;
+  const fetchUnread = async () => {
+    try {
+      const endpoint = user.role === 'admin' ? '/notifications/admin' : '/notifications'; // 👈 directo, sin isAdmin
+      const { data } = await api.get(endpoint);
+      setUnreadCount(data.filter((n: { read: boolean }) => !n.read).length);
+    } catch { /* silencioso */ }
+  };
+  fetchUnread();
+  const interval = setInterval(fetchUnread, 60000);
+  return () => clearInterval(interval);
+}, [user]); // 👈 solo user, sin isAdmin
 
   const toggleMenu = () => { setIsMenuOpen(p => !p); setActiveSubmenu(null); };
   const closeMenu  = () => { setIsMenuOpen(false);   setActiveSubmenu(null); };
@@ -124,7 +124,7 @@ export const NavbarPrivate = () => {
         .bell-hover:hover svg { animation: bell-shake 0.6s ease; }
       `}</style>
 
-      <nav className={`fixed top-0.5 left-0 right-0 z-50 mx-auto w-[95%] m-auto flex flex-row p-2.5 justify-between md:justify-start items-center bg-white shadow-lg rounded-full mt-0.5 transition-transform duration-300 ease-in-out ${isVisible ? "translate-y-0" : "-translate-y-[120%]"}`}>
+      <nav className={`fixed top-0.5 left-0 right-0 z-50 mx-auto w-[95%] m-auto flex flex-row p-2.5 justify-between md:justify-start items-center bg-white shadow-lg rounded-full mt-1 transition-transform duration-300 ease-in-out ${isVisible ? "translate-y-0" : "-translate-y-[120%]"}`}>
 
         {/* LOGO */}
         <div className="flex items-center">
@@ -185,10 +185,25 @@ export const NavbarPrivate = () => {
             </li>
           )}
 
-          {/* Campanita — solo usuarios comunes */}
+          {/* Campanita — usuarios comunes */}
           {!isAdmin && (
             <li>
-              <Link href={notifHref} aria-label="Notificaciones"
+              <Link href="/dashboard/notificaciones" aria-label="Notificaciones"
+                className="bell-hover relative p-2 flex items-center text-[#0b7a4b] hover:text-[#0f8b57] hover:bg-[#0f8b57]/10 rounded-full transition-all duration-300">
+                <Bell size={22} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-4.5 h-4.5 px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center leading-none shadow-sm">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </Link>
+            </li>
+          )}
+
+          {/* Campanita — admin 👈 */}
+          {isAdmin && (
+            <li>
+              <Link href="/dashboardAdmin/notificaciones" aria-label="Notificaciones admin"
                 className="bell-hover relative p-2 flex items-center text-[#0b7a4b] hover:text-[#0f8b57] hover:bg-[#0f8b57]/10 rounded-full transition-all duration-300">
                 <Bell size={22} />
                 {unreadCount > 0 && (
@@ -233,7 +248,6 @@ export const NavbarPrivate = () => {
                 <p className="text-[15px] font-bold text-[#0b7a4b] truncate mt-1">
                   {user?.name} {user?.surname ?? ""}
                 </p>
-                {/* Badge admin en el dropdown */}
                 {isAdmin && (
                   <div className="flex items-center gap-1 mt-1.5 w-fit px-2 py-0.5 rounded-full bg-[#0b7a4b] text-white">
                     <Shield size={9} />
@@ -323,6 +337,7 @@ export const NavbarPrivate = () => {
                   </button>
                 </li>
 
+                {/* Publicar — solo usuarios comunes */}
                 {!isAdmin && (
                   <li>
                     <Link href="/publicar" onClick={closeMenu}
@@ -333,9 +348,35 @@ export const NavbarPrivate = () => {
                   </li>
                 )}
 
+                {/* Campanita mobile — usuarios comunes */}
                 {!isAdmin && (
                   <li>
-                    <Link href={notifHref} onClick={closeMenu}
+                    <Link href="/dashboard/notificaciones" onClick={closeMenu}
+                      className="flex items-center justify-between p-4 text-xl font-medium text-[#0b7a4b] hover:bg-[#0f8b57]/10 rounded-xl transition-colors border-b">
+                      <div className="flex items-center gap-4">
+                        <div className="relative shrink-0">
+                          <Bell size={24} className="text-[#0b7a4b]" />
+                          {unreadCount > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 min-w-4.25 h-4.25 px-1 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
+                              {unreadCount > 99 ? "99+" : unreadCount}
+                            </span>
+                          )}
+                        </div>
+                        <span>notificaciones</span>
+                      </div>
+                      {unreadCount > 0 && (
+                        <span className="text-xs font-bold text-red-500 bg-red-50 px-2.5 py-1 rounded-full">
+                          {unreadCount} sin leer
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                )}
+
+                {/* Campanita mobile — admin 👈 */}
+                {isAdmin && (
+                  <li>
+                    <Link href="/dashboardAdmin/notificaciones" onClick={closeMenu}
                       className="flex items-center justify-between p-4 text-xl font-medium text-[#0b7a4b] hover:bg-[#0f8b57]/10 rounded-xl transition-colors border-b">
                       <div className="flex items-center gap-4">
                         <div className="relative shrink-0">

@@ -140,9 +140,10 @@ function PreferencesBlock({ prefs, userName }: { prefs: SearchPreference | null;
     if (opLabel) parts.push('Quiere ', hi(opLabel, 'op'), ' ', hi(typeArticle, 'type'));
     else parts.push('Está buscando ', hi(typeArticle, 'type'));
 
-    const loc = [prefs.localidad, prefs.barrio].filter(Boolean).join(', ');
-    if (loc) parts.push(' en ', hi(loc, 'loc'));
-    else if (prefs.zone) parts.push(' en la zona ', hi(prefs.zone, 'zone'));
+    const locParts = [prefs.localidad, prefs.barrio].filter(Boolean).join(', ');
+const zonePart = prefs.zone ? `zona ${prefs.zone}` : '';
+const fullLoc  = [locParts, zonePart].filter(Boolean).join(' · ');
+if (fullLoc) parts.push(' en ', hi(fullLoc, 'loc'));
 
     const chars: React.ReactNode[] = [];
     if (prefs.minRooms)     chars.push(hi(`${prefs.minRooms} habitación${prefs.minRooms > 1 ? 'es' : ''}`, 'rooms'));
@@ -565,7 +566,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                     className="flex items-center px-3 py-2 rounded-xl text-xs font-semibold text-gray-400 bg-gray-50 hover:bg-gray-100 transition-all border border-gray-100">
                     {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                   </button>
-                  <button onClick={() => handleDeleteRequest(r.id)}
+                  <button aria-label="Eliminar solicitud" onClick={() => handleDeleteRequest(r.id)}
                     className="flex items-center px-3 py-2 rounded-xl text-xs font-semibold text-red-400 bg-red-50 hover:bg-red-100 transition-all active:scale-95">
                     <Trash2 size={13} />
                   </button>
@@ -632,7 +633,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                     </div>
 
                     <div className="flex justify-between items-center pt-1 border-t border-gray-100">
-                      <p className="text-[11px] text-gray-300">
+                      <p className="text-[11px] text-gray-600">
                         Solicitud #{r.id} · {new Date(r.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </p>
                       <button onClick={() => handleDeleteRequest(r.id)}

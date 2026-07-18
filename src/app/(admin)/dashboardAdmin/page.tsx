@@ -8,6 +8,7 @@ import {
   Users, Building2, FileText, ChevronRight,
   TrendingUp, Clock, User,
   BarChart2,
+  Bell,
 } from 'lucide-react';
 
 interface Stats {
@@ -38,6 +39,20 @@ const quickLinks = [
     label: 'Usuarios',
     description: 'Ver usuarios, contactarlos o eliminarlos',
     color: 'bg-blue-100 text-blue-600',
+  },
+  {
+    href: '/dashboardAdmin/notificaciones',
+    icon: Bell,
+    label: 'Notificaciones',
+    description: 'Ver y gestionar notificaciones',
+    color: 'bg-green-100 text-green-600',
+  },
+    {
+    href: '/dashboardAdmin/estadisticas',
+    icon: BarChart2,
+    label: 'Estadísticas',
+    description: 'Ver y gestionar estadísticas',
+    color: 'bg-purple-100 text-purple-600',
   },
 ];
 
@@ -87,7 +102,7 @@ export default function AdminDashboardPage() {
         <div className="relative z-10 flex items-center justify-between">
           <div>
             <h2 className="text-white text-4xl font-bold ml-5 tracking-tight leading-tight">
-              ¡Hola, PAPUCHOOOO! 👋
+              Bienvenido {user?.name || 'Usuario'} 👋!
             </h2>
             <p className="text-white text-xs mt-4 ml-8 font-medium uppercase">
               Desde acá gestionás y controlas todo el sitio
@@ -127,7 +142,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Stat cards */}
-       <div className="flex items-center gap-2 mt-8">
+       <div className="flex items-center gap-2 mt-4">
           <BarChart2 size={16} className="text-[#0b7a4b] " />
           <h3 className="text-sm font-black text-[#0b7a4b]  uppercase tracking-wider">Indicadores</h3>
         </div>
@@ -153,7 +168,7 @@ export default function AdminDashboardPage() {
 
       {/* Accesos rápidos */}
       <div>
-        <div className="flex items-center gap-2 mb-5">
+        <div className="flex items-center gap-2 mb-4">
           <TrendingUp size={16} className="text-[#0b7a4b] mt-6" />
           <h3 className="text-sm font-black text-[#0b7a4b] mt-6 uppercase tracking-wider">Accesos rápidos</h3>
         </div>

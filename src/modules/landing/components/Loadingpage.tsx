@@ -59,7 +59,7 @@ export default function LoadingPage({ onComplete }: { onComplete?: () => void })
     const el = mountRef.current;
     if (!el || rendererRef.current) return;
 
-    const W = 520, H = 320;
+    const W = 520, H = 420;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -72,7 +72,7 @@ export default function LoadingPage({ onComplete }: { onComplete?: () => void })
 
     const scene  = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(48, W / H, 0.1, 100);
-    camera.position.set(7, 6, 9);
+    camera.position.set(9, 7, 11);
     camera.lookAt(0, 0.5, 0);
 
     // ── Iluminación ────────────────────────────────────────
@@ -387,7 +387,8 @@ export default function LoadingPage({ onComplete }: { onComplete?: () => void })
         ))}
 
         {/* Isla 3D */}
-        <div ref={mountRef} style={{ width: 520, height: 320, flexShrink: 0, overflow: "hidden", zIndex: 1 }} />
+        <div ref={mountRef} style={{ width: 520, marginTop: 20, marginBottom: 8,
+    height:  420, flexShrink: 0, overflow: "hidden", zIndex: 1 }} />
 
         <h1 style={{ color: "#0b7a4b", fontSize: 20, fontWeight: 800, margin: "0 0 2px", zIndex: 1, letterSpacing: "-0.02em" }}>
           Cargando tu experiencia

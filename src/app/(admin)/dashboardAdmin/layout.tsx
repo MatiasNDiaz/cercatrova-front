@@ -2,32 +2,44 @@
 
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import {
   User, Home, FileText, LogOut, ChevronRight,
-  ArrowLeft, Users, Building2, BarChart2, Shield,
+  ArrowLeft, Users, Building2, BarChart2, Shield, Bell,
 } from 'lucide-react';
+import api from '@/modules/shared/lib/axios';
 
-const mainNavItems = [
-  { href: '/dashboardAdmin',             label: 'Inicio',      icon: Home },
-  { href: '/dashboardAdmin/propiedades', label: 'Propiedades', icon: Building2 },
-  { href: '/dashboardAdmin/solicitudes', label: 'Solicitudes', icon: FileText },
-  { href: '/dashboardAdmin/usuarios',    label: 'Usuarios',    icon: Users },
-  { href: '/dashboardAdmin/notificaciones',    label: 'Notificaciones',    icon: Users }
-];
+// ── Tipos ─────────────────────────────────────────────
+interface AdminNotif {
+  id: number;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
 
-const accountNavItems = [
-  { href: '/dashboardAdmin/perfil',       label: 'Mi Perfil',    icon: User },
-  { href: '/dashboardAdmin/estadisticas', label: 'Estadísticas', icon: BarChart2 },
-];
+type NotifType = 'nuevo_usuario' | 'nueva_solicitud' | 'valoracion' | 'comentario' | 'favorito' | 'generica';
 
+function getNotifType(title: string, message: string): NotifType {
+  const t = (title + ' ' + message).toLowerCase();
+  if (t.includes('usuario registrado') || t.includes('se registró'))          return 'nuevo_usuario';
+  if (t.includes('solicitud de publicación') || t.includes('solicitó'))       return 'nueva_solicitud';
+  if (t.includes('valoración') || t.includes('estrella'))                     return 'valoracion';
+  if (t.includes('comentó') || t.includes('comentario'))                      return 'comentario';
+  if (t.includes('favorito') || t.includes('guardó'))                         return 'favorito';
+  return 'generica';
+}
+
+
+
+// ── NavLink con badge ─────────────────────────────────
 function NavLink({
-  href, label, icon: Icon, isActive,
+  href, label, icon: Icon, isActive, badge = 0,
 }: {
-  href: string; label: string; icon: React.ElementType; isActive: boolean;
+  href: string; label: string; icon: React.ElementType; isActive: boolean; badge?: number;
 }) {
   return (
     <Link
@@ -41,14 +53,67 @@ function NavLink({
       {isActive && <div className="absolute left-0 w-1 h-6 bg-white rounded-r-full" />}
       <Icon size={19} className={isActive ? 'text-white' : 'text-gray-500 group-hover:text-[#0b7a4b] transition-colors'} />
       <span className="flex-1">{label}</span>
-      {isActive && <ChevronRight size={14} className="text-white/80" />}
+      {badge > 0
+        ? <span className={`min-w-4.5 h-4.5 px-1 rounded-full text-[10px] font-black flex items-center justify-center leading-none shadow-sm ${
+            isActive ? 'bg-white text-[#0b7a4b]' : 'bg-red-500 text-white'
+          }`}>
+            {badge > 99 ? '99+' : badge}
+          </span>
+        : isActive && <ChevronRight size={14} className="text-white/80" />
+      }
     </Link>
   );
 }
 
+
+// ── Sidebar ───────────────────────────────────────────
 function Sidebar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const [notifs, setNotifs] = useState<AdminNotif[]>([]);
+
+  const fetchNotifs = useCallback(async () => {
+    try {
+      const { data } = await api.get('/notifications/admin');
+      setNotifs(data);
+    } catch { /* silencioso */ }
+  }, []);
+
+ useEffect(() => {
+  fetchNotifs();
+  const interval = setInterval(fetchNotifs, 60000);
+  window.addEventListener('notif-updated', fetchNotifs); // 👈
+
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener('notif-updated', fetchNotifs); // 👈
+  };
+}, [fetchNotifs]);
+
+
+  // Conteos por tipo — solo no leídas
+  const unread = notifs.filter(n => !n.read);
+  const counts = {
+    usuarios:     unread.filter(n => getNotifType(n.title, n.message) === 'nuevo_usuario').length,
+    solicitudes:  unread.filter(n => getNotifType(n.title, n.message) === 'nueva_solicitud').length,
+    comentarios:  unread.filter(n => getNotifType(n.title, n.message) === 'comentario').length,
+    valoraciones: unread.filter(n => getNotifType(n.title, n.message) === 'valoracion').length,
+    favoritos:    unread.filter(n => getNotifType(n.title, n.message) === 'favorito').length,
+    notificaciones: unread.length,
+  };
+
+  const mainNavItems = [
+    { href: '/dashboardAdmin',                  label: 'Inicio',          icon: Home,      badge: 0 },
+    { href: '/dashboardAdmin/propiedades',       label: 'Propiedades',     icon: Building2, badge: 0 },
+    { href: '/dashboardAdmin/solicitudes',       label: 'Solicitudes',     icon: FileText,  badge: counts.solicitudes },
+    { href: '/dashboardAdmin/usuarios',          label: 'Usuarios',        icon: Users,     badge: counts.usuarios },
+    { href: '/dashboardAdmin/notificaciones',    label: 'Notificaciones',  icon: Bell,      badge: counts.notificaciones },
+  ];
+
+  const accountNavItems = [
+    { href: '/dashboardAdmin/perfil',       label: 'Mi Perfil',    icon: User,     badge: 0 },
+    { href: '/dashboardAdmin/estadisticas', label: 'Estadísticas', icon: BarChart2, badge: 0 },
+  ];
 
   const handleLogoutConfirm = () => {
     toast.custom((t) => (
@@ -91,8 +156,8 @@ function Sidebar() {
   };
 
   return (
-    <aside className="w-72 bg-white border-r rounded-tr-3xl mt-3.5 border-gray-100 flex flex-col h-screen sticky top-0 shadow-sm">
-      <div className="p-6 flex items-center justify-start">
+    <aside className="w-72 bg-white border-r rounded-tr-3xl mt-4 border-gray-100 flex flex-col h-screen sticky top-0 shadow-sm">
+      <div className="p-5 flex items-center justify-start">
         <Link href="/" className="p-2 rounded-lg bg-gray-100 text-[#0b7a4b] hover:bg-[#0b7a4b]/10 transition-all group">
           <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
         </Link>
@@ -101,8 +166,8 @@ function Sidebar() {
         </Link>
       </div>
 
-      <div className="px-6 py-4 mb-2">
-        <div className="p-4 rounded-2xl bg-[#0b7a4b]/10 border border-gray-100 flex flex-col items-center text-center">
+      <div className="px-6 mb-6 ">
+        <div className="p-2 rounded-2xl bg-[#0b7a4b]/10 border border-gray-100 flex flex-col items-center text-center">
           <div className="relative mb-3">
             <div className="w-16 h-16 rounded-full bg-white overflow-hidden ring-2 ring-[#0b7a4b]/20 shadow-sm">
               {user?.photo ? (
@@ -125,8 +190,8 @@ function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 px-4 overflow-y-auto">
-        <div className="space-y-1 mb-6">
+      <nav className="flex-1 px-4  overflow-y-auto">
+        <div className="space-y-2 mb-6">
           <p className="px-4 text-[11px] font-bold text-[#0b7a4b] uppercase tracking-widest mb-2">Panel Admin</p>
           {mainNavItems.map((item) => (
             <NavLink
@@ -148,7 +213,7 @@ function Sidebar() {
         </div>
       </nav>
 
-      <div className="p-4 pb-10 mt-auto border-t border-gray-300">
+      <div className="p-4 pb-7 mt-auto border-t border-gray-300">
         <button
           onClick={handleLogoutConfirm}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-[#0b7a4b] hover:bg-red-100 hover:text-red-600 transition-all duration-200 group"
@@ -161,18 +226,14 @@ function Sidebar() {
   );
 }
 
+// ── Layout ────────────────────────────────────────────
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/login');
-      return;
-    }
-    if (!isLoading && user && user.role !== 'admin') {
-      router.push('/dashboard');
-    }
+    if (!isLoading && !user) { router.push('/login'); return; }
+    if (!isLoading && user && user.role !== 'admin') router.push('/dashboard');
   }, [user, isLoading, router]);
 
   if (isLoading) {
