@@ -5,6 +5,8 @@ import { useAuth } from '@/modules/shared/context/AuthContext';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import api from '@/modules/shared/lib/axios';
+import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { validateImageFile } from '@/modules/shared/lib/validateImage';
 import {
   User, Camera, Save, Eye, EyeOff, Lock, Mail,
   Phone, BadgeCheck, Pencil, ArrowLeft,
@@ -12,7 +14,7 @@ import {
 import Link from 'next/link';
 
 export default function AdminPerfilPage() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
 
   const [name, setName] = useState(user?.name ?? '');
   const [surname, setSurname] = useState(user?.surname ?? '');
@@ -37,11 +39,13 @@ export default function AdminPerfilPage() {
     }
     setSavingData(true);
     try {
-      await api.patch(`/users/${user!.id}`, { name, surname, phone, email });
+      // El id sale del token en el backend — PATCH /users/me
+      await api.patch('/users/me', { name, surname, phone, email });
       updateUser({ name, surname, phone, email });
       toast.success('Datos actualizados correctamente');
-    } catch {
-      toast.error('No se pudieron actualizar los datos');
+    } catch (error) {
+      // ej. 409 "Ese email no está disponible" si el email ya lo usa otro usuario
+      toast.error(getErrorMessage(error));
     } finally {
       setSavingData(false);
     }
@@ -62,13 +66,13 @@ export default function AdminPerfilPage() {
     }
     setSavingPassword(true);
     try {
-      await api.patch(`/users/${user!.id}`, { password: newPassword });
-      toast.success('Contraseña actualizada');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch {
-      toast.error('No se pudo actualizar la contraseña');
-    } finally {
+      await api.patch('/users/me', { password: newPassword });
+      // El backend revoca la sesión actual al cambiar la contraseña: cualquier
+      // request siguiente daría 401. Cerramos sesión y llevamos al login.
+      toast.success('Contraseña actualizada. Iniciá sesión de nuevo con tu nueva contraseña.');
+      await logout('/login');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
       setSavingPassword(false);
     }
   };
@@ -76,6 +80,14 @@ export default function AdminPerfilPage() {
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Validación client-side (tipo image/* y ≤ 5MB) antes de gastar el viaje de red
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      e.target.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (ev) => setPreviewPhoto(ev.target?.result as string);
@@ -90,8 +102,9 @@ export default function AdminPerfilPage() {
       });
       updateUser({ photo: updated.photo });
       toast.success('Foto actualizada');
-    } catch {
-      toast.error('No se pudo subir la foto');
+    } catch (error) {
+      // ej. 502 "No pudimos procesar la imagen, intentá de nuevo" si Cloudinary falla
+      toast.error(getErrorMessage(error));
       setPreviewPhoto(null);
     } finally {
       setUploadingPhoto(false);

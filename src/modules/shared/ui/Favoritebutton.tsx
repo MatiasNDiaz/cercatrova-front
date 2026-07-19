@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import api from '@/modules/shared/lib/axios';
+import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { toast } from 'sonner';
 import { Heart } from 'lucide-react';
 
@@ -22,7 +23,8 @@ export function FavoriteButton({ propertyId, variant = 'default' }: FavoriteButt
     if (!user) { setLoading(false); return; }
     const check = async () => {
       try {
-        const { data } = await api.get(`/favorites/${user.id}`);
+        // El userId sale del token en el backend — GET /favorites, sin id en la URL
+        const { data } = await api.get('/favorites');
         setIsFavorite(data.some((f: { property_id: number }) => f.property_id === propertyId));
       } catch {}
       finally { setLoading(false); }
@@ -35,7 +37,7 @@ export function FavoriteButton({ propertyId, variant = 'default' }: FavoriteButt
     setLoading(true);
     try {
       if (isFavorite) {
-        await api.delete(`/favorites/${user.id}/${propertyId}`);
+        await api.delete(`/favorites/${propertyId}`);
         setIsFavorite(false);
         toast.success('Eliminado de favoritos');
       } else {
@@ -43,8 +45,8 @@ export function FavoriteButton({ propertyId, variant = 'default' }: FavoriteButt
         setIsFavorite(true);
         toast.success('Agregado a favoritos ❤️');
       }
-    } catch {
-      toast.error('No se pudo actualizar favoritos');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     } finally {
       setLoading(false);
     }

@@ -240,7 +240,7 @@ export default function ServiciosPremium3D() {
   );
 }
 
-function ServiceCard({ service }) {
+function ServiceCard({ service }: { service: (typeof services)[number] }) {
   const Icon = service.icon;
   const phoneNumber = "543513872817";
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=Hola! Estoy interesado en el servicio de: ${service.title}`;

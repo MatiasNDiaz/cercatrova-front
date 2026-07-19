@@ -28,15 +28,15 @@ export default function Resenas() {
       </div>
       
       <div className="wrapper-carousel pb-20">
-        <div className="inner-carousel" style={{ "--quantity": reviews.length }}>
+        <div className="inner-carousel" style={{ "--quantity": reviews.length } as React.CSSProperties}>
           {reviews.map((review, index) => (
             <div 
               key={index} 
               className="card-review" 
-              style={{ 
-                "--index": index, 
-                "--color-card": review.color 
-              }}
+              style={{
+                "--index": index,
+                "--color-card": review.color
+              } as React.CSSProperties}
             >
               <div className="content-review">
                 <div className="avatar">

@@ -5,6 +5,7 @@ import { useAuth } from '@/modules/shared/context/AuthContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import api from '@/modules/shared/lib/axios';
+import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { toast } from 'sonner';
 import {
   Heart, MapPin, Bed, Bath, Maximize, Trash2, Home, ArrowRight,
@@ -39,10 +40,11 @@ export default function FavoritosPage() {
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
-        const { data } = await api.get(`/favorites/${user!.id}`);
+        // El userId sale del token en el backend — GET /favorites, sin id en la URL
+        const { data } = await api.get('/favorites');
         setFavorites(data);
-      } catch {
-        toast.error('No se pudieron cargar los favoritos');
+      } catch (error) {
+        toast.error(getErrorMessage(error));
       } finally {
         setLoading(false);
       }
@@ -53,12 +55,11 @@ export default function FavoritosPage() {
   const handleRemove = async (propertyId: number) => {
     setRemovingId(propertyId);
     try {
-      // ← Fix: orden correcto userId/propertyId
-      await api.delete(`/favorites/${user!.id}/${propertyId}`);
+      await api.delete(`/favorites/${propertyId}`);
       setFavorites(prev => prev.filter(f => f.property_id !== propertyId));
       toast.success('Eliminado de favoritos');
-    } catch {
-      toast.error('No se pudo eliminar el favorito');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     } finally {
       setRemovingId(null);
     }

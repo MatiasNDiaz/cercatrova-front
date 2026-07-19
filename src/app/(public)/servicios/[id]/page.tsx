@@ -260,7 +260,7 @@ export default function ServicioDetallePage({ params }: { params: { id: string }
             </div>
 
             {/* CTA especial — solo comercialización */}
-            {s.ctaEspecial && (
+            {'ctaEspecial' in s && s.ctaEspecial && (
               <div
                 className="rounded-3xl p-7 relative overflow-hidden"
                 style={{ background: s.light, border: `2px solid ${s.accent}20` }}

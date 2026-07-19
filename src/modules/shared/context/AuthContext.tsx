@@ -2,7 +2,10 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { authService } from '@/modules/auth/services/auth.service';
+import { setOnUnauthorized } from '@/modules/shared/lib/authEvents';
+import { getErrorStatus } from '@/modules/shared/lib/apiError';
 import type { AuthUser, LoginFormData, RegisterFormData } from '@/modules/auth/interface/auth.interfaces';
 
 // 1. DEFINIMOS QUÉ TIENE EL CONTEXTO
@@ -10,7 +13,7 @@ interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
   login: (data: LoginFormData) => Promise<AuthUser>;
-  logout: () => Promise<void>;
+  logout: (redirectTo?: string) => Promise<void>;
   register: (data: RegisterFormData) => Promise<void>;
   updateUser: (data: Partial<AuthUser>) => void;
 }
@@ -40,24 +43,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkSession();
   }, []);
 
+  // Sesión expirada/revocada detectada por el interceptor de axios (401 en
+  // cualquier endpoint que no sea /auth/*): limpiamos el estado y vamos a /login.
+  useEffect(() => {
+    setOnUnauthorized(() => {
+      setUser(null);
+      toast.error('Tu sesión expiró. Iniciá sesión de nuevo.');
+      router.push('/login');
+    });
+    return () => setOnUnauthorized(null);
+  }, [router]);
 
-const login = async (data: LoginFormData) => {
-  const response = await authService.login(data);
-  console.log('ROL QUE LLEGA:', response.user.role); // ← agregá esto
-  setUser(response.user);
-  if (response.user.role === 'admin') {
-    router.push('/dashboardAdmin/');
-  } else {
-    router.push('/dashboard');
-  }
-  return response.user;
-};
+  const login = async (data: LoginFormData) => {
+    const response = await authService.login(data);
+    setUser(response.user);
+    if (response.user.role === 'admin') {
+      router.push('/dashboardAdmin/');
+    } else {
+      router.push('/dashboard');
+    }
+    // Usuario creado vía Google sin teléfono ni contraseña local
+    if (response.user.profileIncomplete) {
+      toast.info('Tu perfil está incompleto: agregá tu teléfono y una contraseña desde "Editar Perfil".', {
+        duration: 8000,
+      });
+    }
+    return response.user;
+  };
 
-
-  const logout = async () => {
-    await authService.logout();
+  const logout = async (redirectTo: string = '/') => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      // 401 = la sesión ya estaba cerrada/revocada en el backend → éxito silencioso.
+      // Cualquier otro error tampoco debe dejar al usuario "atrapado" logueado:
+      // limpiamos el estado local igual.
+      if (getErrorStatus(error) !== 401) {
+        console.error('Error al cerrar sesión en el servidor:', error);
+      }
+    }
     setUser(null);
-    router.push('/'); // redirige al home después del logout
+    router.push(redirectTo);
   };
 
   const register = async (data: RegisterFormData) => {
@@ -66,11 +92,11 @@ const login = async (data: LoginFormData) => {
   };
 
   const updateUser = (data: Partial<AuthUser>) => {
-  setUser(prev => prev ? { ...prev, ...data } : null);
-};
+    setUser(prev => prev ? { ...prev, ...data } : null);
+  };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, register, updateUser  }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, register, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

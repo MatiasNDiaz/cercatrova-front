@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/modules/auth/hooks/useAuth';
+import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -42,8 +43,9 @@ export function RegisterForm() {
       await registerUser(data);
       toast.success('¡Cuenta creada exitosamente! Ya podés iniciar sesión.');
     } catch (error: unknown) {
-        console.assert(error instanceof Error, 'Error desconocido');
-      toast.error('Error al crear la cuenta. Verificá tus datos e intentá nuevamente.');
+      // Muestra el mensaje real del backend: 400 "No se pudo completar el
+      // registro...", errores de validación, o 429 por rate limit (5/min).
+      toast.error(getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }

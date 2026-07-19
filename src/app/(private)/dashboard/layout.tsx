@@ -25,7 +25,7 @@ const accountNavItems = [
 ];
 
 // ── COMPONENTE NAVLINK ────────────────────────────────────────────────────────
-function NavLink({ href, label, icon: Icon, isActive }: { href: string, label: string, icon: any, isActive: boolean }) {
+function NavLink({ href, label, icon: Icon, isActive }: { href: string, label: string, icon: React.ElementType, isActive: boolean }) {
   return (
     <Link 
       href={href}

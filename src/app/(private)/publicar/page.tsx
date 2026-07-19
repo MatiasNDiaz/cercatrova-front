@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/modules/shared/lib/axios';
+import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { toast } from 'sonner';
 import { Save, ArrowLeft, MapPin, Home, Ruler, DollarSign, FileTextIcon, CheckSquare } from 'lucide-react';
 import Link from 'next/link';
 
-const TIPOS_PROPIEDAD   = ['Casa', 'Departamento', 'Quinta', 'Local', 'Oficina', 'Terreno', 'Cochera', 'Otro'];
+// Valores EXACTOS de los enums del backend (CreateRequestPropertyDto) — otro valor da 400
+const TIPOS_PROPIEDAD   = ['Casa', 'Departamento', 'Terreno', 'Local', 'Oficina', 'Quinta'];
 const TIPOS_OPERACION   = ['Venta', 'Alquiler', 'Alquiler temporal'];
-const ESTADOS           = ['Excelente', 'Muy bueno', 'Bueno', 'A refaccionar'];
+const ESTADOS           = ['Excelente', 'Muy bueno', 'Bueno', 'Regular', 'A refaccionar'];
 const ORIENTACIONES     = ['Norte', 'Sur', 'Este', 'Oeste', 'Noreste', 'Noroeste', 'Sureste', 'Suroeste'];
 
 function SectionTitle({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
@@ -87,8 +89,10 @@ export default function NuevaSolicitudPage() {
       });
       toast.success('¡Solicitud enviada! Un agente se contactará pronto');
       router.push('/dashboard/mis-solicitudes');
-    } catch {
-      toast.error('No se pudo enviar la solicitud');
+    } catch (error) {
+      // El backend valida los enums (tipoPropiedad, tipoOperacion, estadoConservacion)
+      // con mensajes en español que listan los valores permitidos.
+      toast.error(getErrorMessage(error));
     } finally {
       setSaving(false);
     }

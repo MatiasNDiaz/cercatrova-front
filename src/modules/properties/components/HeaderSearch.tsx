@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { SlidersHorizontal, X } from 'lucide-react';
-import FiltersPanel from './FiltersPanel '; 
+import FiltersPanel from './FiltersPanel ';
 import { SearchBar } from './SearchBar';
 
 export const HeaderSearch = () => {
@@ -10,13 +10,15 @@ export const HeaderSearch = () => {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 mt-10">
-      
+
       {/* SEARCH + BOTÓN FILTROS */}
       <div className="flex items-center gap-3 mb-6 w-full">
-        
-        {/* SEARCH BAR */}
+
+        {/* SEARCH BAR — usa useSearchParams, necesita Suspense para el prerender */}
         <div className="flex-1">
-          <SearchBar />
+          <Suspense fallback={<div className="h-12 rounded-4xl bg-white/60 animate-pulse" />}>
+            <SearchBar />
+          </Suspense>
         </div>
 
         {/* BOTÓN FILTROS */}
@@ -32,13 +34,15 @@ export const HeaderSearch = () => {
         </button>
       </div>
 
-      {/* PANEL DE FILTROS */}
+      {/* PANEL DE FILTROS — también usa useSearchParams */}
       <div
         className={`overflow-hidden transition-all duration-700 ease-in-out
           ${showFilters ? 'max-h-300 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}
         `}
       >
-        <FiltersPanel />
+        <Suspense fallback={null}>
+          <FiltersPanel />
+        </Suspense>
       </div>
 
     </div>

@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/modules/auth/hooks/useAuth';
+import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -29,9 +30,10 @@ export function LoginForm() {
     try {
       const loggedUser = await login(data);
       toast.success(`¡Bienvenido de nuevo! ${loggedUser?.name || 'Usuario'} Has iniciado sesión exitosamente.`);
-    } catch (e) {
-      console.assert(e instanceof Error, 'Error desconocido');
-      toast.error('Error al iniciar sesión. Verificá tus credenciales e intentá nuevamente.');
+    } catch (error) {
+      // Muestra el mensaje real del backend: 401 "Credenciales inválidas",
+      // 429 "Demasiados intentos..." (rate limit de 5/min), o error de red.
+      toast.error(getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }

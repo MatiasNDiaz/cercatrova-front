@@ -5,15 +5,17 @@ import { useAuth } from '@/modules/shared/context/AuthContext';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import api from '@/modules/shared/lib/axios';
+import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { validateImageFile } from '@/modules/shared/lib/validateImage';
 import {
   User, Camera, Save, Eye, EyeOff, Lock, Mail,
   Phone, BadgeCheck, Pencil,
-  ArrowLeft,
+  ArrowLeft, Bell,
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PerfilPage() {
-  const { user, updateUser } = useAuth(); // ← agregamos updateUser
+  const { user, updateUser, logout } = useAuth();
 
   // ── DATOS PERSONALES ──
   const [name, setName] = useState(user?.name ?? '');
@@ -34,6 +36,28 @@ export default function PerfilPage() {
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── NOTIFICACIONES POR EMAIL ──
+  const [notifyBroadcast, setNotifyBroadcast] = useState(user?.notifyBroadcast ?? true);
+  const [savingNotify, setSavingNotify] = useState(false);
+
+  const handleToggleNotify = async () => {
+    const next = !notifyBroadcast;
+    setNotifyBroadcast(next); // optimista — se revierte si falla
+    setSavingNotify(true);
+    try {
+      await api.patch('/users/me', { notifyBroadcast: next });
+      updateUser({ notifyBroadcast: next });
+      toast.success(next
+        ? 'Vas a recibir novedades de propiedades nuevas por email'
+        : 'Dejaste de recibir novedades por email');
+    } catch (error) {
+      setNotifyBroadcast(!next);
+      toast.error(getErrorMessage(error));
+    } finally {
+      setSavingNotify(false);
+    }
+  };
+
   // ── ACTUALIZAR DATOS ──
   const handleSaveData = async () => {
     if (!name.trim() || !surname.trim() || !email.trim()) {
@@ -42,11 +66,13 @@ export default function PerfilPage() {
     }
     setSavingData(true);
     try {
-      await api.patch(`/users/${user!.id}`, { name, surname, phone, email });
+      // El id sale del token en el backend — PATCH /users/me
+      await api.patch('/users/me', { name, surname, phone, email });
       updateUser({ name, surname, phone, email }); // ← actualiza el contexto
       toast.success('Datos actualizados correctamente');
-    } catch {
-      toast.error('No se pudieron actualizar los datos');
+    } catch (error) {
+      // ej. 409 "Ese email no está disponible" si el email ya lo usa otro usuario
+      toast.error(getErrorMessage(error));
     } finally {
       setSavingData(false);
     }
@@ -68,13 +94,13 @@ export default function PerfilPage() {
     }
     setSavingPassword(true);
     try {
-      await api.patch(`/users/${user!.id}`, { password: newPassword });
-      toast.success('Contraseña actualizada');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch {
-      toast.error('No se pudo actualizar la contraseña');
-    } finally {
+      await api.patch('/users/me', { password: newPassword });
+      // El backend revoca la sesión actual al cambiar la contraseña: cualquier
+      // request siguiente daría 401. Cerramos sesión y llevamos al login.
+      toast.success('Contraseña actualizada. Iniciá sesión de nuevo con tu nueva contraseña.');
+      await logout('/login');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
       setSavingPassword(false);
     }
   };
@@ -83,6 +109,14 @@ export default function PerfilPage() {
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Validación client-side (tipo image/* y ≤ 5MB) antes de gastar el viaje de red
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      e.target.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (ev) => setPreviewPhoto(ev.target?.result as string);
@@ -97,8 +131,9 @@ export default function PerfilPage() {
       });
       updateUser({ photo: updated.photo }); // ← actualiza la foto en todo el contexto
       toast.success('Foto actualizada');
-    } catch {
-      toast.error('No se pudo subir la foto');
+    } catch (error) {
+      // ej. 502 "No pudimos procesar la imagen, intentá de nuevo" si Cloudinary falla
+      toast.error(getErrorMessage(error));
       setPreviewPhoto(null);
     } finally {
       setUploadingPhoto(false);
@@ -216,6 +251,33 @@ export default function PerfilPage() {
             style={{ background: 'linear-gradient(135deg, #0f8b57, #14a366)' }}>
             <Save size={15} />
             {savingData ? 'Guardando...' : 'Guardar cambios'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── NOTIFICACIONES POR EMAIL ── */}
+      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+        <h2 className="text-sm font-bold text-[#0b7a4b] uppercase tracking-wider mb-5 flex items-center gap-2">
+          <Bell size={14} />Notificaciones
+        </h2>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-gray-800">Novedades de propiedades por email</p>
+            <p className="text-xs text-gray-500 mt-0.5">Recibí un aviso cuando publiquemos propiedades nuevas.</p>
+          </div>
+          <button
+            role="switch"
+            aria-checked={notifyBroadcast}
+            aria-label="Recibir novedades de propiedades nuevas por email"
+            onClick={handleToggleNotify}
+            disabled={savingNotify}
+            className={`relative w-12 h-7 rounded-full transition-colors duration-300 shrink-0 disabled:opacity-50 ${
+              notifyBroadcast ? 'bg-[#0b7a4b]' : 'bg-gray-300'
+            }`}
+          >
+            <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all duration-300 ${
+              notifyBroadcast ? 'left-6' : 'left-1'
+            }`} />
           </button>
         </div>
       </div>

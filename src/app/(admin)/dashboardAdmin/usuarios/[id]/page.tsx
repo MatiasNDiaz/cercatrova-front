@@ -3,6 +3,8 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/modules/shared/lib/axios';
+import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { RequestStatus, VALID_REQUEST_TRANSITIONS } from '@/modules/shared/types/api';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import {
@@ -77,6 +79,11 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   aceptado:    { label: 'Aceptado',    color: 'text-[#0b7a4b]',  bg: 'bg-[#0b7a4b]/13', border: 'border-[#0b7a4b]/15',  icon: CheckCircle },
   rechazado:   { label: 'Rechazado',   color: 'text-red-500',    bg: 'bg-red-100',       border: 'border-red-100',       icon: XCircle },
 };
+
+// El backend rechaza con 409 las transiciones ilegales — solo ofrecemos las válidas
+// desde el estado actual (aceptado es terminal; rechazado solo puede volver a revisión).
+const canTransition = (from: string, to: RequestStatus) =>
+  (VALID_REQUEST_TRANSITIONS[from as RequestStatus] ?? []).includes(to);
 
 const WhatsappIcon = ({ size = 15 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
@@ -315,8 +322,9 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
       await api.patch(`/property-requests/${reqId}/status`, { status: newStatus });
       setRequests(prev => prev.map(r => r.id === reqId ? { ...r, status: newStatus } : r));
       toast.success(`Estado actualizado a "${STATUS_CONFIG[newStatus]?.label ?? newStatus}"`);
-    } catch {
-      toast.error('No se pudo actualizar el estado');
+    } catch (error) {
+      // ej. 409 "No se puede pasar la solicitud de 'X' a 'Y'"
+      toast.error(getErrorMessage(error));
     } finally {
       setUpdatingId(null);
     }
@@ -544,19 +552,19 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {r.status !== 'aceptado' && (
+                  {canTransition(r.status, RequestStatus.ACEPTADO) && (
                     <button onClick={() => handleStatusChange(r.id, 'aceptado')} disabled={isUpdating}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#0b7a4b] bg-[#0b7a4b]/10 hover:bg-[#0b7a4b]/16 transition-all active:scale-95 disabled:opacity-40">
                       <CheckCircle size={13} /> Aceptar
                     </button>
                   )}
-                  {r.status !== 'rechazado' && (
+                  {canTransition(r.status, RequestStatus.RECHAZADO) && (
                     <button onClick={() => handleStatusChange(r.id, 'rechazado')} disabled={isUpdating}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-500 bg-red-50 hover:bg-red-100 transition-all active:scale-95 disabled:opacity-40">
                       <XCircle size={13} /> Rechazar
                     </button>
                   )}
-                  {r.status !== 'en_revision' && r.status !== 'aceptado' && r.status !== 'rechazado' && (
+                  {canTransition(r.status, RequestStatus.REVISION) && (
                     <button onClick={() => handleStatusChange(r.id, 'en_revision')} disabled={isUpdating}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 transition-all active:scale-95 disabled:opacity-40">
                       <RefreshCw size={13} /> Revisar
@@ -614,7 +622,10 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                         <RefreshCw size={12} /> Cambiar estado
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {Object.entries(STATUS_CONFIG).map(([key, scfg]) => {
+                        {/* Solo el estado actual + las transiciones válidas desde él */}
+                        {Object.entries(STATUS_CONFIG)
+                          .filter(([key]) => r.status === key || canTransition(r.status, key as RequestStatus))
+                          .map(([key, scfg]) => {
                           const SIcon = scfg.icon;
                           const isCurrent = r.status === key;
                           return (

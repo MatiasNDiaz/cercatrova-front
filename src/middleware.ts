@@ -6,9 +6,10 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('access_token')?.value;
   const { pathname } = request.nextUrl;
 
-  // 1. Definimos las zonas según tu estructura de carpetas
-  const isPrivateZone = pathname.startsWith('/dashboard') || pathname.startsWith('/publicar');
-  const isAdminZone = pathname.startsWith('/admin'); 
+  // 1. Definimos las zonas según la estructura real de rutas
+  // (la zona admin vive en /dashboardAdmin — el route group (admin) no afecta la URL)
+  const isAdminZone = pathname.startsWith('/dashboardAdmin');
+  const isPrivateZone = (pathname.startsWith('/dashboard') && !isAdminZone) || pathname.startsWith('/publicar');
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
   // --- CAPA 1: PROTECCIÓN TOTAL (Authentication) ---
@@ -21,25 +22,22 @@ export function middleware(request: NextRequest) {
 
   if (token) {
     try {
-      const payload: any = decodeJwt(token);
-      const userRole = payload.role;
+      // Nota: decodeJwt solo DECODIFICA, no verifica la firma. La verificación
+      // real la hace el backend en cada request — esto es solo UX/redirección.
+      const payload = decodeJwt(token);
+      const userRole = payload.role as 'user' | 'admin' | undefined;
 
       // --- CAPA 2: PROTECCIÓN POR ROL (Authorization) ---
-      
+
       // Bloquear acceso de usuarios normales a zona Admin
       if (isAdminZone && userRole !== 'admin') {
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
 
-      // (Opcional) Bloquear acceso de Admin a zona de usuario si querés que sean 100% separadas
-      // if (isPrivateZone && userRole === 'admin') {
-      //   return NextResponse.redirect(new URL('/admin', request.url));
-      // }
-
       // --- CAPA 3: UX ---
       // Si ya está logueado, no tiene sentido que vea el Login
       if (isAuthPage) {
-        const dest = userRole === 'admin' ? '/admin' : '/dashboard';
+        const dest = userRole === 'admin' ? '/dashboardAdmin' : '/dashboard';
         return NextResponse.redirect(new URL(dest, request.url));
       }
 
@@ -55,13 +53,15 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// 5. EL MATCHER: Aquí activamos el middleware para las rutas críticas
+// EL MATCHER: rutas donde corre el middleware.
+// /dashboard/:path* NO matchea /dashboardAdmin (el matcher exige el segmento
+// exacto "dashboard"), por eso /dashboardAdmin/:path* va aparte.
 export const config = {
   matcher: [
-    '/dashboard/:path*', 
-    '/publicar/:path*', 
-    '/admin/:path*', 
-    '/login', 
+    '/dashboard/:path*',
+    '/dashboardAdmin/:path*',
+    '/publicar/:path*',
+    '/login',
     '/register'
   ],
 };

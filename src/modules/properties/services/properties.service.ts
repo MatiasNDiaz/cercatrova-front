@@ -1,12 +1,19 @@
 import { PropertyFilters } from '../interfaces/property-filters.interface';
+import { Property } from '../interfaces/propertyInterface';
 import  api  from "../../shared/lib/axios";
+
+// Shape paginado que devuelve GET /properties/filter (ver API_CONTRACT.md)
+export interface FilteredPropertiesResponse {
+  data: Property[];
+  meta: { totalItems: number; itemCount: number; totalPages: number; currentPage: number };
+}
 
 export const propertiesService = {
 
   /**
    * Obtiene propiedades filtradas y paginadas
    */
-  getFilteredProperties: async (filters: PropertyFilters) => {
+  getFilteredProperties: async (filters: PropertyFilters): Promise<FilteredPropertiesResponse> => {
     try {
       const cleanParams = Object.fromEntries(
         Object.entries(filters).filter(

@@ -5,8 +5,15 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
 export default async function FeaturedProperties() {
-  const response = await propertiesService.getFilteredProperties({ page: '1', limit: '6' });
-  const items = response?.data || [];
+  // Server Component: si el backend no está disponible (ej. durante el build),
+  // renderizamos el estado vacío en vez de romper el prerender de la landing.
+  let items: Awaited<ReturnType<typeof propertiesService.getFilteredProperties>>['data'] = [];
+  try {
+    const response = await propertiesService.getFilteredProperties({ page: 1, limit: 6 });
+    items = response?.data || [];
+  } catch {
+    items = [];
+  }
 
   return (
     <section className="container rounded-2xl  w-[85%] py-20 mx-auto">

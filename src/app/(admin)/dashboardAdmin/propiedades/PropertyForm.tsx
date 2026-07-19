@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/modules/shared/lib/axios';
+import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { validateImageFile } from '@/modules/shared/lib/validateImage';
 import { toast } from 'sonner';
 import {
   Save, ArrowLeft, Upload, X, Star, ImagePlus,
@@ -155,11 +157,23 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
   }, []);
 
   const addFiles = (files: File[]) => {
+    // Validación client-side (tipo image/* y ≤ 5MB, límites del backend)
+    const validFiles: File[] = [];
+    for (const file of files) {
+      const validationError = validateImageFile(file);
+      if (validationError) {
+        toast.error(validationError);
+      } else {
+        validFiles.push(file);
+      }
+    }
+    if (validFiles.length === 0) return;
+
     const totalExisting = existingImages.filter(i => !deletedImageIds.includes(i.id)).length;
     const totalNew = newImages.length;
     const available = 10 - totalExisting - totalNew;
     if (available <= 0) { toast.error('Máximo 10 imágenes'); return; }
-    const toAdd = files.slice(0, available);
+    const toAdd = validFiles.slice(0, available);
     const mapped: NewImage[] = toAdd.map((file, idx) => ({
       file,
       preview: URL.createObjectURL(file),
@@ -175,8 +189,8 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
       setExistingImages(prev => prev.map(i => ({ ...i, isCover: i.id === id })));
       setNewImages(prev => prev.map(i => ({ ...i, isCover: false })));
       toast.success('Portada actualizada ✓');
-    } catch {
-      toast.error('No se pudo cambiar la portada');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     }
   };
 
@@ -268,8 +282,11 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
       }
 
       router.push('/dashboardAdmin/propiedades');
-    } catch {
-      toast.error(isEdit ? 'No se pudo actualizar' : 'No se pudo publicar la propiedad');
+    } catch (error) {
+      // El backend ahora valida el JSON del campo `data`: un 400 puede traer el
+      // detalle de qué campo falló (array de class-validator), un 404 si el tipo
+      // de propiedad no existe, o un 502 si Cloudinary falló (con rollback).
+      toast.error(getErrorMessage(error));
     } finally {
       setSaving(false);
     }
