@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { whatsappLink } from "@/modules/shared/lib/contact";
 import {
   Home, Key, DollarSign, Briefcase, Megaphone, FileCheck,
   ArrowLeft, CheckCircle2, TrendingUp, Clock, Shield, Users,
@@ -147,8 +148,7 @@ export default function ServicioDetallePage({ params }: { params: { id: string }
   if (!s) notFound();
 
   const Icon = s.icon;
-  const phoneNumber = "543513872817";
-  const whatsappUrl = `https://wa.me/${phoneNumber}?text=Hola! Estoy interesado en el servicio de: ${s.whatsapp}`;
+  const whatsappUrl = whatsappLink(`¡Hola! Estoy interesado en el servicio de: ${s.whatsapp}`);
 
   return (
     <main className="min-h-screen" style={{ background: "#f5f7f5" }}>

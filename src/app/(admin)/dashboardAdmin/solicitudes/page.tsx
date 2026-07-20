@@ -5,6 +5,7 @@ import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { RequestStatus, VALID_REQUEST_TRANSITIONS } from '@/modules/shared/types/api';
 import { toast } from 'sonner';
+import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import Image from 'next/image';
 import {
   FileText, Search, Trash2, ChevronDown, ChevronUp,
@@ -109,44 +110,25 @@ export default function SolicitudesAdminPage() {
   };
 
   const handleDelete = (id: number) => {
-    toast.custom((t) => (
-      <div className="flex flex-col gap-4 bg-white rounded-3xl px-7 py-6 w-96 shadow-[0_20px_50px_rgba(0,0,0,0.7)] border border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
-            <Trash2 size={20} className="text-red-600" />
-          </div>
-          <div>
-            <p className="font-bold text-gray-900">¿Eliminar solicitud?</p>
-            <p className="text-sm text-gray-500 mt-0.5">Solicitud #{id}</p>
-          </div>
-        </div>
-        <p className="text-sm text-gray-600">Esta acción no se puede deshacer.</p>
-        <div className="flex gap-2">
-          <button
-            onClick={async () => {
-              toast.dismiss(t);
-              setDeletingId(id);
-              try {
-                await api.delete(`/property-requests/${id}`);
-                setRequests(prev => prev.filter(r => r.id !== id));
-                toast.success('Solicitud eliminada');
-              } catch {
-                toast.error('No se pudo eliminar');
-              } finally {
-                setDeletingId(null);
-              }
-            }}
-            className="flex-1 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all active:scale-95"
-          >
-            Sí, eliminar
-          </button>
-          <button onClick={() => toast.dismiss(t)}
-            className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all">
-            Cancelar
-          </button>
-        </div>
-      </div>
-    ), { position: 'top-center', duration: 10000, unstyled: true, style: { background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 } });
+    confirmDialog({
+      title: '¿Eliminar solicitud?',
+      message: `Se va a eliminar la solicitud #${id}. Esta acción no se puede deshacer.`,
+      confirmLabel: 'Sí, eliminar',
+      variant: 'danger',
+      icon: Trash2,
+      onConfirm: async () => {
+        setDeletingId(id);
+        try {
+          await api.delete(`/property-requests/${id}`);
+          setRequests(prev => prev.filter(r => r.id !== id));
+          toast.success('Solicitud eliminada');
+        } catch (error) {
+          toast.error(getErrorMessage(error));
+        } finally {
+          setDeletingId(null);
+        }
+      },
+    });
   };
 
   const gmailUrl = (email: string, name: string) => {

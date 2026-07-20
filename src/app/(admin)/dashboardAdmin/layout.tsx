@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { toast } from 'sonner';
+import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import {
   User, Home, FileText, LogOut, ChevronRight,
   ArrowLeft, Users, Building2, BarChart2, Shield, Bell,
@@ -116,42 +116,20 @@ function Sidebar() {
   ];
 
   const handleLogoutConfirm = () => {
-    toast.custom((t) => (
-      <div className="flex flex-col items-center gap-6 bg-white rounded-4xl px-8 py-8 w-100 shadow-[0_20px_50px_rgba(0,0,0,0.8)] border border-gray-50">
-        <div className="relative">
-          <div className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-20" />
-          <div className="relative w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center">
-            <LogOut size={28} className="text-emerald-700" />
-          </div>
-        </div>
-        <div className="flex flex-col items-center gap-2 text-center">
-          <h3 className="text-2xl font-bold text-[#0b7a4b] pb-2 tracking-tight">¿Ya te vas?</h3>
-          <p className="text-[15px] text-gray-500 font-medium px-2">
-            ¡Esperamos verte pronto,{' '}
-            <span className="text-emerald-600 font-bold">{user?.name || 'Admin'}</span>!{' '}
-            ¿Confirmás que querés cerrar sesión?
-          </p>
-        </div>
-        <div className="flex gap-3 w-full mt-2">
-          <button
-            onClick={() => toast.dismiss(t)}
-            className="flex-1 py-4 text-[15px] font-bold text-white rounded-2xl transition-all active:scale-95 cursor-pointer shadow-[0_8px_20px_rgba(15,139,87,0.35)] hover:brightness-110 hover:-translate-y-0.5"
-            style={{ background: 'linear-gradient(135deg, #0f8b57, #14a366)' }}
-          >
-            No, me quedo
-          </button>
-          <button
-            onClick={() => { toast.dismiss(t); logout(); }}
-            className="flex-1 py-4 text-[15px] font-medium text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-2xl transition-all active:scale-95 cursor-pointer"
-          >
-            Sí, salir
-          </button>
-        </div>
-      </div>
-    ), {
-      duration: 5000,
-      position: 'top-center',
-      style: { background: 'transparent', boxShadow: 'none', border: 'none', padding: 0 },
+    const nombre = user?.name?.trim();
+
+    confirmDialog({
+      title: '¿Ya te vas?',
+      message: nombre
+        ? `¡Esperamos verte pronto, ${nombre}! ¿Confirmás que querés cerrar sesión?`
+        : '¿Confirmás que querés cerrar sesión?',
+      confirmLabel: 'Sí, salir',
+      cancelLabel: 'No, me quedo',
+      variant: 'default',
+      icon: LogOut,
+      onConfirm: async () => {
+        await logout();
+      },
     });
   };
 
@@ -250,7 +228,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   if (!user || user.role !== 'admin') return null;
 
   return (
-    <div className="min-h-screen bg-[#cbd8cd] flex">
+    <div className="min-h-screen bg-surface-deep flex">
       <Sidebar />
       <main className="flex-1 h-screen overflow-y-auto pb-8">
         <div className="max-w-7xl mx-auto px-8 py-4">

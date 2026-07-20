@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import api from '@/modules/shared/lib/axios';
+import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import {
   Plus, Pencil, Trash2, Building2, Search,
   Home, DollarSign, Tag, ImageOff,
@@ -67,49 +69,26 @@ export default function PropiedadesAdminPage() {
     }
   };
 
-  const handleDelete = async (id: number, title: string) => {
-    toast.custom((t) => (
-      <div className="flex flex-col gap-4 bg-white rounded-3xl px-7 py-6 w-96 shadow-[0_20px_50px_rgba(0,0,0,0.7)] border border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
-            <Trash2 size={20} className="text-red-600" />
-          </div>
-          <div>
-            <p className="font-bold text-gray-900">¿Eliminar propiedad?</p>
-            <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{title}</p>
-          </div>
-        </div>
-        <p className="text-sm text-gray-600">
-          Esta acción eliminará también todas las imágenes de Cloudinary. No se puede deshacer.
-        </p>
-        <div className="flex gap-2">
-          <button
-            onClick={async () => {
-              toast.dismiss(t);
-              setDeletingId(id);
-              try {
-                await api.delete(`/properties/${id}`);
-                setProperties(prev => prev.filter(p => p.id !== id));
-                toast.success('Propiedad eliminada');
-              } catch {
-                toast.error('No se pudo eliminar la propiedad');
-              } finally {
-                setDeletingId(null);
-              }
-            }}
-            className="flex-1 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all active:scale-95"
-          >
-            Sí, eliminar
-          </button>
-          <button
-            onClick={() => toast.dismiss(t)}
-            className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    ), { position: 'top-center', duration: 10000, unstyled: true, style: { background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 } });
+  const handleDelete = (id: number, title: string) => {
+    confirmDialog({
+      title: '¿Eliminar propiedad?',
+      message: `Se va a eliminar "${title}", incluidas todas sus imágenes de Cloudinary. Esta acción no se puede deshacer.`,
+      confirmLabel: 'Sí, eliminar',
+      variant: 'danger',
+      icon: Trash2,
+      onConfirm: async () => {
+        setDeletingId(id);
+        try {
+          await api.delete(`/properties/${id}`);
+          setProperties(prev => prev.filter(p => p.id !== id));
+          toast.success('Propiedad eliminada');
+        } catch (error) {
+          toast.error(getErrorMessage(error));
+        } finally {
+          setDeletingId(null);
+        }
+      },
+    });
   };
 
   const filtered = properties.filter(p =>

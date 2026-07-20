@@ -1,141 +1,208 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import gsap from 'gsap';
+import { useState } from 'react';
 import Image from 'next/image';
-import { HeaderSearch } from '@/modules/properties/components/HeaderSearch';
+import Link from 'next/link';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, EffectFade, Navigation, Pagination } from 'swiper/modules';
+import { motion } from 'framer-motion';
+import { ArrowRight, ChevronLeft, ChevronRight, LayoutDashboard, LogIn } from 'lucide-react';
+import { useAuth } from '@/modules/shared/context/AuthContext';
+import { Role } from '@/modules/shared/types/api';
+
+import 'swiper/css';
+import 'swiper/css/effect-fade';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+
+/**
+ * HERO de la landing (Bloque LANDING §1).
+ *
+ * Cambios respecto de la versión anterior:
+ *  - Carrusel manual (useState + setInterval + GSAP) → Swiper con autoplay y fade.
+ *  - GSAP eliminado de este componente: las entradas de texto ahora las hace
+ *    framer-motion, que ya se usa en el resto de la landing. Era el único
+ *    archivo del proyecto que importaba gsap.
+ *  - Se quitó `HeaderSearch` (el panel de filtros ya no vive en la landing, §8).
+ *  - Dos CTAs; el secundario cambia según haya sesión iniciada o no.
+ */
 
 const slides = [
   {
     id: 1,
-    image: 'https://images3.alphacoders.com/591/thumb-1920-591439.jpg',
-    title: 'Viví donde todo sucede',
-    description: 'Nueva Córdoba te conecta con shoppings, gastronomía, universidades y espacios verdes en minutos.',
+    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2400&auto=format&fit=crop',
+    title: 'Encontrá el lugar donde empieza tu historia',
+    description:
+      'Casas y departamentos seleccionados en Córdoba, con el acompañamiento de un martillero matriculado en cada paso.',
   },
   {
     id: 2,
-    image: '/estudiante.jpg',
-    title: 'Tu nueva etapa empieza acá',
-    description: 'Si venís a estudiar a Córdoba, te ayudamos a encontrár un espacio cómodo, seguro y cerca de todo.',
+    // Fachada de departamentos: acompaña el mensaje urbano de Nueva Córdoba.
+    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=2400&auto=format&fit=crop',
+    title: 'Viví donde todo sucede',
+    description:
+      'Nueva Córdoba te conecta con shoppings, gastronomía, universidades y espacios verdes en minutos.',
   },
   {
     id: 3,
-    image: '/adolecenteIndependizado.png',
-    title: 'Dá el paso hacia tu independencia',
-    description: 'Opciones pensadas para que empieces a vivir por tu cuenta con respaldo y tranquilidad.',
+    image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=2400&auto=format&fit=crop',
+    title: 'Espacios para crecer en familia',
+    description:
+      'Departamentos amplios y funcionales en las ubicaciones más estratégicas de la ciudad.',
   },
   {
     id: 4,
-    image: 'https://images.unsplash.com/photo-1609220136736-443140cffec6?q=80&w=2400',
-    title: 'Espacios para crecer en familia',
-    description: 'Departamentos amplios y funcionales en ubicaciones estratégicas de la ciudad.',
-  },
-  {
-    id: 5,
-    image: '/chicaMudandose.jpg',
+    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2400&auto=format&fit=crop',
     title: 'Invertí con visión de futuro',
-    description: 'Propiedades con alta demanda y excelente proyección en córdoba capital.',
+    description:
+      'Propiedades con alta demanda y excelente proyección de valor en Córdoba capital.',
   },
 ];
 
 export const PropertySlider = () => {
-  const [index, setIndex] = useState(0);
-  const slideRef = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const descRef = useRef<HTMLParagraphElement>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const { user, isLoading } = useAuth();
+  const [active, setActive] = useState(0);
 
-  // 1. Memorizamos nextSlide con useCallback
-  const nextSlide = useCallback(() => {
-    setIndex((prev) => (prev + 1) % slides.length);
-  }, []);
-
-  // 2. Memorizamos resetTimer que depende de nextSlide
-  const resetTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(nextSlide, 4500);
-  }, [nextSlide]);
-
-  const prevSlide = () => {
-    setIndex((prev) => (prev - 1 + slides.length) % slides.length);
-    resetTimer();
-  };
-
-  // 3. El useEffect ahora tiene nextSlide como dependencia y ya no dará error
-  useEffect(() => {
-    timerRef.current = setInterval(nextSlide, 4500);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [nextSlide]);
-
-  // Animaciones GSAP
-  useEffect(() => {
-    if (slideRef.current && titleRef.current && descRef.current) {
-      const tl = gsap.timeline();
-      tl.fromTo(slideRef.current, { opacity: 0, scale: 1.05 }, { opacity: 1, scale: 1, duration: 0.8, ease: 'power2.out' });
-      tl.fromTo([titleRef.current, descRef.current], { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, stagger: 0.2, ease: 'power2.out' }, '<');
-    }
-  }, [index]);
+  // CTA secundario según sesión: sin sesión invita a entrar; con sesión
+  // lleva al panel que corresponde al rol (el admin no tiene /dashboard propio).
+  const isAdmin = user?.role === Role.ADMIN;
+  const secondaryCta = user
+    ? {
+        href: isAdmin ? '/dashboardAdmin' : '/dashboard',
+        label: 'Ir a mi panel',
+        Icon: LayoutDashboard,
+      }
+    : { href: '/login', label: 'Iniciar sesión', Icon: LogIn };
 
   return (
-    <div className="relative w-full h-175 bg-gray-900 overflow-hidden">
-      <div ref={slideRef} className="absolute inset-0 w-full h-full">
-        <Image
-          src={slides[index].image}
-          alt={slides[index].title}
-          fill
-          style={{ objectFit: 'cover', objectPosition: 'top' }}
-          priority
-        />
-      </div>
-      <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white">
-        <h2 ref={titleRef} className="text-3xl md:text-5xl font-bold drop-shadow-2xl mb-4 text-center [text-shadow:2px_2px_8px_rgba(0,0,0,1)]">
-          {slides[index].title}
-        </h2>
-        <p ref={descRef} className="text-lg md:text-xl max-w-6xl drop-shadow-2xl text-center mb-37.5 [text-shadow:2px_2px_8px_rgba(0,0,0,1)]">
-          {slides[index].description}
-        </p>
-      </div>
+    <section className="relative min-h-160 w-full overflow-hidden bg-ink-950 md:min-h-180">
+      <Swiper
+        modules={[Autoplay, EffectFade, Navigation, Pagination]}
+        effect="fade"
+        fadeEffect={{ crossFade: true }}
+        speed={900}
+        loop
+        autoplay={{ delay: 5500, disableOnInteraction: false }}
+        navigation={{ prevEl: '.hero-prev', nextEl: '.hero-next' }}
+        pagination={{ el: '.hero-dots', clickable: true, bulletClass: 'hero-dot', bulletActiveClass: 'hero-dot-active' }}
+        onSlideChange={(s) => setActive(s.realIndex)}
+        className="absolute inset-0 h-full w-full"
+      >
+        {slides.map((slide, i) => (
+          <SwiperSlide key={slide.id} className="relative h-full w-full">
+            <Image
+              src={slide.image}
+              alt={slide.title}
+              fill
+              priority={i === 0}
+              sizes="100vw"
+              className="object-cover"
+            />
+            {/* Doble capa: oscurece parejo y refuerza abajo, para que el texto
+                blanco tenga contraste suficiente sobre cualquier foto. */}
+            <div className="absolute inset-0 bg-ink-950/55" />
+            <div className="absolute inset-0 bg-linear-to-t from-ink-950/85 via-ink-950/25 to-ink-950/45" />
+          </SwiperSlide>
+        ))}
+      </Swiper>
 
-      {/* Buscador */}
-      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-        <div className="w-full max-w-7xl px-4 pointer-events-auto mt-10">
-          <HeaderSearch />
+      {/* ── CONTENIDO SUPERPUESTO ── */}
+      <div className="pointer-events-none relative z-20 flex min-h-160 items-center justify-center px-6 md:min-h-180">
+        <div className="w-full max-w-4xl text-center">
+          <motion.span
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            className="pointer-events-auto inline-block rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-[11px] font-bold tracking-[0.25em] text-white uppercase backdrop-blur-sm"
+          >
+            Inmobiliaria en Córdoba
+          </motion.span>
+
+          {/* key={active} re-dispara la animación en cada cambio de slide */}
+          <motion.h1
+            key={`t-${active}`}
+            initial={{ opacity: 0, y: 26 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.65, ease: 'easeOut', delay: 0.08 }}
+            className="mt-6 text-4xl font-bold leading-[1.1] tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)] sm:text-5xl md:text-6xl"
+          >
+            {slides[active].title}
+          </motion.h1>
+
+          <motion.p
+            key={`d-${active}`}
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.65, ease: 'easeOut', delay: 0.18 }}
+            className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] md:text-lg"
+          >
+            {slides[active].description}
+          </motion.p>
+
+          {/* ── CTAs ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut', delay: 0.3 }}
+            className="pointer-events-auto mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
+          >
+            <Link
+              href="/properties"
+              style={{ background: 'var(--gradient-brand)' }}
+              className="group flex w-full items-center justify-center gap-2.5 rounded-2xl px-9 py-4 text-base font-bold text-white shadow-[0_10px_30px_-8px_rgba(11,122,75,0.7)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-10px_rgba(11,122,75,0.85)] hover:brightness-110 active:scale-[0.98] sm:w-auto"
+            >
+              Ver propiedades
+              <ArrowRight size={18} className="transition-transform duration-300 group-hover:translate-x-1" />
+            </Link>
+
+            {/* Mientras hidrata la sesión no se muestra el secundario, para no
+                mostrar "Iniciar sesión" y cambiarlo un instante después. */}
+            {!isLoading && (
+              <Link
+                href={secondaryCta.href}
+                className="group flex w-full items-center justify-center gap-2.5 rounded-2xl border-2 border-white/70 bg-white/10 px-9 py-4 text-base font-bold text-white backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-brand-700 active:scale-[0.98] sm:w-auto"
+              >
+                <secondaryCta.Icon size={18} />
+                {secondaryCta.label}
+              </Link>
+            )}
+          </motion.div>
         </div>
       </div>
 
-  
-
-      {/* Navegación */}
-      <button 
-        aria-label='Anterior' 
-        onClick={prevSlide} 
-        className="absolute left-6 top-1/2 -translate-y-1/2 z-30 p-2 rounded-full bg-[#0b7a4b] hover:bg-[#075534] text-white backdrop-blur-sm transition-all"
+      {/* ── NAVEGACIÓN ── */}
+      <button
+        aria-label="Slide anterior"
+        className="hero-prev absolute top-1/2 left-4 z-30 hidden h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-ink-950/30 text-white backdrop-blur-sm transition-all hover:bg-brand-700 md:flex"
       >
-        <ChevronLeft size={30} />
+        <ChevronLeft size={22} />
       </button>
-      <button 
-        aria-label='Siguiente' 
-        onClick={() => { nextSlide(); resetTimer(); }} 
-        className="absolute right-6 top-1/2 -translate-y-1/2 z-30 p-2 rounded-full bg-[#0b7a4b] hover:bg-[#075534] text-white backdrop-blur-sm transition-all"
+      <button
+        aria-label="Slide siguiente"
+        className="hero-next absolute top-1/2 right-4 z-30 hidden h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-ink-950/30 text-white backdrop-blur-sm transition-all hover:bg-brand-700 md:flex"
       >
-        <ChevronRight size={30} />
+        <ChevronRight size={22} />
       </button>
 
-      {/* Indicadores */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex gap-2">
-        {slides.map((_, i) => (
-          <button 
-            aria-label={`Slide ${i + 1}`} 
-            key={i} 
-            onClick={() => { setIndex(i); resetTimer(); }} 
-            className={`h-1 rounded-full transition-all duration-500 ${i === index ? 'w-8 bg-[#0b7a4b]' : 'w-2 bg-white/40'}`} 
-          />
-        ))}
-      </div>
-    </div>
+      <div className="hero-dots absolute bottom-8 left-1/2 z-30 flex -translate-x-1/2 gap-2" />
+
+      {/* Estilos de los bullets de Swiper (clases custom pasadas arriba). */}
+      <style>{`
+        .hero-dot {
+          display: block;
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.45);
+          cursor: pointer;
+          transition: width 0.4s ease, background 0.4s ease;
+        }
+        .hero-dot-active {
+          width: 30px;
+          background: #14a366;
+        }
+      `}</style>
+    </section>
   );
 };
 

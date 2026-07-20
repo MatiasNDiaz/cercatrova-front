@@ -2,22 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Contexto de este documento:** esta versión fue escrita con foco en preparar un refactor grande de adaptación a un backend NestJS que pasó por un hardening de seguridad. Las secciones de **Cliente de API** y **Autenticación y sesión** están documentadas con el mayor detalle posible, incluyendo explícitamente qué mecanismos **no existen todavía** en el frontend (manejo central de errores, refresh de tokens, etc.), porque eso es exactamente lo que probablemente haya que construir o adaptar.
+> **Contexto de este documento:** regenerado después del refactor de adaptación al backend NestJS post-hardening (Bloques A-G: cliente de API centralizado, interceptores, favoritos reparados, `PATCH /users/me`, middleware admin corregido — ver `FRONTEND_CHANGES.md` para el detalle de esos cambios). Esta versión prioriza, además de las secciones técnicas habituales, tres áreas nuevas pensadas para la próxima fase de **rediseño de UI/UX** (paleta, footer, landing, carrusel, separación de vistas por rol): qué ve exactamente cada tipo de usuario hoy, dónde hay componentes duplicados que pueden interferir entre sí, y un inventario real de estilos/colores/carruseles tal como existen en el código — no como "deberían" ser.
 
 ## Descripción general
 
-Cerca Trova es el frontend de una inmobiliaria en Córdoba, Argentina. Es un proyecto **Next.js 15 con App Router** (confirmado: toda la app vive en `src/app/`, no existe carpeta `pages/`), usando **React 19** y **TypeScript** en modo `strict`. Es un frontend puro: no hay base de datos ni backend en este repo, todo el estado remoto viene de una API HTTP externa (NestJS) referenciada por `NEXT_PUBLIC_API_URL`.
+Cerca Trova es el frontend de una inmobiliaria en Córdoba, Argentina. Es un proyecto **Next.js 15 con App Router** (confirmado de nuevo: todo vive en `src/app/`, no existe `pages/`), **React 19**, **TypeScript** en modo `strict`. Frontend puro — toda la data remota viene de una API NestJS externa (`NEXT_PUBLIC_API_URL`), no hay backend en este repo.
 
-Stack confirmado (por `package.json`):
+Stack confirmado (`package.json`, sin cambios de librerías desde la versión anterior de este documento):
 - **Next.js 15.5.5** (`next dev/build --turbopack`), **React 19.1.0**.
-- **Tailwind CSS v4** vía `@tailwindcss/postcss` — no hay archivo `tailwind.config.*`, la config vive inline en CSS (`src/app/globals.css`).
-- **No hay librería de componentes de UI** (no shadcn/ui, no Radix, no MUI, no Headless UI). No existe `components.json`. Tampoco se usa `clsx`/`cn()`/`tailwind-merge` en ningún lado — las clases de Tailwind se arman como template strings manuales condicionales.
-- **axios** — cliente HTTP único (ver sección "Cliente de API").
-- **react-hook-form + @hookform/resolvers + zod** — pero usados solo en 2 componentes (login y registro); el resto de los formularios son manuales con `useState`.
-- **jose** — decodifica (no verifica firma) el JWT en el middleware de Next.js.
-- **sonner** — toasts, montado una sola vez en el layout raíz.
-- **framer-motion, gsap, three, swiper, lucide-react, react-icons** — animación, 3D y UI decorativa.
-- No hay ningún cliente de estado global tipo Redux/Zustand/Jotai — el único estado global es `AuthContext` (React Context puro).
+- **Tailwind CSS v4** vía `@tailwindcss/postcss` — no hay `tailwind.config.*`; la única config vive en `src/app/globals.css` (`@import "tailwindcss"` + dos `@source` + variables de fuente). Ver sección de estilos para el detalle.
+- **No hay librería de componentes de UI**: no shadcn/ui, no Radix, no MUI. No hay `components.json`. No se usa `clsx`/`cn()`/`tailwind-merge` en ningún lado.
+- **axios** — cliente HTTP único, ahora con interceptor de respuesta (ver "Cliente de API").
+- **react-hook-form + @hookform/resolvers + zod** — solo en `LoginForm`/`RegisterForm`; el resto de formularios son manuales con `useState`.
+- **jose** — decodifica (no verifica firma) el JWT en el middleware.
+- **sonner** — toasts, montado una vez en el layout raíz.
+- **framer-motion, gsap, three, react-icons, lucide-react** — animación/3D/iconos, todos en uso.
+- **swiper** está en `package.json` pero **no se usa en ningún archivo de `src/`** (verificado por grep de `from 'swiper'`/`Swiper`) — dependencia muerta. El carrusel real es 100% custom (ver sección de estilos).
+- Único estado global: `AuthContext` (React Context puro). No hay Redux/Zustand/Jotai.
 
 ## Comandos
 
@@ -28,243 +29,281 @@ npm run start    # levanta el build de producción
 npm run lint     # ESLint (flat config: next/core-web-vitals + next/typescript)
 ```
 
-No hay ningún script de test configurado en `package.json` (no `test`, no `vitest`/`jest`/`playwright` en dependencias) y no se encontró ningún archivo de test en el repo. **No hay testing hoy.**
+Sin cambios: no hay ningún script ni framework de testing configurado (no `test` en `package.json`, no `vitest`/`jest`/`playwright` en dependencias, no archivos de test en el repo).
 
 ## Variables de entorno
 
-Se buscó en `.env` (único archivo de entorno presente en el repo — no hay `.env.local` ni `.env.example`) y con grep de `process.env`/`import.meta.env` en todo `src/`.
+Confirmado de nuevo (único `.env` en el repo, sin `.env.local` ni `.env.example`; grep exhaustivo de `process.env`/`import.meta.env` en `src/`):
 
-| Variable | Pública (`NEXT_PUBLIC_*`) | Dónde se usa | Para qué |
+| Variable | Pública | Dónde se usa | Para qué |
 |---|---|---|---|
-| `NEXT_PUBLIC_API_URL` | Sí | `src/modules/shared/lib/axios.ts` (único uso en todo el código) | `baseURL` del cliente axios. Si no está seteada, cae a `http://localhost:3000` (fallback hardcodeado). |
+| `NEXT_PUBLIC_API_URL` | Sí | `src/modules/shared/lib/axios.ts` (único uso en todo el código) | `baseURL` del cliente axios. Fallback silencioso a `http://localhost:3000` si no está seteada. |
 
-Esa es la **única** variable de entorno que consume el frontend. No hay ninguna variable server-only (sin `NEXT_PUBLIC_`) en uso — todo lo que se lee de `process.env` es esa misma línea. Esto es relevante para el refactor: si el backend endurecido requiere nuevas configuraciones (por ejemplo, distintos orígenes por ambiente, flags de features, claves públicas), hoy no hay ningún patrón establecido para eso, se estaría empezando de cero.
+Sigue siendo la única variable de entorno del frontend. Nada nuevo se agregó en el refactor de hoy (el login con Google, que sí necesitaría `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, quedó pospuesto — ver `FRONTEND_CHANGES.md`).
 
 ## Estructura del proyecto
 
 ```
 src/
   app/                    # App Router — rutas. Los grupos (paréntesis) NO afectan la URL.
-    (public)/             # sin auth: landing, /properties, /servicios
+    (public)/             # sin auth: landing "/", /properties, /servicios
     (auth)/                # /login, /register
     (private)/dashboard/  # zona usuario logueado — URL real: /dashboard
     (private)/publicar/   # URL real: /publicar
-    (admin)/dashboardAdmin/ # zona admin — URL real: /dashboardAdmin (¡ojo, no es /admin!)
-    (user)/                # solo un layout.tsx vacío, sin uso real hoy
+    (admin)/dashboardAdmin/ # zona admin — URL real: /dashboardAdmin
+    (user)/                # layout.tsx passthrough sin páginas — sin uso real, candidato a eliminar
     middleware.ts
-    layout.tsx             # layout raíz: AuthProvider + NavbarSelector + Toaster
+    layout.tsx             # layout raíz: AuthProvider + NavbarSelector + children + FooterPublic + Toaster
     globals.css
-  modules/                # código de features, fuera de app/
+  modules/
     auth/
       components/          # LoginForm.tsx, RegisterForm.tsx
       hooks/useAuth.ts      # re-export de useAuth desde AuthContext
-      interface/auth.interfaces.ts
+      interface/auth.interfaces.ts   # re-exporta tipos desde shared/types/api.ts
       services/auth.service.ts
     properties/
-      components/, hooks/usePropertyFilters.ts, interfaces/, services/properties.service.ts
+      components/           # FiltersPanel, HeaderSearch, SearchBar, PropertiesList, PropertyCard
+      hooks/usePropertyFilters.ts
+      interfaces/            # operation-type.ts y status-property.ts re-exportan desde shared/types/api.ts
+      services/properties.service.ts
     DashboardUser/
-      components/           # Favoritos, MisSolicitudes, Notificaciones, Perfil, Preferencias
-      interfaces/            # carpeta EXISTE pero está VACÍA (sin archivos)
-    landing/components/      # secciones de la home
+      components/, hooks/, interfaces/, services/   # ⚠️ MÓDULO MUERTO — ver nota abajo
+    landing/components/      # secciones de la home + Slider (carrusel hero) + FooterPublic
     shared/
       context/AuthContext.tsx
-      lib/axios.ts            # instancia única de axios
+      lib/
+        axios.ts             # instancia única de axios + interceptor de respuesta
+        authEvents.ts         # puente sin dependencia circular axios↔AuthContext
+        apiError.ts            # getErrorMessage()/getErrorStatus() — lee el error real del backend
+        validateImage.ts        # validación client-side de imágenes (tipo + tamaño)
+      types/api.ts             # tipos canónicos del contrato del backend (enums, User, Property, DTOs, errores)
       ui/                      # NavbarPublic, NavbarPrivate, NavbarSelector, Favoritebutton
 ```
 
-Convención: las páginas en `src/app/**/page.tsx` son mayormente "gordas" (mucha UI + fetch inline, `'use client'` casi en todo), no delgadas. Las excepciones son `auth` y `properties`, que sí separan `service.ts` (llamadas API), `hooks/` e `interfaces/`. En el resto de los módulos (`DashboardUser`, admin) las llamadas a `api` están hechas directo dentro del componente de página, no en un `service.ts` — no hay una capa de servicio consistente en todo el proyecto.
+**`src/modules/DashboardUser/` está muerto.** `hooks/`, `services/` e `interfaces/` no contienen ningún archivo. `components/` tiene 5 archivos (`Favoritos.tsx`, `MisSolicitudes.tsx`, `Notificaciones.tsx`, `Perfil.tsx`, `Preferencias.tsx`) que están **vacíos (0 bytes)** y no se importan desde ningún lado (verificado por grep de `DashboardUser/components`). La funcionalidad real de favoritos/solicitudes/notificaciones/perfil/preferencias del usuario vive en `src/app/(private)/dashboard/*/page.tsx`, no acá. Candidato claro a borrar en una limpieza.
 
-Alias de import: `@/*` → `./src/*` (`tsconfig.json`).
+Convención de código: las páginas en `src/app/**/page.tsx` son mayormente "gordas" (UI + fetch inline, `'use client'` en casi todo). Solo `auth` y `properties` separan `service.ts`/`hooks/`/`interfaces/` de forma consistente; el resto de los módulos llaman a `api` directo desde el componente de página.
 
-## Cliente de API — sección crítica
+Alias: `@/*` → `./src/*`.
 
-**Archivo exacto:** `src/modules/shared/lib/axios.ts` (9 líneas, es todo el archivo):
+## Cliente de API (post-refactor — Bloque A)
 
+**`src/modules/shared/lib/axios.ts`:**
 ```ts
-import axios from 'axios';
-
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
 
-export default api;
-```
-
-- **URL base:** sale de `NEXT_PUBLIC_API_URL`, con fallback a `http://localhost:3000` si no está definida (fallback silencioso, no hay warning ni error si falta la env var en producción).
-- **Credenciales:** `withCredentials: true` — todas las requests mandan cookies automáticamente al backend. El frontend asume que el backend setea una cookie `access_token` (probablemente httpOnly, ya que **el frontend nunca lee `document.cookie` ni usa `js-cookie` en ningún lado** — la única lectura de esa cookie ocurre server-side, en `middleware.ts`, vía `request.cookies.get('access_token')`).
-- **Interceptores: NO existen.** Se buscó explícitamente (`api.interceptors`) y no hay ni un solo interceptor de request ni de response configurado. Esto significa:
-  - No hay refresco automático de token.
-  - No hay manejo centralizado de 401 (no hay un interceptor que redirija a `/login` o dispare `logout()` cuando cualquier llamada devuelve 401).
-  - No hay logging ni tracking central de errores de red.
-- **Manejo de errores: 100% local y no estructurado.** Se hizo grep de `error.response`, `err.response` y `AxiosError` en todo `src/` y **no hay ni un solo uso**. El patrón repetido en absolutamente todos los `service.ts` y componentes es:
-  ```ts
-  try {
-    await api.post(...);
-    toast.success('mensaje genérico de éxito');
-  } catch {
-    toast.error('mensaje genérico de error, hardcodeado');
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (isAxiosError(error) && error.response?.status === 401) {
+      const isAuthEndpoint = (error.config?.url ?? '').startsWith('/auth/');
+      if (!isAuthEndpoint) emitUnauthorized();
+    }
+    return Promise.reject(error);
   }
-  ```
-  Es decir: **ningún componente lee el body del error que devuelve el backend** (ni `error.response.data.message`, ni `error.response.status`, ni validaciones detalladas de un 400). El único servicio que re-lanza el error (`properties.service.ts::getFilteredProperties`) igual solo hace `console.error` y `throw error` crudo, sin tipar ni transformar. Esto es una nota importante para el refactor: si el backend endurecido empieza a devolver errores estructurados (ej. `{ statusCode, message, errors: [...] }` de `class-validator`), hoy no hay ningún lugar preparado para consumir eso — habría que construirlo desde cero (interceptor de axios + un tipo de error compartido + componentes que lean `error.response.data`).
-- **Tipado de respuestas:** no hay tipos genéricos para respuestas de API (no hay `ApiResponse<T>` ni wrapper). Cada `service.ts` tipa manualmente lo que espera devolver, y en la mayoría de los `api.get`/`api.post` directos en componentes ni siquiera hay tipado — se usa `const { data } = await api.get(...)` y `data` queda como `any` implícito, salvo casts puntuales (ej. `data.filter((n: { read: boolean }) => ...)`). Los tipos que sí existen viven en `interfaces/` por módulo (`auth.interfaces.ts`, `propertyInterface.ts`, `property-filters.interface.ts`, `operation-type.ts`, `status-property.ts`), pero no están centralizados ni hay una carpeta global `types/`.
-- Nota menor de duplicación: `status-property.ts` define tanto `StatusProperty` (usado en todo el código) como una interfaz `IPropertyFilter` que parece un duplicado viejo/no usado de `PropertyFilters` (`property-filters.interface.ts`) — vale la pena limpiar esto durante el refactor.
-
-## Autenticación y sesión — sección crítica
-
-### Cómo sabe el frontend si el usuario está logueado
-
-Fuente de verdad: **`AuthContext`** (React Context, no Zustand/Redux) en `src/modules/shared/context/AuthContext.tsx`. Expone `{ user, isLoading, login, logout, register, updateUser }` vía el hook `useAuth()`. Ese hook está re-exportado en dos lugares (`src/modules/auth/hooks/useAuth.ts` y se importa directo desde el contexto en otros archivos) — hay inconsistencia de import path entre archivos, algunos hacen `from '@/modules/auth/hooks/useAuth'` y otros `from '@/modules/shared/context/AuthContext'`, ambos terminan en el mismo contexto.
-
-`user` es del tipo `AuthUser` (`src/modules/auth/interface/auth.interfaces.ts`):
-```ts
-interface AuthUser {
-  id: number; email: string; role: 'user' | 'admin';
-  name: string; surname: string; phone: string; photo?: string;
-}
+);
 ```
-No hay más roles que `'user' | 'admin'` en el tipo actual.
+- **URL base:** `NEXT_PUBLIC_API_URL`, fallback silencioso a `localhost:3000`.
+- **Credenciales:** `withCredentials: true`. La cookie `access_token` es httpOnly — el frontend nunca la lee directamente (confirmado: cero usos de `document.cookie`/`js-cookie`); solo el middleware la lee server-side vía `request.cookies.get`.
+- **Interceptor de respuesta (nuevo):** un 401 fuera de cualquier endpoint `/auth/*` dispara `emitUnauthorized()` → limpia la sesión del `AuthContext` y redirige a `/login` con un toast. Los 401 de `/auth/me` (hidratación), `/auth/login` (credenciales inválidas) y `/auth/logout` (sesión ya cerrada) quedan excluidos a propósito — cada uno los maneja su propio caller. 429 y el resto de los status (400/403/404/409/502) pasan intactos al `catch` del componente.
+- **`src/modules/shared/lib/authEvents.ts`:** el puente entre el interceptor y `AuthContext` (evita el import circular `axios.ts → AuthContext → auth.service → axios.ts`). Expone `setOnUnauthorized(handler)` (llamado por `AuthProvider` al montar/desmontar) y `emitUnauthorized()` (llamado por el interceptor).
+- **`src/modules/shared/lib/apiError.ts`:** `getErrorMessage(error)` — la función que **todo** `catch` de formulario debería usar ahora. Si `error.response.data.message` es string, se muestra tal cual; si es array (fallo de `class-validator`), une los primeros 3; 429 → mensaje propio ("Demasiados intentos..."); sin `response` (red caída) → mensaje de conexión. También `getErrorStatus(error)` para lógica condicional por status (ej. tratar 401 como éxito en logout).
+- **`src/modules/shared/lib/validateImage.ts`:** `validateImageFile(file)` — valida `image/*` y ≤5MB client-side antes de subir (límites reales del backend), usado en los dos perfiles y en `PropertyForm`.
+- **Tipado de respuestas:** `src/modules/shared/types/api.ts` es ahora el archivo canónico con los enums (`Role`, `StatusProperty`, `OperationType`, `RequestStatus` + `VALID_REQUEST_TRANSITIONS`), entidades (`User`, `Property`, `Favorite`, `Comment`, `Notification`, `SearchPreference`, `PropertyRequest`, etc.) y shapes de error (`ApiErrorResponse`, `ApiValidationErrorResponse`, `ApiThrottleErrorResponse`) del contrato del backend. Los `interfaces/` por módulo (`auth/interface/auth.interfaces.ts`, `properties/interfaces/operation-type.ts`, `.../status-property.ts`) ahora re-exportan desde acá en vez de definir sus propios duplicados — si necesitás un tipo de la API, primero mirá si ya está en `shared/types/api.ts`.
+- **Nota:** el resto de las llamadas directas a `api.get/post/...` en componentes (fuera de `auth`/`properties`) siguen sin tipar la respuesta (`data` cae en `any` implícito) — no se tocó en este refactor, es trabajo pendiente si se quiere tipado end-to-end.
 
-### Inicialización/hidratación de sesión
+## Autenticación y sesión (post-refactor — Bloques B/C/D/F)
 
-Al montar `AuthProvider` (envuelve toda la app en el layout raíz `src/app/layout.tsx`), un `useEffect` llama `authService.getMe()` → `GET /auth/me`. Si responde OK, `setUser(data)`; si tira excepción (esperablemente un 401 si no hay sesión), se asume "no logueado" (`setUser(null)`) sin distinguir el motivo del error. `isLoading` arranca en `true` y pasa a `false` en el `finally`. Mientras `isLoading === true`, `NavbarSelector` muestra el navbar público como placeholder.
+### Fuente de verdad de sesión
+`AuthContext` (`src/modules/shared/context/AuthContext.tsx`), consumido vía `useAuth()`. Expone `{ user, isLoading, login, logout, register, updateUser }`. `logout` ahora acepta un `redirectTo` opcional (default `/`) — se usa `logout('/login')` después de un cambio de contraseña exitoso, porque el backend revoca la sesión al cambiar el password.
 
-No hay ningún mecanismo de persistencia en `localStorage`/`sessionStorage` — todo depende de la cookie httpOnly + el round-trip a `/auth/me` en cada carga de la app (no hay cache entre navegaciones del lado cliente más allá del propio Context, que se resetea en cada hard reload).
+### Hidratación
+Al montar `AuthProvider` (en el layout raíz), `GET /auth/me` hidrata `user`; 401 = no logueado. Sin persistencia en `localStorage`. `AuthProvider` también registra el handler de `authEvents` (`setOnUnauthorized`) al montar y lo desregistra al desmontar.
 
-### Dónde está el código de login, registro y logout
+### Login / Registro / Logout
+- **Login:** `LoginForm.tsx` (zod solo valida forma) → `AuthContext.login()` → `POST /auth/login`. Redirige por rol: admin → `/dashboardAdmin/`, resto → `/dashboard`. Si `user.profileIncomplete === true`, muestra un toast informativo (8s) invitando a completar perfil (pensado originalmente para usuarios de Google).
+- **Google OAuth: sigue sin existir.** Pospuesto explícitamente (Bloque H de `FRONTEND_CHANGES.md`) con decisiones ya tomadas: reusar el Client ID del backend + librería `@react-oauth/google`. El backend ya soporta `POST /auth/google`.
+- **Registro:** `RegisterForm.tsx` → `POST /auth/register` → redirige a `/login` (no autologuea).
+- **Logout:** `AuthContext.logout(redirectTo)` → `POST /auth/logout`. Un 401 en logout se trata como éxito silencioso (la sesión ya estaba revocada); cualquier otro error también limpia el estado local igual — nunca deja al usuario "atrapado" logueado. La UI de confirmación de logout está **triplicada** (ver sección de duplicación).
+- **Perfil (`PATCH /users/me`):** tanto `dashboard/perfil/page.tsx` como `dashboardAdmin/perfil/page.tsx` usan `PATCH /users/me` para datos y password (antes usaban `PATCH /users/:id`). Cambio de password exitoso → toast + `logout('/login')`. La foto sigue en `PATCH /users/:id/photo` (el contrato no tiene variante `/me` para foto).
+- **Favoritos (rutas reparadas):** `GET /favorites` y `DELETE /favorites/:propertyId`, sin `userId` en la URL (antes eran `GET/DELETE /favorites/:userId/...`, rutas que ya no existían en el backend — favoritos estaba roto antes de hoy).
 
-- **Login tradicional:** UI en `src/modules/auth/components/LoginForm.tsx` (usa `react-hook-form` + `zod` para validación de forma, pero la llamada real está delegada a `login()` del contexto). Lógica real en `AuthContext.login()` → `authService.login()` → `POST /auth/login` (`src/modules/auth/services/auth.service.ts`). Tras loguear, redirige por rol: `role === 'admin'` → `router.push('/dashboardAdmin/')`, cualquier otro rol → `/dashboard`.
-- **Login con Google / OAuth: NO existe.** Se buscó explícitamente cualquier mención de Google/OAuth relacionada a auth y las únicas coincidencias son enlaces a Google Maps y a `mail.google.com` (para contactar usuarios desde el panel admin), nada de autenticación social.
-- **Registro:** UI en `src/modules/auth/components/RegisterForm.tsx`, misma mecánica (zod + `react-hook-form`), llama a `AuthContext.register()` → `authService.register()` → `POST /auth/register`. Tras registrarse, redirige a `/login` (no loguea automáticamente).
-- **Logout:** `AuthContext.logout()` → `authService.logout()` → `POST /auth/logout`, limpia `user` a `null` y redirige a `/`. La UI de logout está duplicada en dos lugares con el mismo patrón visual (confirmación con `toast.custom`): `src/app/(private)/dashboard/layout.tsx` y `src/app/(admin)/dashboardAdmin/layout.tsx` (cada sidebar tiene su propia copia del modal de confirmación, no hay componente compartido).
-- Nota: el `LoginForm` tiene un link "¿Olvidaste tu contraseña?" apuntando a `/forgot-password`, **pero esa ruta no existe** en `src/app` — es un link roto hoy.
+### Rutas protegidas — estado actual del middleware
+`src/middleware.ts`, matcher: `/dashboard/:path*`, `/dashboardAdmin/:path*`, `/publicar/:path*`, `/login`, `/register`.
+- `isAdminZone = pathname.startsWith('/dashboardAdmin')`; `isPrivateZone` cubre `/dashboard` (excluyendo admin) y `/publicar`.
+- Sin token en zona privada o admin → redirect a `/login?callbackUrl=...` (el `callbackUrl` se setea pero **el login no lo lee** para redirigir de vuelta tras autenticarse — pendiente).
+- Con token: si `isAdminZone && role !== 'admin'` → redirect a `/dashboard`. Si está en `/login` o `/register` ya logueado → redirect a `/dashboardAdmin` o `/dashboard` según rol.
+- `decodeJwt` (jose) solo decodifica, **no verifica firma** — es UX de redirección, no autorización real; la autorización de verdad la hace el backend en cada request.
+- Esto ya corrige el bug documentado en la versión anterior de este archivo (el middleware protegía `/admin` en vez de `/dashboardAdmin` y no bloqueaba nada de la zona admin). **Ya no aplica esa nota vieja** — la zona admin sí está protegida a nivel de servidor ahora.
 
-### Rutas protegidas — tres capas, con un desalineamiento importante
+### Lo que el middleware **no** hace (importante para el rediseño de roles)
+El middleware **no impide que un admin navegue a `/dashboard`**: `isPrivateZone` solo exige un token válido, sin chequear que el rol sea `user`. Tampoco lo bloquea `src/app/(private)/dashboard/layout.tsx` — ese layout solo verifica `!user` (ver más abajo, sección "Vistas por tipo de usuario"). Es decir, hoy un admin logueado que escribe `/dashboard` en la URL entra sin fricción y ve el dashboard de usuario común. Documentado en detalle en la sección nueva de abajo porque es justo lo que probablemente haya que decidir/cambiar en el rediseño de roles.
 
-1. **`src/middleware.ts`** (server-side, Next.js middleware): decodifica el JWT de la cookie `access_token` con `jose.decodeJwt` — **esto solo decodifica, no verifica la firma**. Lee `payload.role` para autorización por rol.
-   - `matcher` (las únicas rutas donde el middleware corre): `/dashboard/:path*`, `/publicar/:path*`, `/admin/:path*`, `/login`, `/register`.
-   - **Bug/gap real detectado:** el middleware protege `/admin/:path*`, pero la URL real de la zona admin es `/dashboardAdmin` (por el route group `(admin)/dashboardAdmin`), no `/admin`. Como consecuencia, **el middleware no protege ni autentica ni autoriza por rol las rutas `/dashboardAdmin/*` en absoluto** — ni siquiera exige que haya un token. Toda la protección de esa zona hoy depende exclusivamente de la capa 2 (chequeo client-side).
-   - Si hay token válido y el usuario intenta entrar a `isAuthPage` (`/login` o `/register`), lo redirige a `/dashboardAdmin` (admin) o `/dashboard` (resto) — esta redirección de conveniencia sí corre porque `/login`/`/register` están en el matcher.
-   - Si el JWT falla al decodificar (inválido/expirado/malformado), borra la cookie y redirige a `/login`.
-2. **Layouts client-side por zona** (la protección real hoy):
-   - `src/app/(private)/dashboard/layout.tsx`: `'use client'`, usa `useAuth()` + `useEffect` — si `!isLoading && !user`, `router.push('/login')`. Mientras `isLoading`, muestra un spinner; si `!user`, no renderiza nada (`return null`).
-   - `src/app/(admin)/dashboardAdmin/layout.tsx`: mismo patrón, pero además valida rol: si `user.role !== 'admin'`, redirige a `/dashboard`.
-   - Estas protecciones son **puramente client-side y ocurren después del render inicial** (hay un flash del layout antes de que el `useEffect` redirija), y dependen 100% de que `AuthContext` ya haya resuelto `getMe()`.
-3. `NavbarSelector` decide navbar público vs. privado en base a `user` (no es protección de ruta, solo UI).
+### 401 en medio de la navegación
+Ya no es un caso sin manejar: lo cubre el interceptor de `axios.ts` (ver "Cliente de API") — limpia sesión + toast + redirect a `/login`. Antes de hoy, un 401 a mitad de navegación dejaba al usuario en un estado inconsistente (UI logueada, backend rechazando); ese problema está resuelto.
 
-### Cómo se distingue una vista de admin de una de usuario normal
+## Vistas por tipo de usuario (sección nueva)
 
-Puramente por `user.role === 'admin'`, chequeado client-side en varios lugares (no hay un HOC ni un hook reusable tipo `useRequireRole()` — cada layout repite su propio `useEffect` con la misma lógica):
-- `src/app/(admin)/dashboardAdmin/layout.tsx` — gate de la zona admin completa.
-- `src/modules/shared/ui/NavbarPrivate.tsx` — decide `dashboardHref`/`perfilHref` y qué endpoint de notificaciones pegar (`/notifications/admin` vs `/notifications`).
-- `src/app/(admin)/dashboardAdmin/usuarios/page.tsx` — filtra/gestiona usuarios.
-- No hay ninguna verificación de rol del lado del middleware (ver punto anterior) ni protección real en las llamadas a la API misma — el frontend confía en que el backend vuelva a validar el rol en cada endpoint (algo que hay que confirmar del lado del backend NestJS endurecido).
+### Visitante NO logueado
+- **Navbar:** `NavbarSelector.tsx` (`src/modules/shared/ui/NavbarSelector.tsx`) decide: si `pathname.startsWith('/dashboard')` (esto también matchea `/dashboardAdmin` por ser prefijo) → no renderiza navbar (los layouts de dashboard tienen su propio sidebar). Si `isLoading` → muestra `NavbarPublic` como placeholder. Si `!user` → `NavbarPublic`.
+- **`NavbarPublic.tsx`:** logo, links con scroll suave a secciones de la landing (inicio, nosotros, faq), dropdowns de "propiedades" (venta/alquiler/terrenos/ver todas) y "servicios" (5 sub-servicios), dropdown de "contacto" (WhatsApp/Instagram/Facebook externos), y un botón "iniciar sesión" que linkea a `/login`. **No hay ningún link a favoritos, publicar propiedad, ni dashboard** — todo eso solo aparece logueado.
+- **Rutas accesibles:** `(public)` completo (`/`, `/properties`, `/properties/:id`, `/servicios/:id`) y `(auth)` (`/login`, `/register`). Cualquier intento de entrar a `/dashboard`, `/dashboardAdmin` o `/publicar` sin token es redirigido a `/login` por el middleware.
+- **Acciones disponibles:** ver catálogo y detalle de propiedades, ver comentarios/ratings existentes de una propiedad (de solo lectura — comentar y calificar requieren `POST`, que exige JWT), filtrar/buscar propiedades, ver servicios, contactar por WhatsApp/redes. **Favoritos, comentar, calificar, publicar, y todo el dashboard están fuera de alcance** — no hay UI de favoritos visible para un visitante (el `FavoriteButton` sí se renderiza en algunas vistas públicas, pero su `onClick` redirige a `/login` si `!user`, no intenta la llamada).
 
-### Qué pasa hoy cuando una request devuelve 401
+### Usuario logueado (`role: 'user'`)
+- **Navbar:** `NavbarPrivate.tsx`. Suma respecto al visitante: link "publicar propiedad" (`/publicar`), campanita de notificaciones (`/dashboard/notificaciones`) con badge de no leídas (polling cada 60s vía `GET /notifications`), y un dropdown de avatar con "Mi perfil" (`/dashboard/perfil`), "Panel de control" (`/dashboard`) y "Cerrar sesión". El link "publicar propiedad" y la campanita de usuario están explícitamente condicionados a `!isAdmin`.
+- **Dashboard (`/dashboard`, layout en `src/app/(private)/dashboard/layout.tsx`):** sidebar propio (logo, tarjeta de perfil, nav: Inicio/Favoritos/Mis Solicitudes/Notificaciones, luego Editar Perfil/Preferencias, luego Cerrar sesión). La página de inicio del dashboard (`dashboard/page.tsx`) es un listado de 5 tarjetas de acceso rápido (Mi Perfil, Favoritos, Preferencias, Mis Solicitudes, Notificaciones).
+- **Rutas exclusivas:** `/dashboard/*` (favoritos, mis-solicitudes, notificaciones, perfil, preferencias) y `/publicar`.
+- **Acciones nuevas respecto al visitante:** guardar/quitar favoritos, comentar y calificar propiedades (1-5, un rating por usuario/propiedad), enviar solicitud de publicación de propiedad propia (`/publicar`), ver el estado de sus solicitudes, guardar preferencias de búsqueda, editar perfil (datos, password, foto), toggle de notificaciones por email (`notifyBroadcast`, agregado en el Bloque G de hoy).
+- **Guard del layout:** `dashboard/layout.tsx` (`useEffect`) solo verifica `!isLoading && !user → router.push('/login')`. **No verifica rol** — ver nota siguiente.
 
-**No hay ningún manejo central.** Al no existir interceptores de axios (ver sección de Cliente de API), un 401 en cualquier llamada `api.get/post/patch/delete` cae en el `catch {}` local de ese componente, que casi siempre solo hace `toast.error('mensaje genérico')` sin mirar el status code. Casos concretos:
-- Si `getMe()` devuelve 401 al hidratar la sesión, `AuthContext` lo interpreta correctamente como "no logueado" (es el único lugar del código que espera un 401 a propósito, vía comentario `// 401 → no logueado`).
-- Si una cookie expira **mientras el usuario ya está navegando** dentro de `/dashboard` o `/dashboardAdmin` y hace, por ejemplo, `PATCH /users/:id`, el usuario va a ver un toast de error genérico ("No se pudieron actualizar los datos") sin ser redirigido a `/login` ni tener su sesión limpiada del `AuthContext` — queda en un estado inconsistente (UI dice que está logueado, pero el backend ya rechaza sus requests) hasta el próximo hard reload o navegación a una ruta protegida por el middleware.
-- No hay reintento automático, no hay refresh token, no hay ningún flujo de "sesión expirada, volvé a loguearte" con feedback claro al usuario.
+### Admin (`role: 'admin'`)
+- **Navbar:** también `NavbarPrivate.tsx`, pero con `isAdmin` cambiando la lógica interna: sin link "publicar propiedad", campanita apunta a `/dashboardAdmin/notificaciones` en vez de `/dashboard/notificaciones`, badge "Administrador" en el dropdown, y los links del dropdown usan `dashboardHref = isAdmin ? '/dashboardAdmin' : '/dashboard'` / `perfilHref = isAdmin ? '/dashboardAdmin/perfil' : '/dashboard/perfil'` — **el navbar nunca ofrece un link a `/dashboard` para un admin**, ese acceso solo sería manual (ver nota abajo).
+- **Dashboard (`/dashboardAdmin`, layout en `src/app/(admin)/dashboardAdmin/layout.tsx`):** sidebar propio y distinto del de usuario (badge "Administrador", nav: Inicio/Propiedades/Solicitudes/Usuarios/Notificaciones con badges de conteo por tipo, luego Mi Perfil/Estadísticas). Notificaciones admin se traen de `GET /notifications/admin`, polling cada 60s + evento custom `notif-updated` para refresco inmediato tras acciones.
+- **Guard del layout:** `dashboardAdmin/layout.tsx` sí verifica rol — `useEffect`: si `!user` → `/login`; si `user.role !== 'admin'` → `/dashboard`. Esta es la única protección de rol client-side (además del middleware, que también protege `/dashboardAdmin/:path*` desde hoy).
+- **Gestión disponible:** CRUD completo de propiedades (alta/edición con imágenes, portada, borrado, cambio de estado), gestión de usuarios (listar, ver detalle, eliminar), gestión de solicitudes de publicación (aprobar/rechazar/volver a revisión — ahora restringido a transiciones válidas del contrato, ver `FRONTEND_CHANGES.md` Bloque F), notificaciones admin.
+- **⚠️ Link roto:** tanto el sidebar admin (`accountNavItems`) como el dashboard admin (`quickLinks` en `dashboardAdmin/page.tsx`) linkean a `/dashboardAdmin/estadisticas`, **ruta que no existe** en `src/app` (verificado: no hay ningún archivo bajo esa carpeta) — da 404 hoy. El backend sí tiene un módulo `stats` completo (`GET /stats/*`, requiere ADMIN) que el frontend nunca consume — es candidato natural para esa página faltante.
+- **¿Puede un admin ver `/dashboard` (zona de usuario)?** **Sí, y no hay ninguna advertencia ni bloqueo si lo hace.** Ni el middleware ni `dashboard/layout.tsx` verifican que el rol sea `user`; solo exigen "logueado". Un admin que navega manualmente a `/dashboard` entra sin redirect y ve el sidebar y las páginas de usuario común (favoritos, mis-solicitudes, etc. — funcionalmente andarían, porque esos endpoints solo exigen JWT, no rol específico). Esto es exactamente el tipo de comportamiento que conviene decidir explícitamente en el rediseño: ¿se bloquea, se permite a propósito, o se ofrece como una vista intencional ("ver como usuario")?
 
-Esto es probablemente el gap más importante a resolver en el refactor: conviene agregar un interceptor de respuesta en `axios.ts` que capture 401 (y probablemente 403) de forma centralizada, dispare `logout()`/limpieza de `AuthContext` y redirija a `/login`, en vez de depender de que cada `catch {}` lo maneje bien (hoy ninguno lo hace).
+## Duplicación y riesgo de interferencia de componentes (sección nueva)
+
+### Footer
+`FooterPublic` se importa **una sola vez**, en el layout raíz (`src/app/layout.tsx:4,40`), fuera de cualquier condicional de ruta — se renderiza en **todas** las páginas, incluidas `/dashboard/*` y `/dashboardAdmin/*` (esos layouts no lo excluyen; a diferencia del navbar, que `NavbarSelector` sí oculta en rutas que empiezan con `/dashboard`). No hay ningún otro import de `FooterPublic` en el resto del código — no está duplicado, pero si el rediseño quiere un dashboard "sin footer", hay que agregar esa exclusión explícitamente (siguiendo el mismo patrón que ya usa `NavbarSelector`).
+
+### Modal de confirmación de logout — triplicado
+Existen **tres implementaciones independientes**, casi idénticas visualmente pero copiadas a mano, del mismo modal `toast.custom(...)` "¿Ya te vas?":
+1. `src/app/(private)/dashboard/layout.tsx` (función `handleLogoutConfirm` dentro de `Sidebar`)
+2. `src/app/(admin)/dashboardAdmin/layout.tsx` (misma función, mismo nombre, en su propio `Sidebar`)
+3. `src/modules/shared/ui/NavbarPrivate.tsx` (otra copia más, en el dropdown de avatar)
+
+Las tres arman el mismo JSX (ícono con pulso, texto "¿Ya te vas?", dos botones) con clases Tailwind ligeramente distintas entre sí. Cambiar el copy o el estilo del modal de logout hoy requiere editar 3 archivos a mano.
+
+### Modal de confirmación genérico (`toast.custom`) — 8 implementaciones distintas
+Además del logout, hay confirmaciones de borrado con el mismo patrón "modal custom vía `toast.custom`" reimplementado por archivo, sin componente compartido:
+- `src/app/(admin)/dashboardAdmin/usuarios/[id]/page.tsx` (eliminar solicitud)
+- `src/app/(admin)/dashboardAdmin/solicitudes/page.tsx` (eliminar solicitud)
+- `src/app/(admin)/dashboardAdmin/usuarios/page.tsx` (eliminar usuario)
+- `src/app/(admin)/dashboardAdmin/propiedades/page.tsx` (eliminar propiedad)
+- `src/app/(public)/properties/[id]/PropertyDetail.tsx` (eliminar comentario)
+- más los 3 de logout ya listados.
+
+No existe un componente `<ConfirmDialog />` reusable — es el mismo patrón de diseño repetido 8 veces con pequeñas variaciones de texto/color. Fuerte candidato a unificar antes o durante el rediseño.
+
+### Inputs/labels de formulario — 3 implementaciones paralelas del mismo helper
+`SectionTitle` + `Field` + constantes `inputCls`/`selectCls` (o `inputClass`/`selectClass`) están definidos **de forma independiente** en:
+- `src/app/(admin)/dashboardAdmin/propiedades/PropertyForm.tsx`
+- `src/app/(private)/publicar/page.tsx`
+- `src/app/(private)/dashboard/preferencias/page.tsx`
+
+Mismo patrón visual (label chico bold + input con fondo gris que blanquea al foco), tres copias de las mismas ~5 líneas de className. No hay `src/modules/shared/ui/Input.tsx` ni equivalente.
+
+### Componentes duplicados a nivel de página completa
+`dashboard/perfil/page.tsx` y `dashboardAdmin/perfil/page.tsx` son, estructuralmente, la misma página (foto, datos personales, cambiar contraseña) copiada dos veces con clases ligeramente distintas — ya señalado como pendiente de unificar en `FRONTEND_CHANGES.md`. Mismo caso, en menor medida, entre `dashboard/layout.tsx` y `dashboardAdmin/layout.tsx` (estructura de `Sidebar` casi idéntica, con el admin agregando badges de notificaciones y el ícono de Shield).
+
+### Renderizado duplicado en el DOM
+No se encontró ningún caso de `Navbar` o `Footer` renderizándose dos veces por anidamiento de layouts (el árbol de layouts es plano: `app/layout.tsx` es el único que monta `NavbarSelector`/`FooterPublic`; los layouts de ruta (`(public)`, `(private)/dashboard`, `(admin)/dashboardAdmin`) no vuelven a importarlos). **Si algo así aparece durante el rediseño, es una regresión nueva, no un problema preexistente.**
+
+### Inventario de color hardcodeado
+Grep de hex de 6 dígitos en todo `src/` (case-insensitive), top de ocurrencias:
+
+| Color | Ocurrencias | Uso |
+|---|---|---|
+| `#0b7a4b` | **581** | Verde de marca principal — texto, fondos, bordes, sombras. Usado en **35 archivos** (prácticamente todos los componentes visuales del proyecto). |
+| `#0f8b57` | 73 | Extremo del gradiente de marca (`linear-gradient(135deg, #0f8b57, #14a366)`), hovers |
+| `#14a366` | 31 | Otro extremo del mismo gradiente |
+| `#14965f` | 16 | Variante de verde en `LoginForm`/`RegisterForm` |
+| `#0f8c58` | 15 | Otra variante de verde, hovers de navbar |
+| `#25d366` | 8 | Verde oficial de WhatsApp (íconos/links) |
+| `#16a34a`, `#15803d`, `#22c55e` | 4/2/2 | Verdes de Tailwind por nombre convertidos a hex en gradientes de servicios |
+| resto (`#f0fdf4`, `#e8f5e9`, `#f8fafc`, `#e5e7eb`, `#9ca3af`, `#166534`, etc.) | 1-5 c/u | Fondos claros, grises de texto, variantes por sección de `/servicios/:id` (cada servicio tiene su propio par de colores `g1`/`g2`/`light`/`accent`) |
+
+**No existe ninguna variable CSS ni token de Tailwind para estos colores** — ni en `globals.css` (que solo define `--font-primary`/`--font-heading`) ni como config de Tailwind (no hay `tailwind.config.*` en v4). Cada archivo repite el hex literal en `className` (arbitrary values `text-[#0b7a4b]`) o en `style={{ background: '...' }}`. Antes de centralizar la paleta, tener en cuenta que `#0b7a4b` por sí solo aparece en 35 de los ~70 archivos `.tsx` del proyecto — es un cambio de alto impacto, no cosmético aislado.
+
+Los 35 archivos exactos con `#0b7a4b` (para referencia al momento de centralizar):
+```
+src/app/(admin)/dashboardAdmin/{layout,page}.tsx
+src/app/(admin)/dashboardAdmin/notificaciones/page.tsx
+src/app/(admin)/dashboardAdmin/perfil/page.tsx
+src/app/(admin)/dashboardAdmin/propiedades/{page,PropertyForm}.tsx
+src/app/(admin)/dashboardAdmin/solicitudes/page.tsx
+src/app/(admin)/dashboardAdmin/usuarios/{page,[id]/page}.tsx
+src/app/(private)/dashboard/{layout,page,perfil/page,preferencias/page,notificaciones/page,mis-solicitudes/page,favoritos/page}.tsx
+src/app/(private)/publicar/page.tsx
+src/app/(public)/properties/Propertiescatalog.tsx
+src/app/(public)/properties/[id]/PropertyDetail.tsx
+src/app/(public)/servicios/[id]/page.tsx
+src/modules/landing/components/{Featuredproperties,FooterPublic,Loadingpage,Nosotros,RealEstateFAQ,Reseñas,Servicios,Slider}.tsx
+src/modules/properties/components/{FiltersPanel ,HeaderSearch,PropertiesList,PropertyCard,SearchBar}.tsx
+src/modules/shared/ui/{Favoritebutton,NavbarPrivate,NavbarPublic}.tsx
+```
+
+## Inventario de estilos actuales (sección nueva)
+
+### Sistema de filtrado de propiedades — aparece en 2 lugares, con 2 implementaciones de header distintas
+- **Componente de filtros real:** `src/modules/properties/components/FiltersPanel .tsx` (⚠️ el nombre de archivo tiene un espacio antes de `.tsx` — `'./FiltersPanel '`, así están los imports en todo el proyecto; no es un typo de este documento). Exporta `FiltersPanel` (named + default).
+- **Sí aparece en la landing (confirmado, no debería quedarse ahí según el pedido):** `src/modules/landing/components/Slider.tsx` (el carrusel hero de `/`) importa `HeaderSearch` (`src/modules/properties/components/HeaderSearch.tsx`), que a su vez importa y renderiza `FiltersPanel` + `SearchBar` dentro de un panel colapsable. Cadena completa: `(public)/page.tsx` → `PropertySlider` → `HeaderSearch` → `FiltersPanel`.
+- **El lugar donde sí debería quedarse:** `src/app/(public)/properties/Propertiescatalog.tsx` (la página `/properties`) importa `FiltersPanel` **directamente** (no a través de `HeaderSearch`) y arma su propia barra de búsqueda + botón de filtros a mano (JSX casi idéntico al de `HeaderSearch.tsx` pero no es el mismo componente — otra duplicación menor: dos implementaciones de "search bar + botón toggle de filtros").
+- Ambos usan el mismo hook de estado compartido `usePropertyFilters()` (lee/escribe query params de la URL), así que filtrar desde la landing y filtrar desde `/properties` técnicamente actualizan el mismo estado de filtros — pero visualmente son dos paneles de filtro distintos montados en dos árboles de componentes distintos.
+
+### Carrusel(es) — no hay un único componente, hay dos patrones distintos y ninguno usa Swiper
+1. **Hero de la landing** (`src/modules/landing/components/Slider.tsx`, exporta `PropertySlider`): carrusel 100% custom hecho a mano — `useState` para el índice + `setInterval` (4.5s) para autoplay + animaciones con **GSAP** (`gsap.timeline()` en cada cambio de slide) + botones prev/next manuales. Datos hardcodeados en el archivo (array `slides`, 5 imágenes fijas, algunas locales en `/public`, otras de Unsplash/Alphacoders). Se usa una sola vez, en la landing.
+2. **Carrusel de reseñas** (`src/modules/landing/components/Reseñas.tsx`): un carrusel circular **puramente CSS**, sin JS de animación — usa custom properties (`--quantity`, `--index`, `--color-card`) inyectadas vía `style` y clases `wrapper-carousel`/`inner-carousel`/`card-review`. El CSS de esas clases (incluida la animación de rotación 3D) **no vive en `globals.css` ni en ningún `.css` aparte** — está inyectado por el propio componente vía `<style dangerouslySetInnerHTML={{ __html: \`...\` }}>` (línea 65 en adelante), autocontenido en ese único archivo. Datos también hardcodeados (10 testimonios fake con nombre/texto/estrellas, no vienen del backend).
+3. **`swiper` (paquete npm) no se usa en absoluto** — dependencia declarada pero sin un solo import en `src/`.
+
+Si el rediseño quiere un carrusel único y reutilizable, hoy no existe ese componente — hay que construirlo o adoptar `swiper` (ya está instalado) para reemplazar ambos casos custom.
+
+### Paleta de colores real (más allá del verde de marca)
+Recorriendo `className`/`style` de los componentes principales:
+- **Verde de marca:** `#0b7a4b` (principal) con variantes `#0f8b57`/`#14a366`/`#14965f`/`#0f8c58`/`#0d7a4d`/`#085031`/`#084f30`/`#075534`/`#064e3b` — todas variaciones tonales del mismo verde, sin un sistema de escalas consistente (no son una escala 50-900 prolija, son valores elegidos a ojo por archivo).
+- **Grises/neutros:** fondos `#f8fafc`, `#f5f7f5`, `#f2f1f1` (body, en `globals.css`), `#e5e7e5`/`#e5e7eb`/`#dde3dd`/`#cbd8cd` (fondos de sección/dashboard), texto gris via clases Tailwind estándar (`text-gray-400/500/600/900`) — estos sí usan la escala de Tailwind por nombre, no hex hardcodeado.
+- **Rojo:** `text-red-500`/`bg-red-50`/`bg-red-100` (clases Tailwind estándar) para errores, favoritos, eliminar — consistente, no hardcodeado en hex salvo casos puntuales.
+- **Colores de marcas externas (hardcodeados, no tocar sin razón):** `#25d366` (WhatsApp), `#1877f2` (Facebook), `#f09433`/`#e6683c`/`#dc2743`/`#cc2366`/`#bc1888` (gradiente oficial de Instagram, en `FooterPublic`/`NavbarPublic`).
+- **Colores por servicio (`/servicios/:id`):** cada uno de los 5 servicios define su propio set `g1`/`g2` (gradiente de fondo del hero), `light`/`lightText` (fondo/texto de sección clara) y `accent` — 5 combinaciones de verde distintas, todas variantes de la marca pero sin reutilizar una paleta común (`src/app/(public)/servicios/[id]/page.tsx`, objeto `serviciosData`).
+- **Amarillo/ámbar y azul:** usados consistentemente vía clases Tailwind (`amber-*`, `blue-*`) para estados/badges (ej. "pendiente", info) — no hardcodeados en hex.
+
+No hay modo oscuro implementado (no se encontró `dark:` en ninguna clase Tailwind ni lógica de tema).
 
 ## Formularios y validación
 
-- **`react-hook-form` + `zod` (`@hookform/resolvers/zod`)** se usa **solo** en `LoginForm.tsx` y `RegisterForm.tsx`. Los schemas son locales a cada componente (no compartidos), ej.:
-  ```ts
-  const loginSchema = z.object({
-    email: z.string().email('Email inválido'),
-    password: z.string().min(5, 'Mínimo 5 caracteres'),
-  });
-  ```
-  Los errores de estos dos formularios se muestran inline por campo (`errors.email.message`, etc.), pero son **errores de validación de forma (client-side)**, no errores devueltos por el backend.
-- **Todo el resto de los formularios** (perfil, nueva propiedad/`PropertyForm.tsx`, nueva solicitud/`publicar/page.tsx`, preferencias, cambio de contraseña) son manuales: `useState` por campo, sin `react-hook-form` ni `zod`, con validación "a mano" tipo:
-  ```ts
-  if (!name.trim() || !surname.trim() || !email.trim()) {
-    toast.error('Nombre, apellido y email son obligatorios');
-    return;
-  }
-  ```
-  o listas de campos requeridos que se chequean con `.filter(k => !form[k])`.
-- **Errores de validación del backend (400 con detalle): no se muestran hoy en ningún formulario.** Como se documentó en la sección de Cliente de API, ningún `catch` lee `error.response.data` — todos muestran un string hardcodeado idéntico sin importar si el backend devolvió "email ya registrado", "contraseña débil", errores de `class-validator` con detalle por campo, etc. Este es un gap explícito a resolver en el refactor si el backend NestJS ahora devuelve errores de validación más ricos/estructurados.
+Sin cambios estructurales desde la versión anterior, con dos ajustes del refactor de hoy:
+- **`LoginForm`/`RegisterForm`** (únicos con `react-hook-form` + `zod`): el `catch` del submit ahora usa `getErrorMessage()` en vez de un string hardcodeado — muestra "Credenciales inválidas" (401), el mensaje real de 400/429, etc. La validación de forma (zod) se sigue mostrando inline por campo, sin cambios.
+- **Resto de formularios** (perfil, `PropertyForm`, `publicar`, preferencias): siguen siendo manuales con `useState` y validación a mano (`if (!campo) toast.error(...)`), pero los `catch` de submit migraron a `getErrorMessage()` — ahora si el backend devuelve, por ejemplo, un 409 "Ese email no está disponible" o el detalle de un campo inválido, el usuario lo ve tal cual en vez de un mensaje genérico fijo. `PropertyForm` y los dos perfiles además validan imágenes client-side con `validateImageFile()` antes de subir.
+- **`src/app/(private)/publicar/page.tsx`:** los arrays de opciones (`TIPOS_PROPIEDAD`, `ESTADOS`) se corrigieron hoy para matchear exactamente los enums que acepta el backend (antes ofrecían valores como "Cochera"/"Otro" que el backend rechazaba con 400 seguro).
 
 ## Endpoints consumidos
 
-Relevado por grep exhaustivo de `api.get/post/patch/delete(` en todo `src/`. Agrupado por módulo funcional (no todos están en un `service.ts`; se indica el archivo real donde vive cada llamada):
+Sin cambios de fondo desde la versión anterior salvo lo ya señalado (favoritos y perfil con rutas nuevas). Por módulo, con el archivo donde vive cada llamada:
 
-**Auth** — `src/modules/auth/services/auth.service.ts`
-- `POST /auth/login`, `POST /auth/register`, `GET /auth/me`, `POST /auth/logout`
-
-**Properties (catálogo público)** — `src/modules/properties/services/properties.service.ts`
-- `GET /properties/filter` (con query params de `PropertyFilters`), `GET /properties/:id`, `GET /properties/filters/locations`
-
-**Properties (comentarios y ratings, en detalle de propiedad)** — `src/app/(public)/properties/[id]/PropertyDetail.tsx`
-- `GET /properties/:id/comments`, `PATCH /properties/:id/comments/:commentId`, `DELETE /properties/:id/comments/:commentId`
-- `GET /ratings/:propertyId`, `POST /ratings/:propertyId`
-
-**Favoritos** — `src/modules/shared/ui/Favoritebutton.tsx` y `src/app/(private)/dashboard/favoritos/page.tsx`
-- `GET /favorites/:userId`, `POST /favorites/:propertyId`, `DELETE /favorites/:userId/:propertyId`
-
-**Solicitudes de publicación (usuario)** — `src/app/(private)/publicar/page.tsx`, `src/app/(private)/dashboard/mis-solicitudes/page.tsx`
-- `POST /property-requests`, `GET /property-requests/my-requests`
-
-**Solicitudes (admin)** — `src/app/(admin)/dashboardAdmin/solicitudes/page.tsx`, `.../usuarios/[id]/page.tsx`
-- `GET /property-requests`, `PATCH /property-requests/:id/status`, `DELETE /property-requests/:id`, `GET /property-requests/user/:id`
-
-**Propiedades (admin, CRUD completo)** — `src/app/(admin)/dashboardAdmin/propiedades/*`
-- `GET /properties`, `DELETE /properties/:id`, `POST /properties` (multipart), `PATCH /properties/:id` (multipart), `GET /property-types`, `PATCH /property-images/:id/set-cover`
-
-**Usuarios (admin)** — `src/app/(admin)/dashboardAdmin/usuarios/*`
-- `GET /users`, `GET /users/:id`, `DELETE /users/:id`
-
-**Perfil (usuario y admin, mismo patrón duplicado en ambos dashboards)** — `.../dashboard/perfil/page.tsx` y `.../dashboardAdmin/perfil/page.tsx`
-- `PATCH /users/:id` (datos personales o `{ password }`), `PATCH /users/:id/photo` (multipart)
-
-**Preferencias de búsqueda** — `src/app/(private)/dashboard/preferencias/page.tsx`
-- `GET /property-types`, `GET /search-preferences`, `PATCH /search-preferences`, `POST /search-preferences`
-- (también consultado en admin: `GET /search-preferences/user/:id` desde `usuarios/[id]/page.tsx`)
-
-**Notificaciones** — usuario en `.../dashboard/notificaciones/page.tsx` y navbar; admin en `.../dashboardAdmin/notificaciones/page.tsx` y `.../dashboardAdmin/layout.tsx`
-- Usuario: `GET /notifications`, `PATCH /notifications/:id/read`, `PATCH /notifications/read-all`
-- Admin: `GET /notifications/admin`, `PATCH /notifications/:id/read`, `PATCH /notifications/admin/read-all`
-- El sidebar admin además dispara/escucha un evento custom del DOM `notif-updated` (`window.dispatchEvent`/`addEventListener`) para refrescar los contadores del sidebar sin esperar al polling de 60s.
-
-**Dashboard admin (resumen/home)** — `src/app/(admin)/dashboardAdmin/page.tsx`
-- `GET /users`, `GET /properties`, `GET /property-requests` (en paralelo, para armar métricas)
-
-No hay ningún endpoint versionado (`/v1/...`) ni prefijo de API aparte del que ya incluye `NEXT_PUBLIC_API_URL` como base.
+- **Auth** (`auth.service.ts`): `POST /auth/login`, `POST /auth/register`, `GET /auth/me`, `POST /auth/logout`.
+- **Properties (público)** (`properties.service.ts`): `GET /properties/filter`, `GET /properties/:id`, `GET /properties/filters/locations`.
+- **Properties (comentarios/ratings)** (`PropertyDetail.tsx`): `GET/PATCH/DELETE /properties/:id/comments[/:commentId]`, `GET/POST /ratings/:propertyId`.
+- **Favoritos** (`Favoritebutton.tsx`, `dashboard/favoritos/page.tsx`): `GET /favorites`, `POST /favorites/:propertyId`, `DELETE /favorites/:propertyId`.
+- **Solicitudes de publicación (usuario)** (`publicar/page.tsx`, `dashboard/mis-solicitudes/page.tsx`): `POST /property-requests`, `GET /property-requests/my-requests`.
+- **Solicitudes (admin)** (`dashboardAdmin/solicitudes/page.tsx`, `usuarios/[id]/page.tsx`): `GET /property-requests`, `PATCH /property-requests/:id/status` (ahora limitado a transiciones válidas en la UI), `DELETE /property-requests/:id`, `GET /property-requests/user/:id`.
+- **Propiedades (admin CRUD)** (`dashboardAdmin/propiedades/*`): `GET /properties`, `DELETE /properties/:id`, `POST/PATCH /properties[/:id]` (multipart), `GET /property-types`, `PATCH /property-images/:id/set-cover`.
+- **Usuarios (admin)** (`dashboardAdmin/usuarios/*`): `GET /users`, `GET /users/:id`, `DELETE /users/:id`.
+- **Perfil** (`dashboard/perfil`, `dashboardAdmin/perfil`): `PATCH /users/me` (datos/password), `PATCH /users/:id/photo` (multipart).
+- **Preferencias de búsqueda** (`dashboard/preferencias/page.tsx`): `GET /property-types`, `GET/PATCH/POST /search-preferences`; admin también `GET /search-preferences/user/:id`.
+- **Notificaciones:** usuario `GET /notifications`, `PATCH /notifications/:id/read`, `PATCH /notifications/read-all`; admin `GET /notifications/admin`, `PATCH /notifications/admin/read-all` (+ evento DOM custom `notif-updated` para refresco fuera del polling de 60s).
+- **Dashboard admin (métricas)** (`dashboardAdmin/page.tsx`): `GET /users` + `GET /properties` + `GET /property-requests` en paralelo, agregados client-side. **No usa `GET /stats/*`** pese a que el backend lo expone completo — ver nota del link roto a `/dashboardAdmin/estadisticas` en la sección de vistas por rol.
 
 ## Subida de imágenes
 
-Dos flujos, ambos con el mismo patrón de fondo (FormData + `multipart/form-data`, sin ninguna librería de upload):
+Mismo mecanismo de antes (`FormData` + `multipart/form-data`, sin librería de upload), con una capa nueva de validación client-side agregada hoy:
 
-**Foto de perfil** (`.../dashboard/perfil/page.tsx` y `.../dashboardAdmin/perfil/page.tsx`, código duplicado en ambos):
-- `<input type="file">` oculto, disparado por click en un botón de cámara.
-- Preview inmediato con `FileReader.readAsDataURL` (antes de que termine el upload).
-- `FormData` con un solo campo `file`, `PATCH /users/:id/photo`.
-- **Sin ninguna validación client-side de tipo o tamaño de archivo** — no hay chequeo de `file.type` ni de `file.size` antes de mandarlo. Si falla la subida, se limpia el preview y se muestra un toast genérico (de nuevo, sin leer el detalle del error).
-
-**Imágenes de propiedad** (`src/app/(admin)/dashboardAdmin/propiedades/PropertyForm.tsx`):
-- Drag & drop (`onDrop`/`onDragOver`) + click-to-browse sobre el mismo dropzone, `<input type="file" multiple accept="image/*">`.
-- **Sí hay una validación client-side**: al soltar/seleccionar, filtra por `file.type.startsWith('image/')` (descarta no-imágenes) y limita a un máximo de 10 imágenes totales (existentes + nuevas), con `toast.error('Máximo 10 imágenes')` si se excede. No hay validación de tamaño de archivo (`file.size`) ni de dimensiones.
-- Preview con `URL.createObjectURL` (con el correspondiente `URL.revokeObjectURL` al remover una imagen nueva, para no leakear memoria).
-- Selección de portada ("cover") manejada con estado local para imágenes nuevas, y con una llamada dedicada al backend para imágenes ya existentes: `PATCH /property-images/:id/set-cover`.
-- Al guardar, arma un único `FormData`: el campo `data` con el payload JSON completo (`JSON.stringify(payload)`) más un array de archivos bajo la key `images` (creación) o `newImages` (edición), y en edición además manda `deleteImages: number[]` y `setCoverImageId` dentro del mismo JSON de `data`.
-- Las imágenes ya subidas se renderizan con `<img>` nativo (no `next/image`), con un comentario `eslint-disable-next-line @next/next/no-img-element` — es decir, están conscientemente evitando la optimización de imágenes de Next para estas previews.
-
-Los hosts remotos permitidos por `next/image` (para lo que sí usa el componente optimizado) están hardcodeados en `next.config.ts` → `images.remotePatterns`: `res.cloudinary.com`, `images3.alphacoders.com`, `images.unsplash.com`, `www.unc.edu.ar`. Esto sugiere que las imágenes de propiedades ya subidas terminan serviéndose desde Cloudinary del lado del backend, aunque el frontend no tiene ninguna integración directa con Cloudinary (no hay SDK ni upload preset en el cliente — todo el upload pasa por el backend vía `multipart/form-data`).
+- **Foto de perfil** (ambos perfiles): preview con `FileReader.readAsDataURL`, ahora **valida con `validateImageFile()`** (tipo `image/*` y ≤5MB) antes de armar el `FormData` y llamar `PATCH /users/:id/photo` — antes no había ninguna validación client-side.
+- **Imágenes de propiedad** (`PropertyForm.tsx`): drag & drop + click-to-browse, máximo 10 imágenes totales (existentes + nuevas), preview con `URL.createObjectURL` (con `revokeObjectURL` al remover). Ahora cada archivo pasa por `validateImageFile()` antes de contarse contra el límite de 10 — un archivo inválido se rechaza con toast puntual y no ocupa un slot. Selección de portada: estado local para imágenes nuevas, `PATCH /property-images/:id/set-cover` para las ya existentes.
+- Los hosts remotos permitidos por `next/image` siguen definidos en `next.config.ts` → `images.remotePatterns`: `res.cloudinary.com`, `images3.alphacoders.com`, `images.unsplash.com`, `www.unc.edu.ar`.
 
 ## Convenciones de estilo
 
-- Componentes **funcionales** con hooks, casi todos marcados `'use client'` (hay muy pocos server components reales; incluso layouts que podrían ser server component, como los de dashboard, son client components porque dependen de `useAuth()`).
-- Naming: componentes en PascalCase (`FavoriteButton`, `PropertyForm`), hooks custom con prefijo `use` (`usePropertyFilters`, `useAuth`, y hooks inline no exportados como `useHideOnScroll`/`useScrollToSection` dentro de `NavbarPrivate.tsx`).
-- Bastantes archivos y variables tienen comentarios y nombres en español mezclados con código en inglés (ej. `handleSaveData`, `mensajeAgente`) — es consistente con que el dominio y los usuarios son hispanohablantes; no hay una convención estricta de idioma.
-- **Tailwind:** clases inline directo en JSX, sin `clsx`/`cn()` — las clases condicionales se arman con template literals y ternarios directo en el `className`, ej.:
-  ```tsx
-  className={`${inputBase} ${errors.email ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
-  ```
-  Hay algunos helpers locales no reusados entre archivos (`inputCls`, `selectCls`, `inputClass`, `selectClass` — variantes del mismo patrón redefinidas por componente, no compartidas). No existe una capa de "design system" ni componentes de UI base reusables (botón, input, card genéricos) — cada página redefine su propio estilo de input/botón/card.
-  - Paleta repetida como literal hexadecimal en decenas de archivos, especialmente `#0b7a4b` (verde marca) — no está centralizada como variable de Tailwind ni token de diseño, se repite el hex a mano en cada `className`/`style`.
-- Los ids de sección y estructura de página priorizan composición visual muy detallada (gradientes, sombras, animaciones con Framer Motion) sobre abstracción — es un estilo "todo en el archivo de la página", con subcomponentes definidos in-line en el mismo archivo (`function NavLink(...)`, `function Sidebar(...)`) en vez de en archivos separados, incluso cuando se duplica casi el mismo subcomponente entre `dashboard/layout.tsx` y `dashboardAdmin/layout.tsx`.
+- Componentes funcionales con hooks, casi todo `'use client'` (incluso layouts que podrían ser server component, como los de dashboard, son client components porque dependen de `useAuth()`).
+- Naming: PascalCase para componentes, `use`-prefix para hooks (incluye hooks locales no exportados como `useHideOnScroll`/`useScrollToSection`, duplicados de forma casi idéntica entre `NavbarPublic.tsx` y `NavbarPrivate.tsx` — otro caso de lógica repetida en vez de un hook compartido en `shared/`).
+- Mezcla de español/inglés en nombres — consistente con que el dominio y usuarios son hispanohablantes, sin regla estricta.
+- **Tailwind:** clases inline con template literals y ternarios condicionales directo en `className`, sin `clsx`/`cn()`. Ver sección de duplicación para los helpers locales (`inputCls`, `SectionTitle`, `Field`) redefinidos por archivo en vez de compartidos.
+- **CSS plano fuera de Tailwind:** vive en dos lugares — `globals.css` (el botón "volver arriba", clases `.button`/`.svgIcon`, con `@keyframes floating`) y un bloque `<style dangerouslySetInnerHTML>` autocontenido dentro de `Reseñas.tsx` (clases del carrusel circular de testimonios). No hay un tercer `.css` en el proyecto fuera de estos dos puntos.
+- Sin modo oscuro, sin sistema de tokens de diseño, sin componentes base compartidos (botón/input/card genéricos) — cada página define su propio estilo visual repitiendo patrones similares a mano.

@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { validateImageFile } from '@/modules/shared/lib/validateImage';
+import { Field } from '@/modules/shared/ui/Field';
+import { Input, inputBaseClasses } from '@/modules/shared/ui/Input';
+import { Select } from '@/modules/shared/ui/Select';
 import { toast } from 'sonner';
 import {
   Save, ArrowLeft, Upload, X, Star, ImagePlus,
@@ -42,24 +45,12 @@ const OP_OPTIONS = [
 ];
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
-const inputCls = 'w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0b7a4b] focus:bg-white transition-all placeholder:text-gray-400';
-const selectCls = 'w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0b7a4b] focus:bg-white transition-all appearance-none';
-
+// `Field`, `Input` y `Select` ahora vienen de shared/ui (antes estaban duplicados acá).
 function SectionTitle({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
   return (
     <h2 className="text-sm font-bold text-[#0b7a4b] uppercase tracking-wider flex items-center gap-2 mb-4">
       <Icon size={14} />{label}
     </h2>
-  );
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-bold text-gray-700">{label}</label>
-      {children}
-      {hint && <p className="text-[11px] font-medium text-[#0b7a4b]/70">{hint}</p>}
-    </div>
   );
 }
 
@@ -467,35 +458,33 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
         <SectionTitle icon={Info} label="Información básica" />
         <div className="flex flex-col gap-4">
           <Field label="Título">
-            <input value={form.title} onChange={e => set('title', e.target.value)}
-              className={inputCls} placeholder="Ej: Casa amplia con jardín en Nueva Córdoba" />
+            <Input value={form.title} onChange={e => set('title', e.target.value)}
+              placeholder="Ej: Casa amplia con jardín en Nueva Córdoba" />
           </Field>
           <Field label="Descripción">
+            {/* textarea: usa las clases base sueltas porque no hay componente <Textarea> */}
             <textarea value={form.description} onChange={e => set('description', e.target.value)}
-              rows={4} className={`${inputCls} resize-none`}
+              rows={4} className={`${inputBaseClasses} border-gray-200 focus:border-brand-700 resize-none`}
               placeholder="Describí la propiedad en detalle..." />
           </Field>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Tipo de propiedad">
-              <select aria-label="Tipo de propiedad" value={form.typeOfPropertyId} onChange={e => set('typeOfPropertyId', e.target.value)}
-                className={selectCls}>
+              <Select aria-label="Tipo de propiedad" value={form.typeOfPropertyId} onChange={e => set('typeOfPropertyId', e.target.value)}>
                 <option value="">Seleccionar...</option>
                 {propertyTypes.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <Field label="Operación">
-              <select aria-label="Operación"  value={form.operationType} onChange={e => set('operationType', e.target.value)}
-                className={selectCls}>
+              <Select aria-label="Operación" value={form.operationType} onChange={e => set('operationType', e.target.value)}>
                 {OP_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label="Estado">
-              <select aria-label="Estado" value={form.status} onChange={e => set('status', e.target.value)}
-                className={selectCls}>
+              <Select aria-label="Estado" value={form.status} onChange={e => set('status', e.target.value)}>
                 {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
+              </Select>
             </Field>
           </div>
         </div>
@@ -506,20 +495,20 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
         <SectionTitle icon={MapPin} label="Ubicación" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Provincia">
-            <input value={form.provincia} onChange={e => set('provincia', e.target.value)}
-              className={inputCls} placeholder="Córdoba" />
+            <Input value={form.provincia} onChange={e => set('provincia', e.target.value)}
+              placeholder="Córdoba" />
           </Field>
           <Field label="Localidad">
-            <input value={form.localidad} onChange={e => set('localidad', e.target.value)}
-              className={inputCls} placeholder="Ej: Villa Carlos Paz" />
+            <Input value={form.localidad} onChange={e => set('localidad', e.target.value)}
+              placeholder="Ej: Villa Carlos Paz" />
           </Field>
           <Field label="Barrio">
-            <input value={form.barrio} onChange={e => set('barrio', e.target.value)}
-              className={inputCls} placeholder="Ej: Nueva Córdoba" />
+            <Input value={form.barrio} onChange={e => set('barrio', e.target.value)}
+              placeholder="Ej: Nueva Córdoba" />
           </Field>
           <Field label="Zona">
-            <input value={form.zone} onChange={e => set('zone', e.target.value)}
-              className={inputCls} placeholder="Ej: sierras, norte, centro" />
+            <Input value={form.zone} onChange={e => set('zone', e.target.value)}
+              placeholder="Ej: sierras, norte, centro" />
           </Field>
         </div>
       </div>
@@ -529,20 +518,20 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
         <SectionTitle icon={Ruler} label="Características" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Field label="Habitaciones">
-            <input type="number" min="0" value={form.rooms} onChange={e => set('rooms', e.target.value)}
-              className={inputCls} placeholder="0" />
+            <Input type="number" min="0" value={form.rooms} onChange={e => set('rooms', e.target.value)}
+              placeholder="0" />
           </Field>
           <Field label="Baños">
-            <input type="number" min="0" value={form.bathrooms} onChange={e => set('bathrooms', e.target.value)}
-              className={inputCls} placeholder="0" />
+            <Input type="number" min="0" value={form.bathrooms} onChange={e => set('bathrooms', e.target.value)}
+              placeholder="0" />
           </Field>
           <Field label="Superficie (m²)">
-            <input type="number" min="0" value={form.m2} onChange={e => set('m2', e.target.value)}
-              className={inputCls} placeholder="0" />
+            <Input type="number" min="0" value={form.m2} onChange={e => set('m2', e.target.value)}
+              placeholder="0" />
           </Field>
           <Field label="Antigüedad (años)">
-            <input type="number" min="0" value={form.antiquity} onChange={e => set('antiquity', e.target.value)}
-              className={inputCls} placeholder="0" />
+            <Input type="number" min="0" value={form.antiquity} onChange={e => set('antiquity', e.target.value)}
+              placeholder="0" />
           </Field>
         </div>
 
@@ -577,6 +566,10 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
         <Field label="Precio (USD)">
           <div className="relative">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0b7a4b] font-black text-sm">$</span>
+            {/* Único campo que NO usa <Input>: necesita pl-8 (no px-4) para dejar
+                lugar al "$" superpuesto. Como el proyecto no usa tailwind-merge,
+                pasar pl-8 por className dejaría px-4 y pl-8 compitiendo y el
+                ganador dependería del orden del CSS generado. Se deja explícito. */}
             <input type="number" min="0" value={form.price} onChange={e => set('price', e.target.value)}
               className="w-full pl-8 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0b7a4b] focus:bg-white transition-all placeholder:text-gray-400"
               placeholder="Ej: 85000" />

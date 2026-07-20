@@ -1,9 +1,79 @@
 /* globals.css */
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOKENS DE DISEÑO — Tailwind v4 (@theme, NO tailwind.config)
+   ───────────────────────────────────────────────────────────────────────────
+   Paleta de marca según el logo: VERDE + NEGRO/GRIS + BLANCO. Nada más.
+
+   Cada token acá genera utilidades automáticamente:
+     --color-brand-700  →  bg-brand-700  text-brand-700  border-brand-700
+                           from-brand-700  ring-brand-700  bg-brand-700/10 …
+
+   ⚠️ Los pasos 500/600/700/800 de la escala verde son los tonos EXACTOS que
+   el proyecto ya usa hoy (no aproximaciones), para que migrar un archivo sea
+   un reemplazo 1:1 sin cambio visual:
+       #14a366 → brand-500   |  #0f8b57 → brand-600
+       #0b7a4b → brand-700   |  #085031 → brand-800
+   El resto de la escala se generó a hue ~155° para mantener la familia.
+
+   ⚠️ La escala neutra se llama `ink`, NO `gray`: nombrarla `gray` pisaría la
+   escala nativa de Tailwind y cambiaría cada `text-gray-*` ya existente en el
+   proyecto. `ink-*` convive con `gray-*` sin tocar nada.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@theme {
+  /* ── VERDE DE MARCA ─────────────────────────────────────────────────────── */
+  --color-brand-50: #eff9f4;
+  --color-brand-100: #d7f0e3;
+  --color-brand-200: #b0e2c8;
+  --color-brand-300: #7ecfa7;
+  --color-brand-400: #45b782;
+  --color-brand-500: #14a366; /* existente: gradientes (extremo claro) */
+  --color-brand-600: #0f8b57; /* existente: gradientes (inicio) + hovers */
+  --color-brand-700: #0b7a4b; /* existente: VERDE DE MARCA — 581 usos hoy */
+  --color-brand-800: #085031; /* existente: hover oscuro / pressed */
+  --color-brand-900: #063923;
+  --color-brand-950: #032315;
+
+  /* Alias del verde de marca — permite `bg-brand` sin recordar el paso.
+     Mismo valor literal que brand-700 (no var(), para evitar bordes raros
+     con los modificadores de opacidad tipo bg-brand/10). */
+  --color-brand: #0b7a4b;
+
+  /* ── NEGRO / GRIS (escala `ink`) ────────────────────────────────────────── */
+  /* Neutros con un dejo verde mínimo, para que peguen con la marca en vez de
+     verse fríos al lado del verde. */
+  --color-ink-50: #f6f7f6;
+  --color-ink-100: #e8eae9;
+  --color-ink-200: #d1d5d2;
+  --color-ink-300: #adb3af;
+  --color-ink-400: #7e8681;
+  --color-ink-500: #5b635e;
+  --color-ink-600: #444a46;
+  --color-ink-700: #363b38;
+  --color-ink-800: #222624;
+  --color-ink-900: #141715;
+  --color-ink-950: #0a0c0b; /* el "negro" del logo */
+
+  /* ── SUPERFICIES ────────────────────────────────────────────────────────── */
+  /* Blanco puro NO tiene token: se sigue usando `bg-white` de Tailwind. */
+  --color-surface: #f5f7f5;      /* fondo de página — unifica #f8fafc/#f2f1f1/#fcfffd/#f0f2f0 */
+  --color-surface-alt: #e5e7e5;  /* sección secundaria */
+  /* Fondo de dashboard — unifica los dos que existían (#dde3dd usuario /
+     #cbd8cd admin) en el más oscuro. Cambio visual intencional y aprobado:
+     el panel de usuario queda un poco más oscuro que antes. */
+  --color-surface-deep: #cbd8cd;
+}
+
 :root {
   --font-primary: var(--font-inter);
   --font-heading: var(--font-playfair);
+
+  /* Gradiente de marca — preserva EXACTO el par que ya usan 20+ botones
+     (#0f8b57 → #14a366), ahora en un solo lugar.
+     Uso: style={{ background: 'var(--gradient-brand)' }} */
+  --gradient-brand: linear-gradient(135deg, var(--color-brand-600), var(--color-brand-500));
+  --gradient-brand-hover: linear-gradient(135deg, var(--color-brand-700), var(--color-brand-600));
 }
 
 body {

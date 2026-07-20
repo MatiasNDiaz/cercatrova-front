@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import api from '@/modules/shared/lib/axios';
+import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { toast } from 'sonner';
+import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -227,52 +229,24 @@ export default function UsuariosAdminPage() {
   };
 
   const handleDelete = (id: number, name: string) => {
-    toast.custom((t) => (
-      <div className="flex flex-col gap-4 bg-white rounded-2xl px-6 py-5 w-80 shadow-[0_16px_40px_rgba(0,0,0,0.12)] border border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
-            <Trash2 size={18} className="text-red-500" />
-          </div>
-          <div>
-            <p className="font-semibold text-gray-900 text-sm">¿Eliminar usuario?</p>
-            <p className="text-xs text-gray-500 mt-0.5">{name}</p>
-          </div>
-        </div>
-        <p className="text-xs text-gray-500 leading-relaxed">
-          Se eliminarán todos sus datos, favoritos y solicitudes. Esta acción no se puede deshacer.
-        </p>
-        <div className="flex gap-2">
-          <button
-            onClick={async () => {
-              toast.dismiss(t);
-              setDeletingId(id);
-              try {
-                await api.delete(`/users/${id}`);
-                setUsers(prev => prev.filter(u => u.id !== id));
-                toast.success('Usuario eliminado');
-              } catch {
-                toast.error('No se pudo eliminar el usuario');
-              } finally {
-                setDeletingId(null);
-              }
-            }}
-            className="flex-1 py-2.5 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all active:scale-95"
-          >
-            Eliminar
-          </button>
-          <button
-            onClick={() => toast.dismiss(t)}
-            className="flex-1 py-2.5 text-sm font-medium text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    ), {
-      position: 'top-center',
-      duration: 10000,
-      unstyled: true,
-      style: { background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 },
+    confirmDialog({
+      title: '¿Eliminar usuario?',
+      message: `Se eliminarán todos los datos de ${name}, incluidos sus favoritos y solicitudes. Esta acción no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      variant: 'danger',
+      icon: Trash2,
+      onConfirm: async () => {
+        setDeletingId(id);
+        try {
+          await api.delete(`/users/${id}`);
+          setUsers(prev => prev.filter(u => u.id !== id));
+          toast.success('Usuario eliminado');
+        } catch (error) {
+          toast.error(getErrorMessage(error));
+        } finally {
+          setDeletingId(null);
+        }
+      },
     });
   };
 

@@ -13,8 +13,10 @@ import {
 } from 'lucide-react';
 import { BsWhatsapp } from 'react-icons/bs';
 import { toast } from 'sonner';
+import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import { useAuth } from '@/modules/shared/context/AuthContext';
-import api from '@/modules/shared/lib/axios'; 
+import api from '@/modules/shared/lib/axios';
+import { getErrorMessage } from '@/modules/shared/lib/apiError'; 
 
 // ── INTERFACES ────────────────────────────────────────────────────────────────
 interface PropertyImage { id: number; url: string; isCover?: boolean; }
@@ -287,34 +289,21 @@ function CommentsAndRatings({
 
   // ── ELIMINAR COMENTARIO ──
   const handleDelete = (commentId: number) => {
-    toast.custom((t) => (
-      <div className="flex flex-col gap-4 bg-white rounded-3xl shadow-2xl border border-gray-100 px-6 py-5 w-85">
-        <div className="flex flex-col gap-1">
-          <p className="text-[15px] font-bold text-gray-800">¿Eliminar comentario?</p>
-          <p className="text-[13px] text-gray-400">Esta acción no se puede deshacer.</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => toast.dismiss(t)}
-            className="flex-1 py-2.5 text-sm font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer">
-            Cancelar
-          </button>
-          <button
-            onClick={async () => {
-              toast.dismiss(t);
-              try {
-                await api.delete(`/properties/${propertyId}/comments/${commentId}`);
-                setComments((prev) => prev.filter((c) => c.id !== commentId));
-                toast.success('Comentario eliminado');
-              } catch {
-                toast.error('No se pudo eliminar');
-              }
-            }}
-            className="flex-1 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors cursor-pointer">
-            Eliminar
-          </button>
-        </div>
-      </div>
-    ), { position: 'top-center', unstyled: true, style: { background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 } });
+    confirmDialog({
+      title: '¿Eliminar comentario?',
+      message: 'Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/properties/${propertyId}/comments/${commentId}`);
+          setComments((prev) => prev.filter((c) => c.id !== commentId));
+          toast.success('Comentario eliminado');
+        } catch (error) {
+          toast.error(getErrorMessage(error));
+        }
+      },
+    });
   };
 
   // ── SUBMIT RATING ──

@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { Field } from '@/modules/shared/ui/Field';
+import { Input, inputBaseClasses } from '@/modules/shared/ui/Input';
+import { Select } from '@/modules/shared/ui/Select';
 import { toast } from 'sonner';
 import { Save, ArrowLeft, MapPin, Home, Ruler, DollarSign, FileTextIcon, CheckSquare } from 'lucide-react';
 import Link from 'next/link';
@@ -22,17 +25,7 @@ function SectionTitle({ icon: Icon, label }: { icon: React.ElementType; label: s
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-semibold text-gray-800">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-const inputClass = "w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0b7a4b] focus:bg-white transition-all";
-const selectClass = "w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0b7a4b] focus:bg-white transition-all appearance-none";
+// `Field`, `Input` y `Select` ahora vienen de shared/ui (antes estaban duplicados acá).
 
 export default function NuevaSolicitudPage() {
   const router = useRouter();
@@ -118,16 +111,16 @@ export default function NuevaSolicitudPage() {
         <SectionTitle icon={MapPin} label="Ubicación" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Localidad *">
-            <input value={form.localidad} onChange={e => set('localidad', e.target.value)} className={inputClass} placeholder="Ej: Córdoba Capital" />
+            <Input value={form.localidad} onChange={e => set('localidad', e.target.value)} placeholder="Ej: Córdoba Capital" />
           </Field>
           <Field label="Barrio *">
-            <input value={form.barrio} onChange={e => set('barrio', e.target.value)} className={inputClass} placeholder="Ej: Nueva Córdoba" />
+            <Input value={form.barrio} onChange={e => set('barrio', e.target.value)} placeholder="Ej: Nueva Córdoba" />
           </Field>
           <Field label="Dirección *">
-            <input value={form.direccion} onChange={e => set('direccion', e.target.value)} className={inputClass} placeholder="Ej: Av. Colón 1234" />
+            <Input value={form.direccion} onChange={e => set('direccion', e.target.value)} placeholder="Ej: Av. Colón 1234" />
           </Field>
           <Field label="Piso / Depto">
-            <input value={form.pisoDepto} onChange={e => set('pisoDepto', e.target.value)} className={inputClass} placeholder="Ej: 4B (opcional)" />
+            <Input value={form.pisoDepto} onChange={e => set('pisoDepto', e.target.value)} placeholder="Ej: 4B (opcional)" />
           </Field>
         </div>
       </div>
@@ -137,37 +130,37 @@ export default function NuevaSolicitudPage() {
         <SectionTitle icon={Home} label="Características" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Tipo de propiedad *">
-            <select aria-label='a' value={form.tipoPropiedad} onChange={e => set('tipoPropiedad', e.target.value)} className={selectClass}>
+            <Select aria-label="Tipo de propiedad" value={form.tipoPropiedad} onChange={e => set('tipoPropiedad', e.target.value)}>
               <option value="">Seleccioná...</option>
               {TIPOS_PROPIEDAD.map(t => <option key={t}>{t}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label="Tipo de operación *">
-            <select aria-label='a' value={form.tipoOperacion} onChange={e => set('tipoOperacion', e.target.value)} className={selectClass}>
+            <Select aria-label="Tipo de operación" value={form.tipoOperacion} onChange={e => set('tipoOperacion', e.target.value)}>
               <option value="">Seleccioná...</option>
               {TIPOS_OPERACION.map(t => <option key={t}>{t}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label="Estado de conservación *">
-            <select aria-label='a' value={form.estadoConservacion} onChange={e => set('estadoConservacion', e.target.value)} className={selectClass}>
+            <Select aria-label="Estado de conservación" value={form.estadoConservacion} onChange={e => set('estadoConservacion', e.target.value)}>
               <option value="">Seleccioná...</option>
               {ESTADOS.map(t => <option key={t}>{t}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label="Orientación">
-            <select aria-label='a' value={form.orientacion} onChange={e => set('orientacion', e.target.value)} className={selectClass}>
+            <Select aria-label="Orientación" value={form.orientacion} onChange={e => set('orientacion', e.target.value)}>
               <option value="">Seleccioná... (opcional)</option>
               {ORIENTACIONES.map(t => <option key={t}>{t}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label="Habitaciones *">
-            <input type="number" min="0" value={form.habitaciones} onChange={e => set('habitaciones', e.target.value)} className={inputClass} placeholder="Ej: 3" />
+            <Input type="number" min="0" value={form.habitaciones} onChange={e => set('habitaciones', e.target.value)} placeholder="Ej: 3" />
           </Field>
           <Field label="Baños *">
-            <input type="number" min="0" value={form.baños} onChange={e => set('baños', e.target.value)} className={inputClass} placeholder="Ej: 2" />
+            <Input type="number" min="0" value={form.baños} onChange={e => set('baños', e.target.value)} placeholder="Ej: 2" />
           </Field>
           <Field label="Antigüedad (años) *">
-            <input type="number" min="0" value={form.antiguedad} onChange={e => set('antiguedad', e.target.value)} className={inputClass} placeholder="Ej: 10" />
+            <Input type="number" min="0" value={form.antiguedad} onChange={e => set('antiguedad', e.target.value)} placeholder="Ej: 10" />
           </Field>
         </div>
       </div>
@@ -177,10 +170,10 @@ export default function NuevaSolicitudPage() {
         <SectionTitle icon={Ruler} label="Superficies" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="M² totales *">
-            <input type="number" min="0" value={form.m2Totales} onChange={e => set('m2Totales', e.target.value)} className={inputClass} placeholder="Ej: 200" />
+            <Input type="number" min="0" value={form.m2Totales} onChange={e => set('m2Totales', e.target.value)} placeholder="Ej: 200" />
           </Field>
           <Field label="M² cubiertos *">
-            <input type="number" min="0" value={form.m2Cubiertos} onChange={e => set('m2Cubiertos', e.target.value)} className={inputClass} placeholder="Ej: 150" />
+            <Input type="number" min="0" value={form.m2Cubiertos} onChange={e => set('m2Cubiertos', e.target.value)} placeholder="Ej: 150" />
           </Field>
         </div>
       </div>
@@ -221,14 +214,15 @@ export default function NuevaSolicitudPage() {
         <SectionTitle icon={DollarSign} label="Precio y contacto" />
         <div className="flex flex-col gap-4">
           <Field label="Precio estimado (USD) *">
-            <input type="number" min="0" value={form.precioEstimado} onChange={e => set('precioEstimado', e.target.value)} className={inputClass} placeholder="Ej: 85000" />
+            <Input type="number" min="0" value={form.precioEstimado} onChange={e => set('precioEstimado', e.target.value)} placeholder="Ej: 85000" />
           </Field>
           <Field label="Mensaje para el agente">
+            {/* textarea: usa las clases base sueltas porque no hay componente <Textarea> */}
             <textarea
               value={form.mensajeAgente}
               onChange={e => set('mensajeAgente', e.target.value)}
               rows={4}
-              className={`${inputClass} resize-none`}
+              className={`${inputBaseClasses} border-gray-200 focus:border-brand-700 resize-none`}
               placeholder="Contale al agente lo que necesites saber sobre tu propiedad..."
             />
           </Field>

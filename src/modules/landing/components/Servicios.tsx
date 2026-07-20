@@ -1,287 +1,122 @@
-import React from "react";
-import {
-  Home,
-  Key,
-  DollarSign,
-  Briefcase,
-  Megaphone,
-  FileCheck,
-  ChevronDown,
-} from "lucide-react";
-import { BsWhatsapp } from "react-icons/bs"; // Asegúrate de tener react-icons instalado
+import Link from 'next/link';
+import { Home, Key, DollarSign, Briefcase, Megaphone, FileCheck, ArrowRight } from 'lucide-react';
+import { BsWhatsapp } from 'react-icons/bs';
+import { SectionHeading } from './SectionHeading';
+import { Reveal } from './Reveal';
+import { WHATSAPP_NUMBER } from '@/modules/shared/lib/contact';
+
+/**
+ * Servicios (Bloque LANDING §3).
+ *
+ * Se reemplazó la tarjeta 3D (rotate3d + capa "glass" + ~170 líneas de CSS
+ * inyectado con dangerouslySetInnerHTML) por tarjetas planas y modernas.
+ * Motivo además de estético: el CSS viejo fijaba `width: 320px; height: 350px`,
+ * así que las tarjetas no eran responsivas y el texto se cortaba en las
+ * descripciones más largas.
+ *
+ * Los 6 servicios ya existían en el array (incluida "Gestión Legal y
+ * Documental"), así que la grilla queda 3 + 3 en desktop.
+ */
 
 const services = [
   {
-    id: "venta",
-    title: "Venta de Propiedades",
-    description: "Estrategias personalizadas para posicionar su propiedad y maximizar su valor de venta.",
+    id: 'venta',
+    title: 'Venta de Propiedades',
+    description: 'Estrategias personalizadas para posicionar tu propiedad y maximizar su valor de venta.',
     icon: Home,
   },
   {
-    id: "alquiler",
-    title: "Alquileres",
-    description: "Gestión completa: evaluación de inquilinos, redacción contractual y seguimiento.",
+    id: 'alquiler',
+    title: 'Alquileres',
+    description: 'Gestión completa: evaluación de inquilinos, redacción contractual y seguimiento mensual.',
     icon: Key,
   },
   {
-    id: "tasaciones",
-    title: "Tasaciones Profesionales",
-    description: "Valoraciones fundamentadas en análisis comparativos y conocimiento del mercado.",
+    id: 'tasaciones',
+    title: 'Tasaciones Profesionales',
+    description: 'Valoraciones fundamentadas en análisis comparativos y conocimiento real del mercado.',
     icon: DollarSign,
   },
   {
-    id: "asesoramiento",
-    title: "Asesoramiento Inmobiliario",
-    description: "Acompañamiento estratégico para decisiones informadas y seguras en cada etapa.",
+    id: 'asesoramiento',
+    title: 'Asesoramiento Inmobiliario',
+    description: 'Acompañamiento estratégico para decisiones informadas y seguras en cada etapa.',
     icon: Briefcase,
   },
   {
-    id: "comercializacion",
-    title: "Publicamos tu Propiedad ",
-    description: "Evaluamos su propiedad e iniciamos el proceso de comercialización de inmediato.",
+    id: 'comercializacion',
+    title: 'Publicamos tu Propiedad',
+    description: 'Evaluamos tu propiedad e iniciamos el proceso de comercialización de inmediato.',
     icon: Megaphone,
   },
   {
-    id: "legal",
-    title: "Gestión Legal y Documental",
-    description: "Supervisión de contratos y documentación para asegurar transparencia jurídica.",
+    id: 'legal',
+    title: 'Gestión Legal y Documental',
+    description: 'Supervisión de contratos y documentación para asegurar transparencia jurídica.',
     icon: FileCheck,
   },
 ];
 
-export default function ServiciosPremium3D() {
+export default function Servicios() {
   return (
-    <section id="servicios" className="py-20 bg-gray-50 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="text-center mb-12">
-          <span className="text-sm tracking-[0.2em] uppercase text-[#0b7a4b] font-medium">
-            Servicios Inmobiliarios
-          </span>
-          <h2 className="text-4xl md:text-5xl font-semibold mt-4 text-gray-900 leading-tight">
-            Hacemos que todo sea <span className="text-[#0b7a4b]">más simple para vos.</span>
-          </h2>
-          <div className="w-28 h-0.5 bg-[#0b7a4b] mx-auto mt-8"></div>
-        </div>
+    <section id="servicios" className="bg-surface py-24 md:py-28">
+      <div className="mx-auto max-w-7xl px-6">
+        <SectionHeading
+          eyebrow="Servicios inmobiliarios"
+          title={<>Hacemos que todo sea <span className="text-brand-700">más simple para vos</span></>}
+          subtitle="Desde la tasación hasta la escritura, cubrimos cada etapa de la operación."
+        />
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-y-13 gap-x-12 justify-items-center">
-          {services.map((service) => (
-            <ServiceCard key={service.id} service={service} />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {services.map((service, i) => (
+            <Reveal key={service.id} delay={(i % 3) * 0.08} className="h-full">
+              <ServiceCard service={service} />
+            </Reveal>
           ))}
         </div>
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        .card-parent {
-          width: 320px;
-          height: 350px;
-          perspective: 1000px;
-        }
-
-        .card-3d {
-          height: 100%;
-          position: relative;
-          border-radius: 50px;
-          background: linear-gradient(135deg, #0b7a4b 0%, #22c55e 100%);
-          transition: all 0.5s ease-in-out;
-          transform-style: preserve-3d;
-        }
-
-        .glass-layer {
-          transform-style: preserve-3d;
-          position: absolute;
-          inset: 8px;
-          border-radius: 55px;
-          border-top-right-radius: 100%;
-          background: linear-gradient(0deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.8) 100%);
-          backdrop-filter: blur(5px);
-          transform: translate3d(0px, 0px, 25px);
-          border-left: 1px solid white;
-          border-bottom: 1px solid white;
-          transition: all 0.5s ease-in-out;
-        }
-
-        .card-content {
-          padding: 110px 30px 0px 30px;
-          transform: translate3d(0, 0, 30px);
-        }
-
-        .card-3d-title {
-          display: block;
-          color: #04382b;
-          font-weight: 900;
-          font-size: 1.25rem;
-          line-height: 1.2;
-        }
-
-        .card-3d-text {
-          display: block;
-          color: #064e3b;
-          font-size: 0.875rem;
-          margin-top: 15px;
-          line-height: 1.5;
-          font-weight: 500;
-        }
-
-        .card-bottom {
-          padding: 10px 20px;
-          transform-style: preserve-3d;
-          position: absolute;
-          bottom: 25px;
-          left: 0;
-          right: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          transform: translate3d(0, 0, 60px);
-        }
-
-        /* --- BOTONES ESTILO BURBUJA 3D --- */
-        .view-more-btn, .whatsapp-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          color: white;
-          padding: 10px 18px;
-          border-radius: 100px;
-          font-weight: 700;
-          font-size: 13px;
-          border: none;
-          cursor: pointer;
-          position: relative;
-          overflow: hidden;
-          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          
-          /* Sombras para volumen 3D (Efecto esfera) */
-          box-shadow: 
-            0 8px 15px rgba(0, 0, 0, 0.2),
-            inset 0 4px 6px rgba(255, 255, 255, 0.35),
-            inset 0 -4px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Reflejo superior de cristal */
-        .view-more-btn::after, .whatsapp-btn::after {
-          content: "";
-          position: absolute;
-          top: 10%;
-          left: 15%;
-          width: 70%;
-          height: 35%;
-          background: linear-gradient(to bottom, rgba(255,255,255,0.45), transparent);
-          border-radius: 50% 50% 45% 45%;
-          pointer-events: none;
-          transition: all 0.3s ease;
-        }
-
-        .view-more-btn { background: linear-gradient(135deg, #042f2e 0%, #064e3b 100%); }
-        .whatsapp-btn { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-
-        /* --- HOVER BURBUJA CLARA (Mantiene volumen) --- */
-        .view-more-btn:hover, .whatsapp-btn:hover {
-          padding: 10px 30px;
-          transform: scale(1.05) translate3d(0, 0, 20px);
-          /* Mantenemos el margen negativo para expansión simétrica */
-          margin-left: -12px;
-          margin-right: -12px;
-          
-          /* Cambiamos a un degradado casi blanco pero conservamos sombras inset */
-          background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
-          box-shadow: 
-            0 12px 25px rgba(0, 0, 0, 0.15),
-            inset 0 4px 6px rgba(255, 255, 255, 1),
-            inset 0 -4px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        .view-more-btn:hover { color: #042f2e; }
-        .whatsapp-btn:hover { color: #059669; }
-
-        /* Ajuste del brillo en hover para que sea sutil sobre el fondo claro */
-        .view-more-btn:hover::after, .whatsapp-btn:hover::after {
-          background: linear-gradient(to bottom, rgba(255,255,255,0.8), transparent);
-          width: 85%;
-          left: 7.5%;
-        }
-
-        .card-logo-container {
-          position: absolute;
-          right: 0;
-          top: 0;
-          transform-style: preserve-3d;
-        }
-
-        .circle {
-          display: block;
-          position: absolute;
-          aspect-ratio: 1;
-          border-radius: 50%;
-          top: 0;
-          right: 0;
-          background: rgba(255, 255, 255, 0.2);
-          backdrop-filter: blur(5px);
-          transition: all 0.5s ease-in-out;
-        }
-
-        .c5 { 
-          width: 45px; transform: translate3d(0, 0, 100px); top: 30px; right: 30px; 
-          display: grid; place-content: center; transition-delay: 0.4s;
-          background: #0b7a4b; color: white;
-          box-shadow: inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.2);
-        }
-
-        .card-parent:hover .card-3d {
-          transform: rotate3d(1, 1, 0, 25deg);
-          box-shadow: rgba(5, 71, 17, 0.3) 30px 50px 25px -40px, rgba(5, 71, 17, 0.1) 0px 25px 30px 0px;
-        }
-
-        .card-parent:hover .c5 { transform: translate3d(0, 0, 120px); }
-      ` }} />
     </section>
   );
 }
 
 function ServiceCard({ service }: { service: (typeof services)[number] }) {
   const Icon = service.icon;
-  const phoneNumber = "543513872817";
-  const whatsappUrl = `https://wa.me/${phoneNumber}?text=Hola! Estoy interesado en el servicio de: ${service.title}`;
+  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+    `¡Hola! Me interesa el servicio de ${service.title}. ¿Me pueden dar más información?`
+  )}`;
 
   return (
-    <div className="card-parent" id={service.id}>
-      <div className="card-3d">
-        <div className="card-logo-container">
-          <span className="circle c1"></span>
-          <span className="circle c2"></span>
-          <span className="circle c3"></span>
-          <span className="circle c4"></span>
-          <span className="circle c5">
-            <Icon size={20} />
-          </span>
-        </div>
+    <div
+      id={service.id}
+      className="group flex h-full flex-col rounded-3xl border border-ink-100 bg-white p-7 transition-all duration-400 hover:-translate-y-1.5 hover:border-brand-700/30 hover:shadow-[0_24px_50px_-18px_rgba(11,122,75,0.3)]"
+    >
+      {/* Ícono */}
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 transition-all duration-400 group-hover:scale-105 group-hover:bg-brand-700 group-hover:text-white">
+        <Icon size={24} strokeWidth={2} />
+      </div>
 
-        <div className="glass-layer"></div>
+      <h3 className="mt-5 text-xl font-bold tracking-tight text-ink-900">{service.title}</h3>
+      <p className="mt-2.5 text-[15px] leading-relaxed text-ink-500">{service.description}</p>
 
-        <div className="card-content">
-          <span className="card-3d-title">{service.title}</span>
-          <span className="card-3d-text">{service.description}</span>
-        </div>
+      {/* Botones */}
+      <div className="mt-7 flex flex-wrap items-center gap-2.5 border-t border-ink-100 pt-5">
+        <Link
+          href={`/servicios/${service.id}`}
+          className="flex items-center gap-1.5 rounded-xl bg-ink-900 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:bg-brand-700 active:scale-[0.98]"
+        >
+          Ver detalle
+          <ArrowRight size={15} className="transition-transform duration-300 group-hover:translate-x-0.5" />
+        </Link>
 
-        <div className="card-bottom">
-          <a href={`/servicios/${service.id}`} className="view-more-btn">
-            + Info <ChevronDown size={14} strokeWidth={3} />
-          </a>
-          
-          <a 
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="whatsapp-btn"
-          >
-            Consultar <BsWhatsapp size={14} />
-          </a>
-
-          
-        </div>
-        
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 rounded-xl border border-ink-200 px-5 py-2.5 text-sm font-semibold text-ink-700 transition-all duration-300 hover:border-[#25d366] hover:bg-[#25d366] hover:text-white active:scale-[0.98]"
+        >
+          <BsWhatsapp size={15} />
+          Consultar
+        </a>
       </div>
     </div>
   );

@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import api from '@/modules/shared/lib/axios';
+import { Field } from '@/modules/shared/ui/Field';
+import { Input } from '@/modules/shared/ui/Input';
+import { Select } from '@/modules/shared/ui/Select';
 import { toast } from 'sonner';
 import {
   MapPin, Home, Ruler, DollarSign, Bell, Save,
@@ -26,18 +29,7 @@ function SectionTitle({ icon: Icon, label }: { icon: React.ElementType; label: s
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-bold text-gray-700">{label}</label>
-      {children}
-      {hint && <p className="text-[11px] font-medium text-[#0b7a4b]/70 mt-0.5">{hint}</p>}
-    </div>
-  );
-}
-
-const inputClass = "w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0b7a4b] focus:bg-white transition-all placeholder:text-gray-400";
-const selectClass = "w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0b7a4b] focus:bg-white transition-all appearance-none";
+// `Field`, `Input` y `Select` ahora vienen de shared/ui (antes estaban duplicados acá).
 
 // ── TIPOS ─────────────────────────────────────────────────────────────────────
 interface FormState {
@@ -401,16 +393,16 @@ export default function PreferenciasPage() {
           <SectionTitle icon={MapPin} label="Ubicación" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Localidad" hint="Ej: Córdoba Capital, La Calera, Villa Carlos Paz">
-              <input value={form.localidad} onChange={e => set('localidad', e.target.value)}
-                className={inputClass} placeholder="Ej: Córdoba Capital" />
+              <Input value={form.localidad} onChange={e => set('localidad', e.target.value)}
+                placeholder="Ej: Córdoba Capital" />
             </Field>
             <Field label="Barrio" hint="Ej: Nueva Córdoba, Güemes, Alta Córdoba">
-              <input value={form.barrio} onChange={e => set('barrio', e.target.value)}
-                className={inputClass} placeholder="Ej: Nueva Córdoba" />
+              <Input value={form.barrio} onChange={e => set('barrio', e.target.value)}
+                placeholder="Ej: Nueva Córdoba" />
             </Field>
             <Field label="Zona">
-              <input value={form.zone} onChange={e => set('zone', e.target.value)}
-                className={inputClass} placeholder="Ej: cordoba, sierras, norte" />
+              <Input value={form.zone} onChange={e => set('zone', e.target.value)}
+                placeholder="Ej: cordoba, sierras, norte" />
             </Field>
           </div>
         </div>
@@ -420,22 +412,22 @@ export default function PreferenciasPage() {
           <SectionTitle icon={Home} label="Tipo de propiedad" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Tipo">
-              <select aria-label="Tipo de propiedad" value={form.typeOfPropertyId}
-                onChange={e => set('typeOfPropertyId', e.target.value)} className={selectClass}>
+              <Select aria-label="Tipo de propiedad" value={form.typeOfPropertyId}
+                onChange={e => set('typeOfPropertyId', e.target.value)}>
                 <option value="">Cualquier tipo</option>
                 {propertyTypes.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <Field label="Operación">
-              <select aria-label="Tipo de operación" value={form.operationType}
-                onChange={e => set('operationType', e.target.value)} className={selectClass}>
+              <Select aria-label="Tipo de operación" value={form.operationType}
+                onChange={e => set('operationType', e.target.value)}>
                 <option value="">Venta o alquiler</option>
                 {OPERATION_TYPES.map(t => (
                   <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
                 ))}
-              </select>
+              </Select>
             </Field>
           </div>
         </div>
@@ -443,6 +435,10 @@ export default function PreferenciasPage() {
         {/* CARACTERÍSTICAS */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
           <SectionTitle icon={Ruler} label="Características" />
+          {/* Los inputs de esta sección NO usan <Input>: llevan un ícono superpuesto y
+              necesitan pl-9 en vez del px-4 que trae la clase base. Como el proyecto no
+              usa tailwind-merge, pasar pl-9 por className dejaría ambos paddings
+              compitiendo. Se dejan explícitos hasta que exista un <Input icon={...}>. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Habitaciones mínimas">
               <div className="relative">
