@@ -5,24 +5,27 @@ import { motion, useInView } from 'framer-motion';
 import { Building2, Users, CalendarDays, Star } from 'lucide-react';
 
 /**
- * Contador de confianza (Bloque LANDING §6) — sección NUEVA.
+ * Contador de confianza (Bloque LANDING §6, rediseñado en §5).
  *
- * Los números suben cuando la sección entra en viewport. Se usa `useInView` de
- * framer-motion (ya instalado) + requestAnimationFrame; NO se agregó ninguna
- * dependencia nueva para esto.
+ * Los números suben cuando la sección entra en viewport, con `useInView` de
+ * framer-motion + requestAnimationFrame. NO se agregó ninguna dependencia.
  *
- * ⚠️ Los valores son contenido de marketing, no datos de la base. Se decidió
- * a propósito no traer el total real con GET /properties: la cifra bajaría si
- * se despublican propiedades y quedaría raro ("120 propiedades" un día y "90"
- * al siguiente), además de sumar una request bloqueante a la landing. Si más
- * adelante se quiere el número real, la fuente natural es `GET /stats/*`, que
- * el backend ya expone y el frontend todavía no consume.
+ * Rediseño (tanda de ajustes): las 4 métricas ahora viven en tarjetas de fondo
+ * BLANCO (antes eran "glass" translúcidas sobre el verde y se leían apagadas),
+ * con sombra propia y hover que las eleva. Detrás de las tarjetas, sobre el
+ * verde profundo, hay una marca de agua "CT" gigante como elemento decorativo
+ * de marca. El fondo sigue siendo `.surface-brand-deep`, el mismo ancla visual
+ * de la franja de estudiantes y el footer.
+ *
+ * ⚠️ Los valores son contenido de marketing, no datos de la base. Traer el
+ * total real con GET /properties haría que la cifra baje al despublicar
+ * propiedades. Si se quiere el número real, la fuente natural es GET /stats/*.
  */
 
 const stats = [
-  { value: 250, suffix: '+', label: 'Propiedades publicadas', Icon: Building2 },
-  { value: 480, suffix: '+', label: 'Clientes satisfechos', Icon: Users },
-  { value: 7,   suffix: ' años', label: 'En el mercado cordobés', Icon: CalendarDays },
+  { value: 50, suffix: '+', label: 'Propiedades publicadas', Icon: Building2 },
+  { value: 100, suffix: '+', label: 'Clientes satisfechos', Icon: Users },
+  { value: 7, suffix: ' años', label: 'En el mercado cordobés', Icon: CalendarDays },
   { value: 4.9, suffix: '', label: 'Valoración promedio', Icon: Star, decimals: 1 },
 ];
 
@@ -46,8 +49,7 @@ function useCountUp(target: number, active: boolean, decimals = 0) {
 
     const tick = (now: number) => {
       const progress = Math.min((now - start) / DURATION_MS, 1);
-      // easeOutCubic: arranca rápido y desacelera al final.
-      const eased = 1 - Math.pow(1 - progress, 3);
+      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
       setValue(Number((target * eased).toFixed(decimals)));
       if (progress < 1) frame = requestAnimationFrame(tick);
     };
@@ -59,7 +61,7 @@ function useCountUp(target: number, active: boolean, decimals = 0) {
   return value;
 }
 
-function StatItem({
+function StatCard({
   stat,
   active,
   index,
@@ -74,22 +76,24 @@ function StatItem({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 22 }}
+      initial={{ opacity: 0, y: 26 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, ease: 'easeOut', delay: index * 0.1 }}
-      className="flex flex-col items-center text-center"
+      className="group flex cursor-default flex-col items-center rounded-2xl border border-white/40 bg-white px-6 py-8 text-center shadow-[0_16px_40px_-16px_rgba(0,0,0,0.5)] transition-all duration-400 hover:-translate-y-1.5 hover:shadow-[0_28px_55px_-18px_rgba(0,0,0,0.6)]"
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-white backdrop-blur-sm">
+      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-brand-50 text-brand-700 transition-all duration-400 group-hover:scale-110 group-hover:bg-brand-700 group-hover:text-white">
         <Icon size={24} strokeWidth={2} />
       </div>
 
-      <p className="mt-5 text-4xl font-black tracking-tight text-white tabular-nums md:text-5xl">
+      {/* Número en verde de marca (bien contrastado sobre blanco), label en gris:
+          jerarquía clara entre el dato y su descripción. */}
+      <p className="mt-6 text-4xl font-black tracking-tight text-brand-700 tabular-nums md:text-5xl">
         {value.toFixed(decimals)}
         <span className="text-3xl md:text-4xl">{stat.suffix}</span>
       </p>
 
-      <p className="mt-2 text-sm font-medium text-white/80">{stat.label}</p>
+      <p className="mt-2.5 text-sm font-semibold text-ink-500">{stat.label}</p>
     </motion.div>
   );
 }
@@ -99,24 +103,34 @@ export default function Confianza() {
   const inView = useInView(ref, { once: true, margin: '-100px' });
 
   return (
-    <section className="relative overflow-hidden py-24 md:py-28" style={{ background: 'var(--gradient-brand)' }}>
-      {/* Círculos decorativos, mismo lenguaje que /servicios/:id */}
-      <span className="pointer-events-none absolute -top-24 -right-24 h-96 w-96 rounded-full bg-white/5" />
-      <span className="pointer-events-none absolute -bottom-20 -left-20 h-72 w-72 rounded-full bg-white/5" />
+    <section className="surface-brand-deep relative overflow-hidden py-24 md:py-28">
+      {/* Marca de agua "CT" — decorativa, sobre el verde y detrás de las tarjetas
+          (z-0). Verde más claro que el fondo para que se note apenas. En la
+          fuente serif de marca (Playfair). Se recorta contra el borde derecho. */}
+      <span
+        aria-hidden
+        style={{ fontFamily: 'var(--font-heading)' }}
+        className="pointer-events-none absolute top-1/2 -right-8 z-0 -translate-y-1/2 text-[22rem] leading-none font-black text-white/6 select-none sm:right-4 md:text-[28rem]"
+      >
+        CT
+      </span>
 
       <div ref={ref} className="relative z-10 mx-auto max-w-7xl px-6">
-        <div className="mx-auto mb-14 max-w-2xl text-center">
-          <span className="inline-block rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-bold tracking-[0.25em] text-white uppercase backdrop-blur-sm">
+        <div className="mx-auto mb-14 max-w-2xl text-center md:mb-16">
+          <span className="inline-block rounded-full border border-white/25 bg-white/15 px-4 py-1.5 text-xs font-bold tracking-[0.22em] text-white uppercase backdrop-blur-sm">
             Nuestra trayectoria
           </span>
           <h2 className="mt-5 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
             Números que respaldan cada operación
           </h2>
+          <p className="mt-4 text-base leading-relaxed text-white/70 md:text-lg">
+            Años de trabajo en Córdoba, medidos en familias que ya encontraron su lugar.
+          </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-10 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat, i) => (
-            <StatItem key={stat.label} stat={stat} active={inView} index={i} />
+            <StatCard key={stat.label} stat={stat} active={inView} index={i} />
           ))}
         </div>
       </div>

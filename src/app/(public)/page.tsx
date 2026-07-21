@@ -1,6 +1,7 @@
 // ✅ Server Component puro — sin "use client", sin async issues
 import { PropertySlider } from '@/modules/landing/components/Slider';
 import FeaturedProperties from '@/modules/landing/components/Featuredproperties';
+import PublicarPropiedad from '@/modules/landing/components/PublicarPropiedad';
 import Servicios from '@/modules/landing/components/Servicios';
 import Confianza from '@/modules/landing/components/Confianza';
 import Resenas from '@/modules/landing/components/Reseñas';
@@ -30,6 +31,7 @@ export default function LandingPage() {
       <main id="inicio" className="min-h-screen">
         <PropertySlider />
         <FeaturedProperties />
+        <PublicarPropiedad />
         <Servicios />
         <Confianza />
         <Resenas />

@@ -78,7 +78,7 @@ export default function RealEstateFAQ() {
   const visible = showAll ? faqData : faqData.slice(0, INITIAL_VISIBLE);
 
   return (
-    <section id="faq" className="bg-white py-24 md:py-28">
+    <section id="faq" className="bg-gray-150 py-24 md:py-28">
       <div className="mx-auto max-w-4xl px-6">
         <SectionHeading
           eyebrow="Preguntas frecuentes"

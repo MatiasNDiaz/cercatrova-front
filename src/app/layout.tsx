@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { Inter, Playfair_Display } from "next/font/google";
 import { AuthProvider } from "@/modules/shared/context/AuthContext";
-import { FooterPublic } from "@/modules/landing/components/FooterPublic";
+import { FooterSelector } from "@/modules/shared/ui/FooterSelector";
 import { Toaster } from 'sonner';
 import { NavbarSelector } from '@/modules/shared/ui/NavbarSelector';
 import "./globals.css";
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: 'Tu aliado en cada inversión inmobiliaria en Córdoba',
   icons: {
     // Añadimos ?v=1 al final para romper la caché
-    icon: '/favicon.png?v=2', 
+    icon: '/icon.png?v=1', 
   },
 };
 
@@ -37,7 +37,7 @@ export default function RootLayout({
           <AuthProvider>
             <NavbarSelector />
               {children}
-              <FooterPublic/>
+              <FooterSelector/>
           </AuthProvider>
           <Toaster
   position="bottom-right"

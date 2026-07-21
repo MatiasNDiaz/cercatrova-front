@@ -81,6 +81,46 @@ body {
   background-color: #f2f1f1;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   SUPERFICIE VERDE PROFUNDA — secciones ancla de la landing
+   ───────────────────────────────────────────────────────────────────────────
+   Verde oscuro y elegante (NO el verde brillante del gradiente de marca).
+   Se usa en: franja de estudiantes, Trayectoria y Footer.
+
+   No es plano: combina un gradiente diagonal apagado con dos halos radiales
+   muy sutiles y una trama de puntos apenas perceptible, para que la superficie
+   tenga textura sin distraer de la lectura.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.surface-brand-deep {
+  position: relative;
+  background-color: #063923; /* brand-900 — fallback sólido */
+  background-image:
+    radial-gradient(ellipse 80% 60% at 15% 0%, rgba(20, 163, 102, 0.16), transparent 60%),
+    radial-gradient(ellipse 70% 60% at 90% 100%, rgba(8, 80, 49, 0.55), transparent 60%),
+    linear-gradient(135deg, #074c2f 0%, #063923 55%, #042a19 100%);
+}
+
+/* Variante más oscura, para que el footer cierre la página. */
+.surface-brand-deepest {
+  position: relative;
+  background-color: #042a19;
+  background-image:
+    radial-gradient(ellipse 90% 70% at 20% 0%, rgba(15, 139, 87, 0.18), transparent 62%),
+    linear-gradient(135deg, #063923 0%, #042a19 60%, #032315 100%);
+}
+
+/* Trama de puntos — va en ::before para no pisar el background del elemento.
+   Se aplica a ambas variantes, así cada una se usa sola (no combinadas). */
+.surface-brand-deep::before,
+.surface-brand-deepest::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
 @source "../app/**/*.{js,ts,jsx,tsx}";
 @source "../src/**/*.{js,ts,jsx,tsx}";
 

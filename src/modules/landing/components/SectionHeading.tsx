@@ -26,7 +26,10 @@ export function SectionHeading({ eyebrow, title, subtitle, className = '' }: Sec
       transition={{ duration: 0.6, ease: 'easeOut' }}
       className={`mx-auto mb-14 max-w-2xl text-center md:mb-16 ${className}`}
     >
-      <span className="inline-block rounded-full bg-brand-50 px-4 py-1.5 text-xs font-bold tracking-[0.25em] text-brand-700 uppercase">
+      {/* Píldora sólida: antes era `bg-brand-50` (#eff9f4), casi invisible
+          sobre blanco. Ahora es el verde de marca pleno con texto blanco —
+          tiene presencia real sin competir con el h2, porque es chica. */}
+      <span className="inline-block rounded-full bg-brand-700 px-4 py-1.5 text-xs font-bold tracking-[0.22em] text-white uppercase shadow-[0_4px_12px_-4px_rgba(11,122,75,0.6)]">
         {eyebrow}
       </span>
       <h2 className="mt-5 text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl md:text-5xl">

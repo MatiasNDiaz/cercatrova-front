@@ -517,6 +517,228 @@ a Unsplash: funcionan, son retratos diversos, y **evita agregar un host nuevo a
 
 ---
 
+## Bloque LANDING (continuación) — Tanda de pulido sobre feedback real
+
+Ajustes hechos después de ver la página rediseñada en el navegador.
+
+### §1 — Sistema de fondos replanteado
+**Problema:** el contraste entre secciones era casi imperceptible — `bg-white` y
+`bg-surface` (`#f5f7f5`) se diferencian en ~4% de luminancia.
+
+**Solución:** se sumó una **tercera superficie**, un verde profundo con textura, y se
+rediseñó el ritmo completo de las 8 secciones en conjunto:
+
+| # | Sección | Fondo |
+|---|---|---|
+| 1 | Hero | Imagen + overlay `ink-950` |
+| 2 | Estudiantes (nueva) | **`.surface-brand-deep`** |
+| 3 | Destacadas | `surface` (gris) — tarjetas blancas |
+| 4 | Servicios | Blanco |
+| 5 | Trayectoria | **`.surface-brand-deep`** (ancla) |
+| 6 | Reseñas | `brand-50` (verde muy claro) |
+| 7 | Nosotros | Blanco |
+| 8 | FAQ | `surface` (gris) |
+| — | Footer | **`.surface-brand-deepest`** |
+
+Dos clases nuevas en `globals.css`. **No son planas**, como se pidió: combinan un
+gradiente diagonal apagado, dos halos radiales y una trama de puntos en `::before`.
+- `.surface-brand-deep` → `#074c2f → #063923 → #042a19`
+- `.surface-brand-deepest` → variante más oscura, solo para el footer
+
+Se usa `::before` para la trama porque `background-image` ya está ocupado por los
+gradientes; ambas variantes comparten la regla para poder usarse por separado.
+
+### §2 — Hero: bug de imágenes + franja de estudiantes
+
+**🐛 BUG CORREGIDO — las imágenes no se veían.** Consola:
+`Image has fill and a height value of 0... parent element has not been styled to have a set height`.
+
+*Causa:* el `<Swiper>` iba `absolute inset-0` y los slides dependían del CSS propio de
+Swiper para heredar altura. `.swiper-slide` quedaba en **0px**, así que `<Image fill>` no
+tenía contenedor con alto y no renderizaba nada.
+
+*Fix:* la altura se propaga **explícitamente en toda la cadena**, y el Swiper dejó de ser
+`absolute` (ahora participa del flujo y toma el alto real de la sección; el texto es el que
+pasó a estar superpuesto):
+
+```
+section  h-160 / md:h-180   ← altura fija, ya no min-h
+  └ Swiper            h-full  +  [&_.swiper-wrapper]:h-full  +  [&_.swiper-slide]:h-full
+      └ div interno   relative h-full
+          └ <Image fill>
+```
+
+*Verificado a nivel CSS* en el build — la regla se genera:
+```css
+.[&_.swiper-slide]:h-full .swiper-slide,
+.[&_.swiper-wrapper]:h-full .swiper-wrapper { height: 100% }
+```
+y las 15 URLs de imagen aparecen en el HTML prerenderizado de `/`.
+
+**Franja de estudiantes (`EstudiantesBand`).** Se eligió **una franja debajo del carrusel
+en vez de un 5º slide**: como slide habría aparecido 1 de cada 5 rotaciones (el mensaje se
+perdería) y habría competido con el CTA principal. Como franja fija está siempre visible y
+además funciona de transición entre el hero oscuro y el resto de la página.
+El CTA apunta a `/properties?search=Nueva+Córdoba` — se verificó que `usePropertyFilters`
+lee el param `search`, así que el catálogo abre ya filtrado por la zona universitaria.
+
+### §3 y §4 — CTAs: un solo componente (`CtaButton.tsx`)
+**Problema:** había tres lenguajes de botón distintos en la misma página — el hero con
+gradiente y **barrido de brillo permanente**, "Ver todas las propiedades" repitiendo el
+gradiente, y "Ver detalle" de servicios en **negro** (`ink-900`).
+
+**Solución:** un componente con tres variantes, usado en toda la landing:
+- `primary` → **verde sólido `brand-700`**, sin gradiente. Sombra presente pero sobria.
+  El barrido de luz **existe pero solo se dispara en hover** (`-translate-x-full` →
+  `translate-x-full`); en reposo el botón es verde plano.
+- `outlineLight` → contorno blanco, para fondos oscuros (hero, verde profundo).
+- `outlineDark` → contorno verde, para fondos claros.
+
+Todos comparten geometría (`rounded-xl`, `px-8 py-4`), peso `bold` y la misma respuesta
+al hover (elevación + sombra + `active:scale-[0.98]`).
+
+**Posición fija de los CTAs del hero:** el bloque de título + subtítulo tiene ahora
+`min-h-64 md:min-h-68`. Antes los botones se movían verticalmente en cada cambio de slide,
+porque los 4 textos tienen distinto largo.
+
+### §5 — Trayectoria con vida
+Los 4 números flotaban sueltos sobre el verde. Ahora cada métrica vive en su **tarjeta
+glass** (`bg-white/[0.07]` + `backdrop-blur` + borde), con hover que eleva la tarjeta,
+escala el ícono e **invierte sus colores** (de verde claro sobre translúcido a
+`brand-800` sobre blanco). Jerarquía de color explícita: número en blanco puro,
+label en `brand-200`.
+
+### §6 — Reseñas
+- **Más verde:** fondo de sección `brand-50`, barra superior con el gradiente de marca en
+  cada tarjeta, comilla `brand-300`, anillo `brand-600` en el avatar y chip verde de operación.
+- **Info nueva por testimonio:** **operación** (Compra / Venta / Alquiler / Tasación) y
+  **zona** de Córdoba, para que el testimonio sea creíble y no un texto suelto.
+- **Fotos reales:** se reemplazó `i.pravatar.cc` por **10 retratos de Unsplash**, todos
+  verificados uno por uno (ver nota de imágenes). Variados en edad, género y origen.
+  Se usa `next/image` porque `images.unsplash.com` ya estaba en `remotePatterns`.
+
+### §7 — Tarjeta de Destacadas
+- **`FavoriteButton` quitado SOLO de esta sección.** Verificado por grep: el componente
+  sigue usándose en `PropertyCard` (catálogo `/properties`), donde funciona igual que
+  siempre. Motivo: la landing es la puerta de entrada y el corazón empujaba a `/login` a
+  quien todavía no tiene cuenta.
+- **Signo `$`** antes del precio, con separador de miles `es-AR`.
+- **Tono más empresarial:** `rounded-xl` en vez de `rounded-3xl`, borde `ink-200`,
+  imagen más alta (`h-64`) y padding mayor. El contenedor de la sección pasó a
+  `max-w-350` (1400px) para que las 4 tarjetas tengan cuerpo.
+- Las tarjetas son **blancas sobre fondo gris**, así se despegan del fondo de verdad y no
+  dependen solo de la sombra.
+- Al no usar más `FavoriteButton`, el archivo **dejó de necesitar `'use client'`**.
+
+### §8 — Píldoras de título
+Eran `bg-brand-50` (`#eff9f4`) — prácticamente invisibles sobre blanco. Ahora son
+**`bg-brand-700` sólido con texto blanco** y una sombra suave. Tienen presencia real sin
+competir con el `h2`, porque son chicas. En las secciones de fondo verde la píldora usa
+`bg-white/15` con borde, por contraste.
+
+### §9 — Footer rediseñado
+- **Se eliminó el arco SVG** de curvas grises/blancas superior y el verde plano `#0b7a4b`.
+  Ahora usa `.surface-brand-deepest`, misma familia que el resto: el footer **cierra** la
+  página en vez de cortarla.
+- **Se eliminaron los 8 círculos decorativos y los 2 grids de puntos SVG** dibujados a mano
+  (≈35 líneas de JSX): la textura la da la clase CSS.
+- **Enlaces reorganizados:** 3 columnas claras (Navegación / Servicios / Contacto) sobre
+  una grilla de 12, en vez de anchos dispares. Se sumaron enlaces que faltaban (FAQ,
+  Asesoramiento, Publicar mi propiedad).
+- **Redes sociales rediseñadas:** contenedores circulares neutros que **se tiñen del color
+  real de cada marca al hacer hover**, en vez de estar siempre a todo color compitiendo
+  entre sí y con el verde del fondo. Los colores de marca ajena (`#25d366`, `#1877f2`,
+  gradiente de Instagram) se conservan intactos.
+- **La información no cambió:** WhatsApp, Instagram, Facebook, dirección, mapa y matrícula
+  son exactamente los mismos. Solo cambia el diseño.
+- El `iframe` del mapa ganó un `title` (faltaba, es requisito de accesibilidad).
+- El componente dejó de ser `'use client'`: no usa ningún hook.
+
+### Nota de imágenes — 15 URLs verificadas
+Todas las imágenes nuevas se verificaron **descargándolas y mirándolas**, no asumiendo que
+existieran: 4 del hero + 1 de la franja de estudiantes + 10 retratos de reseñas.
+Un caso concreto: la primera candidata a foto de estudiantes y varias de los retratos se
+eligieron sobre alternativas descartadas al verlas.
+
+- **Estado:** ✅ build OK, 22/22 páginas, `/` sigue estático.
+
+---
+
+## Bloque LANDING (tanda de ajustes) — pulido sobre feedback en navegador
+
+Cuatro ajustes puntuales después de ver la landing renderizada.
+
+### 1 — Botones del Hero medían distinto (`CtaButton.tsx`)
+- **Causa (ya diagnosticada):** la variante `primary` ("Ver propiedades") no tenía borde y
+  la `outlineLight` ("Iniciar sesión") tenía `border-2`. Esos 4px (2 por lado) hacían que
+  el segundo botón se viera más grande en la misma fila.
+- **Solución:** el `border-2` se movió a la clase `BASE`, así las **tres** variantes
+  reservan el mismo box de borde; `primary` solo sobreescribe el color a
+  `border-transparent`. **No se restó padding a mano** — si mañana cambia el grosor del
+  borde, siguen quedando parejos solos.
+- Verificado: ambos botones del hero comparten `BASE` (con `border-2`) y difieren solo en
+  color de borde, así que miden idéntico.
+
+### 2 — Nueva sección "Publicá tu propiedad" (`PublicarPropiedad.tsx`)
+- **Ubicación:** entre `FeaturedProperties` y `Servicios` (confirmado en `page.tsx`).
+- **Formato:** imagen como tarjeta flotante (redondeada + sombra + `ring`) a un lado, con
+  una tarjetita "Publicación asistida" superpuesta; texto + lista de 3 bullets + CTA
+  `primary` "Publicar mi propiedad" → `/publicar` al otro. Entra con `Reveal` (el mismo
+  framer-motion del resto, no un sistema nuevo).
+- **Fondo elegido: `bg-brand-50` (verde muy claro).** Queda entre la Destacadas de arriba y
+  la Servicios blanca de abajo sin repetir ninguno de los dos, y deja resaltar la tarjeta
+  de imagen blanca y el texto oscuro. Ritmo resultante:
+  Hero → Destacadas(gris) → **Publicar(brand-50)** → Servicios(blanco) → Trayectoria(verde
+  profundo) → Reseñas(brand-50) → Nosotros(blanco) → FAQ(gris) → Footer(verde).
+- **⚠️ Imagen — no encontré la exacta que se pidió.** El brief era un *hombre solo,
+  sonriendo, con la laptop de espaldas a la cámara, en su casa*. Tras revisar ~18 fotos de
+  Unsplash (verificándolas visualmente una por una), no apareció ninguna con esa
+  combinación exacta: las de un hombre solo eran retratos sin laptop; las de laptop-de-
+  espaldas + gesto de disfrute eran de una mujer o de grupos/oficina. Se usó
+  `photo-1600880292203-757bb62b4baf` (hombre sonriendo con laptop, ambiente cálido y
+  profesional): cumple "hombre + sonriendo + laptop + facilidad/éxito", pero **son dos
+  personas y el encuadre no es "monitor de espaldas"**. La alternativa que sí clava la
+  composición y el mood (persona de frente, laptop de espaldas, gesto de disfrute en un
+  living) es `photo-1584697964358-3e14ca57658b`, **pero es una mujer**. Cambiar la imagen
+  es una línea (`src=` en `PublicarPropiedad.tsx`).
+
+### 3 — Marca de agua en las tarjetas de Servicios (`Servicios.tsx`)
+- Las 6 tarjetas se veían muy vacías. Se agregó, **detrás del contenido** (`z-0`, con el
+  contenido envuelto en `relative z-10`):
+  - la palabra **"CERCA"** en la fuente serif de marca (`var(--font-heading)` = Playfair),
+    `font-black`, en `brand-100/60`, anclada abajo a la derecha y recortada por el
+    `overflow-hidden` de la card;
+  - un ícono `Building2` grande (120px) en `brand-50`, arriba a la derecha, que se
+    intensifica apenas en hover.
+- Ambos son `pointer-events-none` y `aria-hidden`; el ícono/título/descripción/botones no
+  pierden legibilidad.
+
+### 4 — Trayectoria: tarjetas blancas + marca de agua "CT" (`Confianza.tsx`)
+- Cada una de las 4 métricas pasó de tarjeta "glass" translúcida a **tarjeta blanca** con
+  sombra propia. Al cambiar el fondo a blanco se invirtieron los colores de texto para
+  mantener contraste: número en `brand-700`, label en `ink-500`, ícono en `brand-50` que
+  se vuelve `brand-700`→blanco en hover.
+- Detrás de las tarjetas, sobre el verde profundo, se agregó una marca de agua **"CT"**
+  gigante (`text-[28rem]`, Playfair, `text-white/6`) anclada a la derecha — apenas un verde
+  más claro, decorativa, en `z-0`. Las tarjetas van en `z-10`.
+- **Las animaciones de contador NO se tocaron:** `useInView` + `requestAnimationFrame`
+  siguen igual; solo cambió el contenedor visual.
+
+### Nota — `bg-gray-150` en Destacadas y FAQ (no introducido acá)
+Un cambio previo puso `bg-gray-150` en `Featuredproperties` y `RealEstateFAQ`, pero
+**`gray-150` no es un step de la escala de Tailwind** (va 100 → 200). Esa clase no genera
+ninguna regla, así que esas dos secciones hoy toman el color del `body` (`#f2f1f1`) que se
+ve por detrás — se ven gris claro **por accidente**, no por el token. Funciona visualmente
+pero es frágil: si algún día el `body` cambia de color, esas secciones cambian con él. Si
+la intención es un gris estable, conviene o definir `--color-gray-150` en `@theme`, o usar
+`bg-surface` (que ya existe, `#f5f7f5`). **Se dejó como está** (fue un cambio intencional),
+solo queda anotado.
+
+- **Estado:** ✅ build OK, 23/23 páginas (la sección nueva no agrega ruta; el conteo subió
+  porque el grupo `(auth)` sumó su layout en una sesión anterior), `/` sigue estático.
+
+---
+
 ## Nota de tooling — `NEXT_DIST_DIR` en `next.config.ts`
 
 En Windows, `npm run build` se cuelga indefinidamente si hay un `npm run dev` corriendo:
@@ -696,7 +918,7 @@ este escape hatch, se puede revertir esa línea sin ningún otro cambio.
 
 ## Pendientes para sesiones futuras
 
-1. **Bloque H — Login con Google** (ver sección siguiente, decisiones ya tomadas).
+1. ~~**Bloque H — Login con Google**~~ → ✅ **completo**, ver el bloque al final del documento.
 2. **Unificar el perfil** duplicado entre `dashboard/perfil` y `dashboardAdmin/perfil` en un componente compartido.
 3. **`callbackUrl`:** el middleware setea `?callbackUrl=` al redirigir a `/login`, pero el login no lo lee al redirigir post-login — mejora de UX pendiente.
 4. **Eliminar** la carpeta vacía `src/app/(user)/` si se confirma que no se va a usar.
@@ -704,10 +926,195 @@ este escape hatch, se puede revertir esa línea sin ningún otro cambio.
 
 ---
 
-## Bloque H — Login con Google (POSPUESTO a una sesión futura, decidido con el usuario)
+## Bloque H — Login con Google + rediseño de las pantallas de auth ✅ COMPLETO
 
-Decisiones ya tomadas para cuando se implemente:
-- **Client ID:** se reutiliza el del backend — hay que agregarle `http://localhost:3000` (y el dominio de producción) a los *Authorized JavaScript origins* en Google Cloud Console antes de empezar.
-- **Librería:** `@react-oauth/google` (dependencia nueva aprobada).
-- **Variable de entorno nueva:** `NEXT_PUBLIC_GOOGLE_CLIENT_ID` en `.env`.
-- **Flujo:** botón "Continuar con Google" en `LoginForm.tsx` (y evaluar reuso en `RegisterForm.tsx` — el backend maneja login y registro en un solo paso); con el `idToken` → `POST /auth/google` `{ idToken }`; en éxito, mismo redirect por rol que `login()` del AuthContext; errores vía `getErrorMessage()` (el interceptor ya excluye `/auth/*` del redirect por 401, así que los 401 de audience-mismatch/email-no-verificado llegan al formulario); si `profileIncomplete: true`, mostrar el aviso del Bloque G.
+Se implementó el login con Google y se rediseñaron `LoginForm` y `RegisterForm` para que
+entonen con la landing.
+
+### H.1 — Login con Google
+
+**Dependencia nueva:** `@react-oauth/google@0.13.5` (aprobada previamente).
+
+#### ⚠️ El botón custom con `useGoogleLogin` era técnicamente inviable
+El pedido dejaba elegir entre el botón prearmado y uno custom con el hook, prefiriendo el
+custom por control de estilo. **No se pudo: el hook no puede producir el token que este
+backend necesita.** `POST /auth/google` espera un **idToken** (un JWT de OpenID que el
+backend verifica con google-auth-library), y según los tipos de la propia librería:
+
+| API | Qué devuelve | ¿Sirve? |
+|---|---|---|
+| `<GoogleLogin>` | `CredentialResponse.credential` — *"the returned ID token"* | ✅ |
+| `useGoogleLogin({ flow: 'implicit' })` | `TokenResponse.access_token` | ❌ no es un ID token |
+| `useGoogleLogin({ flow: 'auth-code' })` | `code` (requiere intercambio server-side) | ❌ el front no lo hace |
+
+Así que se usa `<GoogleLogin>` configurado con las opciones que sí expone (`theme`,
+`size`, `shape`, `width`, `text`). Google lo renderiza **dentro de un iframe**, o sea que
+su tipografía y alto no se pueden pisar con CSS; el contenedor iguala el ancho al del
+resto del formulario para que no quede desalineado. Un botón 100% custom requeriría
+cambiar el contrato del backend (aceptar `access_token` y llamar a `userinfo`).
+
+Detalle menor: `locale` **no existe** como prop en esta versión de la librería (da error de
+tipos). El botón toma el idioma del navegador.
+
+#### Archivos
+
+| Archivo | Rol |
+|---|---|
+| `auth/components/GoogleProvider.tsx` (NUEVO) | `GoogleOAuthProvider` + export de `GOOGLE_CLIENT_ID` |
+| `app/(auth)/layout.tsx` (NUEVO) | Monta el provider solo en `/login` y `/register` |
+| `auth/components/GoogleAuthButton.tsx` (NUEVO) | Botón + canje del idToken + errores |
+| `auth/services/auth.service.ts` | `loginWithGoogle(idToken)` → `POST /auth/google` |
+| `shared/context/AuthContext.tsx` | `loginWithGoogle` + `handleAuthSuccess` compartido |
+
+**Dónde va el provider:** en el layout del grupo `(auth)`, **no** en el layout raíz. Google
+login solo se usa en dos páginas; envolver toda la app cargaría el script de Google
+Identity Services en cada vista, incluida la landing. El layout sigue siendo Server
+Component porque el provider está aislado en su propio componente cliente.
+
+**Si falta `NEXT_PUBLIC_GOOGLE_CLIENT_ID`:** el provider renderiza los hijos igual y el
+botón **no se monta**. Los formularios siguen funcionando con email + contraseña en vez de
+romper la pantalla entera. En desarrollo se avisa por consola.
+
+#### `handleAuthSuccess` — por qué se extrajo
+El pedido incluía *confirmar que el toast de `profileIncomplete` se dispara también en el
+flujo de Google*. En vez de duplicar la lógica, se extrajo todo el post-login (setear
+`user` + redirect por rol + toast de perfil incompleto) a `handleAuthSuccess`, que usan
+**tanto `login` como `loginWithGoogle`**. Así los dos flujos no pueden divergir: el toast
+está garantizado por construcción, no por copiar el mismo bloque dos veces.
+
+#### El botón también va en el registro
+Se incluyó en `RegisterForm` además de en `LoginForm`. El backend resuelve login y alta en
+un solo paso (crea el usuario si el email no existe), así que desde la pantalla de registro
+es un camino legítimo y más corto que llenar 5 campos. Solo cambia el texto
+(`signup_with` vs `signin_with`).
+
+**⚠️ Diferencia de flujo que conviene tener presente:** el registro tradicional **no
+autologuea** (`AuthContext.register` redirige a `/login`), mientras que el alta con Google
+**sí** deja la sesión iniciada y va directo al dashboard. Es el comportamiento del backend,
+no una inconsistencia del frontend.
+
+#### ✅ Verificación contra el backend real (no solo "mentalmente")
+El backend estaba corriendo en `localhost:3000`, así que se probaron los caminos de error
+de verdad con `curl`:
+
+| Caso | Respuesta real | Qué muestra `getErrorMessage` |
+|---|---|---|
+| `GET /auth/me` sin sesión | `401` | (hidratación, esperado) |
+| `POST /auth/google` sin `idToken` | `400` `["El idToken de Google es obligatorio","idToken must be a string"]` | ver nota ↓ |
+| `POST /auth/google` con token basura | `400 "No se pudo verificar el token de Google"` | el mensaje tal cual ✅ |
+| `POST /auth/login` mal | `401 "Credenciales inválidas"` | el mensaje tal cual ✅ |
+
+**Nota sobre el primer caso:** el backend devuelve un **array** de class-validator que
+incluye `"idToken must be a string"` en inglés. `getErrorMessage` uniría ambos con `·`,
+quedando medio feo — pero **ese caso es inalcanzable desde la UI**, porque
+`GoogleAuthButton` corta antes con su propio mensaje si Google no devolvió `credential`.
+
+**Lo que NO se pudo probar de punta a punta:** el login con Google exitoso y los dos
+errores 401 (`token no emitido para esta aplicación`, `email no verificado`) requieren un
+idToken real firmado por Google, que solo se obtiene desde un navegador con la cuenta del
+usuario. Queda pendiente de prueba manual. Lo que sí está verificado es que el endpoint
+existe, valida como dice el contrato, y que los mensajes string se muestran tal cual.
+
+### H.2 — Rediseño visual de las pantallas de auth
+
+| Archivo | Rol |
+|---|---|
+| `auth/components/AuthShell.tsx` (NUEVO) | Estructura de 2 columnas compartida |
+| `auth/components/AuthField.tsx` (NUEVO) | Campo + ícono + error animado |
+| `auth/schemas/auth.schemas.ts` (NUEVO) | Schemas de zod compartidos |
+| `shared/ui/FooterSelector.tsx` (NUEVO) | Oculta el footer en rutas de auth |
+
+- **Layout:** se mantiene el esquema de 2 columnas, rehecho. El panel de imagen lleva
+  overlay `brand-950` de la misma familia que la landing, con logo y mensaje encima.
+  Antes era una foto suelta con **7 círculos decorativos y un `<div></div>` vacío** al
+  centro.
+- **Imágenes nuevas de Unsplash, verificadas visualmente:** llaves sobre una mesa (login)
+  y casa iluminada al atardecer (registro).
+- **Animaciones:** entrada del formulario con framer-motion; el mensaje de error aparece
+  y desaparece animando alto + opacidad, así el form no "salta" al validar.
+- **Botón de submit** alineado con el `CtaButton` de la landing (verde sólido `brand-700`,
+  hover que eleva, `active:scale`), con spinner propio.
+
+#### 🐛 Dos arreglos de layout que salieron de esto
+1. **El footer completo aparecía debajo del login.** `FooterPublic` se montaba sin
+   condición en el layout raíz, así que la pantalla de login tenía debajo el CTA de
+   WhatsApp, las 3 columnas de links y el mapa de Google. Ahora hay un `FooterSelector`
+   (mismo patrón que el `NavbarSelector` que ya existía) que lo oculta en `/login` y
+   `/register`. **Los dashboards se dejaron como estaban** — sacarlo de ahí también sería
+   razonable, pero no se pidió.
+2. **Los links del navbar público no funcionaban en `/login`.** `NavbarPublic` hace scroll
+   a `#inicio`, `#nosotros` y `#faq`, secciones que solo existen en la landing. Se ocultó
+   el navbar en las rutas de auth y las pantallas ganaron su propio "Volver al inicio".
+   De paso desaparece el `mt-15` que `RegisterForm` tenía para esquivar el navbar fijo.
+
+#### Por qué NO se usaron `Field`/`Input` de `shared/ui`
+El pedido planteaba evaluar migrarlos. **No conviene:** esos componentes tienen `px-4` en
+su clase base y estos campos necesitan `pl-10` para el ícono interno (y `pr-11` en los de
+contraseña, por el ojito). Como el proyecto no usa `tailwind-merge`, pasar `pl-10` por
+`className` dejaría los dos paddings compitiendo — **exactamente el caso ya documentado en
+el Bloque UI-7** con los inputs con ícono de `preferencias` y el precio de `PropertyForm`.
+Se creó `AuthField` con su propia clase base. Cuando exista un `<Input icon={...} />`
+compartido, estos campos son los primeros candidatos a migrar.
+
+### H.3 — Validaciones reforzadas
+
+**🔒 Lo que NO se tocó:** `password` sigue en **mínimo 5 caracteres** en ambos formularios.
+Es el mínimo real del backend; subirlo dejaría afuera a los usuarios ya registrados.
+
+| Campo | Antes | Ahora |
+|---|---|---|
+| `name` / `surname` | `min(2)` | `min(2)` + **`max(50)`** + **regex de solo letras** |
+| `phone` | `min(8)` sobre el string + regex de forma | regex de forma + **conteo de dígitos reales entre 8 y 15** |
+| `email` (ambos) | `.email()` | `.trim()` + **`min(1)` con mensaje propio** + `.email()` |
+| `password` | `min(5)` | `min(5)` — **sin cambios** |
+
+- **Regex de nombre:** `/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:[ '\-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/`
+  Acepta acentos y ñ, y permite espacios/apóstrofes/guiones **solo entre palabras** — cubre
+  "José María", "D'Angelo", "García-López". Rechaza números, símbolos y espacios al
+  principio o al final.
+- **Teléfono:** el `min(8)` anterior contaba **caracteres**, así que `"--- ---"` (7 guiones
+  y un espacio) pasaba la validación. Ahora se cuentan los **dígitos reales** ignorando
+  separadores: `+54 351 387 2817` (12 dígitos) pasa, `"+"` solo no. El tope de 15 es el
+  máximo de E.164, el estándar internacional de numeración.
+- Los schemas se movieron a `auth/schemas/auth.schemas.ts` para compartirlos entre ambos
+  formularios en vez de tenerlos duplicados en cada archivo.
+
+### H.4 — Fix: la foto de perfil de Google rompía `next/image`
+
+**Problema (encontrado al probar el login con Google de verdad):** apenas un usuario de
+Google entraba al dashboard, `next/image` tiraba
+`Invalid src prop (https://lh3.googleusercontent.com/...) — hostname is not configured
+under images in your next.config.js`. Las cuentas de Google sirven su avatar desde ese
+host, que no estaba en `remotePatterns`.
+
+**Solución:** se agregó `lh3.googleusercontent.com` a `images.remotePatterns` en
+`next.config.ts`, con el mismo shape que los hosts ya presentes.
+
+**Verificado a través del pipeline real de imágenes**, no solo revisando el config: se
+levantó un dev server y se consultó el optimizador directamente, con un control para que
+el resultado fuera concluyente.
+
+| Host | `GET /_next/image?url=…` | Lectura |
+|---|---|---|
+| `lh3.googleusercontent.com` | **200**, `content-type: image/png` | aceptado y optimizado ✅ |
+| `example.com` (control, no configurado) | **400** `"url" parameter is not allowed` | así se ve un host bloqueado |
+
+El 400 del control es exactamente el error que se estaba viendo, así que el 200 confirma
+que el host quedó habilitado de punta a punta.
+
+**Nota para producción:** Google sirve avatares casi siempre desde `lh3`, pero
+históricamente también usó `lh4`/`lh5`/`lh6`. Si alguna vez reaparece el error con otro
+subdominio, la alternativa es reemplazar la entrada por el wildcard
+`hostname: '**.googleusercontent.com'`, que `remotePatterns` soporta. Se dejó `lh3`
+explícito por ahora, que es lo que se pidió y lo que cubre el caso real.
+
+**Limpieza asociada:** levantar dev servers con `NEXT_DIST_DIR` hace que Next agregue solo
+la carpeta temporal correspondiente al `include` de `tsconfig.json`. Habían quedado
+`.next-verify/types/**/*.ts` y `.next-devcheck/types/**/*.ts` apuntando a directorios que
+ya no existen; se sacaron del `tsconfig.json`.
+
+### Links rotos preexistentes (NO introducidos acá, no arreglados)
+Se preservaron tal cual estaban, pero no tienen página: **`/forgot-password`** (link en
+LoginForm), **`/privacidad`** y **`/terminos`** (links en el footer). Los tres dan 404.
+
+- **Estado:** ✅ **Bloque H cerrado.** Build OK, 22/22 páginas.

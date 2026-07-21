@@ -34,6 +34,7 @@ const tags = [
   { label: 'Empatía', Icon: HeartHandshake },
   { label: 'Carácter', Icon: Award },
   { label: 'Profesionalismo', Icon: ShieldCheck },
+  { label: 'Cercania', Icon: ShieldCheck },
 ];
 
 export default function Nosotros() {
@@ -47,7 +48,7 @@ export default function Nosotros() {
   }, []);
 
   return (
-    <section id="nosotros" className="overflow-hidden bg-surface py-24 md:py-28">
+    <section id="nosotros" className="overflow-hidden bg-white py-24 md:py-28">
       <div className="mx-auto max-w-7xl px-6">
         <SectionHeading
           eyebrow="Nuestra historia"

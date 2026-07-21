@@ -13,6 +13,8 @@ interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
   login: (data: LoginFormData) => Promise<AuthUser>;
+  /** Login/registro con Google (Bloque H). Recibe el idToken de Google. */
+  loginWithGoogle: (idToken: string) => Promise<AuthUser>;
   logout: (redirectTo?: string) => Promise<void>;
   register: (data: RegisterFormData) => Promise<void>;
   updateUser: (data: Partial<AuthUser>) => void;
@@ -54,21 +56,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => setOnUnauthorized(null);
   }, [router]);
 
-  const login = async (data: LoginFormData) => {
-    const response = await authService.login(data);
-    setUser(response.user);
-    if (response.user.role === 'admin') {
+  /**
+   * Todo lo que pasa después de una autenticación exitosa, sin importar por qué
+   * vía se logueó el usuario: setear el estado, redirigir según el rol y avisar
+   * si el perfil quedó incompleto.
+   *
+   * Está extraído a propósito para que `login` (email + password) y
+   * `loginWithGoogle` no puedan divergir: cualquier cambio de comportamiento
+   * post-login aplica a los dos flujos automáticamente.
+   */
+  const handleAuthSuccess = (authUser: AuthUser) => {
+    setUser(authUser);
+
+    if (authUser.role === 'admin') {
       router.push('/dashboardAdmin/');
     } else {
       router.push('/dashboard');
     }
-    // Usuario creado vía Google sin teléfono ni contraseña local
-    if (response.user.profileIncomplete) {
+
+    // Usuario creado vía Google: queda sin teléfono ni contraseña local.
+    if (authUser.profileIncomplete) {
       toast.info('Tu perfil está incompleto: agregá tu teléfono y una contraseña desde "Editar Perfil".', {
         duration: 8000,
       });
     }
-    return response.user;
+
+    return authUser;
+  };
+
+  const login = async (data: LoginFormData) => {
+    const response = await authService.login(data);
+    return handleAuthSuccess(response.user);
+  };
+
+  const loginWithGoogle = async (idToken: string) => {
+    const response = await authService.loginWithGoogle(idToken);
+    return handleAuthSuccess(response.user);
   };
 
   const logout = async (redirectTo: string = '/') => {
@@ -96,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, register, updateUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, logout, register, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

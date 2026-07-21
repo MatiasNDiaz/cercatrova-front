@@ -26,7 +26,16 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'www.unc.edu.ar', 
+        hostname: 'www.unc.edu.ar',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        // Fotos de perfil de las cuentas de Google (login con Google, Bloque H).
+        // Sin esto, `next/image` tira "hostname not configured under images"
+        // apenas un usuario de Google entra al dashboard.
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
         port: '',
         pathname: '/**',
       },

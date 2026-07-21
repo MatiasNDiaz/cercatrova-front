@@ -1,21 +1,24 @@
-'use client';
-
 import Image from 'next/image';
 import Link from 'next/link';
-import { Bed, Toilet, Maximize, MapPin, Star } from 'lucide-react';
+import { Bed, Toilet, Maximize, MapPin, Star, ArrowRight } from 'lucide-react';
 import { Property } from '@/modules/shared/types/api';
-import { FavoriteButton } from '@/modules/shared/ui/Favoritebutton';
 
 /**
  * Tarjeta de propiedad para la sección "Destacadas" de la landing.
  *
- * Es un componente NUEVO y aparte de `PropertyCard` (catálogo) a propósito:
- *  - muestra el badge de valoración (`ratingAverage`), que la del catálogo no tiene;
- *  - usa el tipo canónico `Property` de shared/types/api (el del catálogo usa el
- *    tipo viejo del módulo properties, sin `ratingAverage`);
- *  - tiene más presencia visual (imagen más alta, precio en barra inferior).
+ * Es un componente aparte de `PropertyCard` (catálogo) a propósito: muestra el
+ * badge de valoración (`ratingAverage`), usa el tipo canónico de
+ * shared/types/api y tiene más presencia visual. `PropertyCard` no se tocó.
  *
- * No se tocó `PropertyCard` para no alterar el catálogo en esta sesión.
+ * Rediseño (Bloque LANDING §7):
+ *  - **Sin `FavoriteButton`.** Se quitó SOLO de esta sección: la landing es la
+ *    puerta de entrada y el ícono empujaba a `/login` a quien todavía no tiene
+ *    cuenta. Favoritos sigue funcionando igual en `/properties` y en el detalle.
+ *  - Tono más empresarial: `rounded-xl` en vez de `rounded-3xl`, imagen más
+ *    alta (h-64) y tarjeta más grande, para que la propiedad sea protagonista.
+ *  - Precio con signo `$` y separador de miles en formato local.
+ *  - La tarjeta es blanca sobre fondo `surface` gris, así que se despega del
+ *    fondo sin depender solo de la sombra.
  */
 
 export function FeaturedPropertyCard({ property }: { property: Property }) {
@@ -29,83 +32,88 @@ export function FeaturedPropertyCard({ property }: { property: Property }) {
     images?.[0]?.url ||
     '/placeholder-house.jpg';
 
-  const rating = typeof ratingAverage === 'number' && ratingAverage > 0
-    ? ratingAverage
-    : null;
+  const rating =
+    typeof ratingAverage === 'number' && ratingAverage > 0 ? ratingAverage : null;
 
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-[0_4px_24px_-8px_rgba(10,12,11,0.12)] ring-1 ring-ink-100 transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_24px_50px_-16px_rgba(11,122,75,0.35)] hover:ring-brand-700/30">
-      <Link href={`/properties/${id}`} className="flex h-full flex-col">
-        {/* ── IMAGEN ── */}
-        <div className="relative h-56 w-full shrink-0 overflow-hidden">
-          <Image
-            src={cover}
-            alt={title}
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
-            className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-linear-to-t from-ink-950/75 via-ink-950/10 to-transparent" />
+    <Link
+      href={`/properties/${id}`}
+      className="group flex h-full flex-col overflow-hidden rounded-xl border border-ink-200/70 bg-white shadow-[0_2px_10px_-2px_rgba(10,12,11,0.08)] transition-all duration-400 hover:-translate-y-1.5 hover:border-brand-700/40 hover:shadow-[0_28px_55px_-18px_rgba(6,57,35,0.4)]"
+    >
+      {/* ── IMAGEN ── */}
+      <div className="relative h-64 w-full shrink-0 overflow-hidden">
+        <Image
+          src={cover}
+          alt={title}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-linear-to-t from-ink-950/80 via-ink-950/10 to-transparent" />
 
-          {/* Operación */}
-          <span className="absolute top-4 left-4 rounded-full bg-brand-700 px-3 py-1 text-[10px] font-bold tracking-[0.14em] text-white uppercase shadow-sm">
-            {operationType}
+        {/* Operación */}
+        <span className="absolute top-4 left-4 rounded-md bg-brand-700 px-3 py-1.5 text-[10px] font-bold tracking-[0.14em] text-white uppercase shadow-md">
+          {operationType}
+        </span>
+
+        {/* Valoración */}
+        {rating && (
+          <span className="absolute top-4 right-4 flex items-center gap-1 rounded-md bg-white/95 px-2.5 py-1.5 text-xs font-bold text-ink-900 shadow-md backdrop-blur-sm">
+            <Star size={12} className="fill-amber-400 text-amber-400" />
+            {rating.toFixed(1)}
           </span>
+        )}
 
-          {/* Valoración */}
-          {rating && (
-            <span className="absolute top-4 right-14 flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-ink-900 shadow-sm backdrop-blur-sm">
-              <Star size={12} className="fill-amber-400 text-amber-400" />
-              {rating.toFixed(1)}
+        {/* Precio */}
+        <div className="absolute bottom-4 left-5">
+          <p className="text-3xl font-bold tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]">
+            ${price.toLocaleString('es-AR')}
+            <span className="ml-1.5 text-base font-semibold text-white/80">USD</span>
+          </p>
+        </div>
+      </div>
+
+      {/* ── CONTENIDO ── */}
+      <div className="flex grow flex-col p-6">
+        <span className="text-[11px] font-bold tracking-[0.14em] text-brand-700 uppercase">
+          {typeOfProperty?.name || 'Propiedad'}
+        </span>
+
+        <h3 className="mt-2 line-clamp-2 text-xl font-bold leading-snug text-ink-900 transition-colors duration-300 group-hover:text-brand-700">
+          {title}
+        </h3>
+
+        <div className="mt-2.5 flex items-center gap-1.5 text-sm text-ink-500">
+          <MapPin size={15} className="shrink-0 text-brand-700" />
+          <span className="line-clamp-1">
+            {localidad}
+            {barrio ? `, ${barrio}` : ''}
+          </span>
+        </div>
+
+        {/* Características */}
+        <div className="mt-auto flex items-center gap-5 border-t border-ink-100 pt-5 text-sm text-ink-600">
+          <span className="flex items-center gap-1.5">
+            <Bed size={16} className="text-brand-700" />
+            <span className="font-semibold">{rooms}</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Toilet size={16} className="text-brand-700" />
+            <span className="font-semibold">{bathrooms}</span>
+          </span>
+          {m2 != null && (
+            <span className="flex items-center gap-1.5">
+              <Maximize size={16} className="text-brand-700" />
+              <span className="font-semibold">{m2} m²</span>
             </span>
           )}
 
-          {/* Precio */}
-          <p className="absolute bottom-3 left-4 text-2xl font-bold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-            {price.toLocaleString('es-AR')} USD
-          </p>
-        </div>
-
-        {/* ── CONTENIDO ── */}
-        <div className="flex grow flex-col p-5">
-          <span className="text-[11px] font-bold tracking-[0.12em] text-brand-700 uppercase">
-            {typeOfProperty?.name || 'Propiedad'}
+          <span className="ml-auto flex items-center text-brand-700 opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100">
+            <ArrowRight size={18} />
           </span>
-
-          <h3 className="mt-1.5 line-clamp-1 text-lg font-bold text-ink-900 transition-colors duration-300 group-hover:text-brand-700">
-            {title}
-          </h3>
-
-          <div className="mt-2 flex items-center gap-1.5 text-sm text-ink-500">
-            <MapPin size={14} className="shrink-0 text-brand-700" />
-            <span className="line-clamp-1">{localidad}{barrio ? `, ${barrio}` : ''}</span>
-          </div>
-
-          {/* Características */}
-          <div className="mt-auto flex items-center gap-4 border-t border-ink-100 pt-4 text-sm text-ink-600">
-            <span className="flex items-center gap-1.5">
-              <Bed size={15} className="text-brand-700" />
-              <span className="font-semibold">{rooms}</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Toilet size={15} className="text-brand-700" />
-              <span className="font-semibold">{bathrooms}</span>
-            </span>
-            {m2 != null && (
-              <span className="flex items-center gap-1.5">
-                <Maximize size={15} className="text-brand-700" />
-                <span className="font-semibold">{m2} m²</span>
-              </span>
-            )}
-          </div>
         </div>
-      </Link>
-
-      {/* Favorito fuera del Link para que no dispare la navegación */}
-      <div className="absolute top-3.5 right-4 z-10">
-        <FavoriteButton propertyId={id} variant="card" />
       </div>
-    </article>
+    </Link>
   );
 }
 
