@@ -23,8 +23,11 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
   const initialItems = response?.data || [];
   const initialTotal = response?.meta?.totalItems || 0;
 
+  // El fondo ya NO es uniforme: `PropertiesCatalog` arma 2 secciones full-bleed
+  // con su propio color (hero+filtros claro / resultados verde suave) — ver
+  // ese componente. `bg-white` acá es solo un fallback de base.
   return (
-    <main className="min-h-screen bg-[#e5e7e5]">
+    <main className="min-h-screen bg-white">
       <PropertiesCatalog
         initialItems={initialItems}
         initialTotal={initialTotal}

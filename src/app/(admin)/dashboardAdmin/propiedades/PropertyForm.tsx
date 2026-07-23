@@ -260,15 +260,22 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
         formData.append(isEdit ? 'newImages' : 'images', img.file);
       });
 
+      // La instancia de axios (`shared/lib/axios.ts`) trae `Content-Type:
+      // application/json` como default para TODAS las requests. Para FormData
+      // eso es doblemente incorrecto: además de faltarle el boundary, si el
+      // Content-Type efectivo sigue siendo 'application/json' en este punto,
+      // el propio transformRequest de axios intenta JSON.stringify el
+      // FormData (perdiendo los archivos) en vez de enviarlo como multipart.
+      // `Content-Type: undefined` borra el default SOLO para esta llamada, así
+      // axios detecta el FormData real y delega en el browser el armado del
+      // header con el boundary correcto al serializar la request.
+      const multipartConfig = { headers: { 'Content-Type': undefined } };
+
       if (isEdit) {
-        await api.patch(`/properties/${propertyId}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await api.patch(`/properties/${propertyId}`, formData, multipartConfig);
         toast.success('Propiedad actualizada ✓');
       } else {
-        await api.post('/properties', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await api.post('/properties', formData, multipartConfig);
         toast.success('Propiedad publicada ✓');
       }
 

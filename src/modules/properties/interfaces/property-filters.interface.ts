@@ -37,6 +37,11 @@ export interface PropertyFilters {
   property_deed?: boolean;
 
   // --- ENUMS ---
-  operationType?: OperationType; 
+  operationType?: OperationType;
+
+  // --- ORDENAMIENTO ---
+  // Coincide con PropertyFilterDto del backend. `date` = fecha de publicación.
+  sortBy?: 'price' | 'antiquity' | 'date' | 'rating';
+  order?: 'ASC' | 'DESC';
 }
 

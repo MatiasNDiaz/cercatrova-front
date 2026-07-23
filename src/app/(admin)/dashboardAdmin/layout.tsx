@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import {
   User, Home, FileText, LogOut, ChevronRight,
-  ArrowLeft, Users, Building2, BarChart2, Shield, Bell,
+  ArrowLeft, Users, Building2, BarChart2, Shield, Bell, Eye,
 } from 'lucide-react';
 import api from '@/modules/shared/lib/axios';
 
@@ -191,7 +191,15 @@ function Sidebar() {
         </div>
       </nav>
 
-      <div className="p-4 pb-7 mt-auto border-t border-gray-300">
+      <div className="p-4 pb-7 mt-auto border-t border-gray-300 space-y-1">
+        {/* Context switcher — el admin puede ver el sitio como un usuario común */}
+        <Link
+          href="/dashboard"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-500 hover:bg-[#0b7a4b]/10 hover:text-[#0b7a4b] transition-all duration-200 group"
+        >
+          <Eye size={19} className="group-hover:scale-110 transition-transform" />
+          Vista de Usuario
+        </Link>
         <button
           onClick={handleLogoutConfirm}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-[#0b7a4b] hover:bg-red-100 hover:text-red-600 transition-all duration-200 group"
@@ -228,7 +236,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   if (!user || user.role !== 'admin') return null;
 
   return (
-    <div className="min-h-screen bg-surface-deep flex">
+    <div className="h-screen overflow-hidden bg-surface-deep flex">
       <Sidebar />
       <main className="flex-1 h-screen overflow-y-auto pb-8">
         <div className="max-w-7xl mx-auto px-8 py-4">

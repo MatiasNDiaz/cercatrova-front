@@ -2,114 +2,128 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Bed, Maximize, MapPin, Toilet, Hourglass } from 'lucide-react';
+import { Bed, Toilet, Maximize, MapPin, ArrowRight, Star } from 'lucide-react';
 import { Property, PropertyImage } from '../interfaces/propertyInterface';
 import { FavoriteButton } from '@/modules/shared/ui/Favoritebutton';
+import { BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor } from '../lib/badgeStyles';
 
+/**
+ * Tarjeta de propiedad del catálogo — vista MOSAICO (Bloque 3 del rediseño).
+ *
+ * Rediseñada para compartir ADN visual con `FeaturedPropertyCard` de la Landing:
+ * `rounded-xl` (más serio), tokens `brand-*`/`ink-*` (cero hex hardcodeado),
+ * sombra suave que se intensifica en hover, imagen que hace zoom sutil, y una
+ * barra de gradiente de marca que crece en el borde inferior al pasar el mouse.
+ *
+ * Diferencia con `FeaturedPropertyCard`: ESTA sí incluye `FavoriteButton`
+ * (la Landing lo omite a propósito) y no muestra badge de rating, porque el
+ * endpoint del catálogo (`GET /properties/filter`) no devuelve `ratingAverage`.
+ */
 export const PropertyCard = ({ property }: { property: Property }) => {
   const {
-    id,
-    title,
-    price,
-    rooms,
-    bathrooms,
-    m2,
-    localidad,
-    barrio,
-    images,
-    typeOfProperty,
-    operationType,
-    antiquity,
+    id, title, price, rooms, bathrooms, m2,
+    localidad, barrio, images, typeOfProperty, operationType, ratingAverage,
   } = property;
 
-  const coverImage =
+  const cover =
     images?.find((img: PropertyImage) => img.isCover)?.url ||
     images?.[0]?.url ||
     '/placeholder-house.jpg';
 
+  const rating =
+    typeof ratingAverage === 'number' && ratingAverage > 0 ? ratingAverage : null;
+
   return (
-    <div className="w-[95%] mx-auto py-3">
-      <div className="group relative rounded-3xl overflow-hidden bg-white hover:border border-[#0b7a4b]/80 shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_40px_rgba(11,122,75,0.2)] transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-2 flex flex-col h-full">
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-ink-100 bg-white shadow-[0_1px_2px_rgba(10,12,11,0.04),0_10px_28px_-14px_rgba(10,12,11,0.12)] transition-all duration-500 ease-out hover:-translate-y-2 hover:border-brand-600/50 hover:shadow-[0_36px_70px_-20px_rgba(6,57,35,0.28)]">
+      <Link href={`/properties/${id}`} className="flex h-full flex-col">
+        {/* ── IMAGEN ── */}
+        <div className="relative h-60 w-full shrink-0 overflow-hidden">
+          <Image
+            src={cover}
+            alt={title}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-linear-to-t from-ink-950/80 via-ink-950/10 to-transparent" />
 
-        {/* ── LINK que envuelve toda la card ── */}
-        <Link href={`/properties/${id}`} className="flex flex-col grow">
+          {/* Operación — color propio según venta/alquiler/temporal */}
+          <span className={`absolute top-4 left-4 ${BADGE_BASE} ${operationBadgeColor(operationType)}`}>
+            {operationType}
+          </span>
 
-          {/* IMAGE */}
-          <div className="relative h-60 sm:h-72 w-full overflow-hidden">
-            <Image
-              src={coverImage}
-              alt={title}
-              fill
-              className="object-cover transition-transform duration-1200 ease-out group-hover:scale-105"
-            />
-
-            {/* Dark gradient */}
-            <div className="absolute inset-0 bg-linear-to-t from-black/50 via-black/20 to-transparent" />
-
-            {/* Operation badge */}
-            <div className="absolute top-5 left-5">
-              <span className="bg-[#179144] text-white text-xs font-semibold px-4 py-1.5 rounded-full uppercase tracking-[0.15em] shadow-md">
-                {operationType}
-              </span>
-            </div>
-
-            {/* Price over image */}
-            <div className="absolute inset-0 flex items-end mb-3 justify-center">
-              <p className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg tracking-tight [text-shadow:2px_2px_8px_rgba(0,0,0,1)]">
-                {price.toLocaleString()} USD
-              </p>
-            </div>
+          {/* Precio */}
+          <div className="absolute bottom-4 left-5">
+            <p className="text-2xl font-bold tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]">
+              ${price.toLocaleString('es-AR')}
+              <span className="ml-1.5 text-sm font-semibold text-white/80">USD</span>
+            </p>
           </div>
 
-          {/* CONTENT */}
-          <div className="p-6 flex flex-col grow">
-
-            {/* Type */}
-            <span className="text-[#0b7a4b] text-xs font-semibold uppercase tracking-[0.12em] mb-1.5">
-              tipo: {typeOfProperty?.name || 'Propiedad'}
+          {/* Valoración */}
+          {rating && (
+            <span className="absolute right-4 bottom-4 flex items-center gap-1 rounded-md bg-white/95 px-2.5 py-1.5 text-xs font-bold text-ink-900 shadow-md backdrop-blur-sm">
+              <Star size={12} className="fill-amber-400 text-amber-400" />
+              {rating.toFixed(1)}
             </span>
-
-            {/* Title */}
-            <h3 className="text-xl font-semibold text-gray-800 line-clamp-1 mb-2 group-hover:text-[#0b7a4b] transition-colors duration-300">
-              {title}
-            </h3>
-
-            {/* Location */}
-            <div className="flex items-center text-gray-600 text-sm mb-4">
-              <MapPin size={16} className="mr-2 text-[#0b7a4b] shrink-0" />
-              <span className="line-clamp-1">{localidad}, {barrio}</span>
-            </div>
-
-            {/* Feature Cards */}
-            <div className="mt-auto grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { icon: Bed,       value: rooms,       label: 'Hab.' },
-                { icon: Toilet,    value: bathrooms,   label: 'Baños' },
-                { icon: Hourglass, value: antiquity,   label: 'Años.' },
-                { icon: Maximize,  value: `${m2} m²`, label: 'Superficie' },
-              ].map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <div key={index}
-                    className="flex flex-col items-center justify-center bg-[#0b7a4b]/10 rounded-2xl py-3 transition-all duration-300 hover:bg-[#0b7a4b]/20 hover:shadow-md">
-                    <Icon size={18} className="text-[#0b7a4b] mb-1" />
-                    <span className="text-sm font-semibold text-[#0b7a4b]">{item.value}</span>
-                    <span className="text-[10px] uppercase tracking-wider text-gray-500">{item.label}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </Link>
-
-        {/* ── Favorite button FUERA del Link ── */}
-        <div className="absolute top-3.5 right-5 z-10">
-          <FavoriteButton propertyId={id} variant="card" />
+          )}
         </div>
 
-        {/* Animated bottom line */}
-        <div className="absolute bottom-0 left-0 h-0.75 w-0 bg-[#0b7a4b] group-hover:w-full transition-all duration-1000 ease-out" />
+        {/* ── CONTENIDO ── */}
+        <div className="flex grow flex-col p-6">
+          {/* Tipo de propiedad — misma geometría que el badge de operación,
+              con su propia gama (terreno=naranja, comercial=rojo, etc.) */}
+          <span className={`w-fit ${BADGE_BASE} ${propertyTypeBadgeColor(typeOfProperty?.name)}`}>
+            {typeOfProperty?.name || 'Propiedad'}
+          </span>
+
+          <h3 className="mt-2.5 line-clamp-1 text-lg font-bold text-ink-900 transition-colors duration-300 group-hover:text-brand-700">
+            {title}
+          </h3>
+
+          <div className="mt-2.5 flex items-center gap-1.5 text-sm text-ink-500">
+            <MapPin size={15} className="shrink-0 text-brand-700" />
+            <span className="line-clamp-1">
+              {localidad}
+              {barrio ? `, ${barrio}` : ''}
+            </span>
+          </div>
+
+          {/* Características */}
+          <div className="mt-auto flex items-center gap-5 border-t border-ink-100 pt-5 pb-0.5 text-sm text-ink-600">
+            <span className="flex items-center gap-1.5">
+              <Bed size={16} className="text-brand-700" />
+              <span className="font-semibold">{rooms}</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Toilet size={16} className="text-brand-700" />
+              <span className="font-semibold">{bathrooms}</span>
+            </span>
+            {m2 != null && (
+              <span className="flex items-center gap-1.5">
+                <Maximize size={16} className="text-brand-700" />
+                <span className="font-semibold">{m2} m²</span>
+              </span>
+            )}
+            <span className="ml-auto flex items-center text-brand-700 opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100">
+              <ArrowRight size={18} />
+            </span>
+          </div>
+        </div>
+      </Link>
+
+      {/* ── Favorito (FUERA del Link) ── */}
+      <div className="absolute top-3.5 right-4 z-10">
+        <FavoriteButton propertyId={id} variant="card" />
       </div>
+
+      {/* Barra de gradiente de marca que crece en hover */}
+      <div
+        className="pointer-events-none absolute bottom-0 left-0 h-1 w-0 transition-all duration-500 ease-out group-hover:w-full"
+        style={{ background: 'var(--gradient-brand)' }}
+      />
     </div>
   );
 };
+
+export default PropertyCard;

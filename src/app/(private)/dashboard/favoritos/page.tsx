@@ -42,7 +42,11 @@ export default function FavoritosPage() {
       try {
         // El userId sale del token en el backend — GET /favorites, sin id en la URL
         const { data } = await api.get('/favorites');
-        setFavorites(data);
+        // Guard defensivo: si el admin borró una propiedad que estaba en
+        // favoritos y el backend no cascadeó la fila, `property` puede venir
+        // null/undefined. Filtramos esos casos ANTES de renderizar para evitar
+        // el TypeError al acceder a property.images/title/price (ver auditoría).
+        setFavorites(Array.isArray(data) ? data.filter((f: FavoriteProperty) => Boolean(f?.property)) : []);
       } catch (error) {
         toast.error(getErrorMessage(error));
       } finally {

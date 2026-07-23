@@ -32,6 +32,11 @@ export interface Property {
 
   images?: PropertyImage[];
 
+  // Promedio de valoraciones (1-5). Solo lo devuelven GET /properties y
+  // GET /properties/:id; el catálogo lo cruza aparte para mostrarlo en las
+  // tarjetas (ver Propertiescatalog).
+  ratingAverage?: number;
+
   createdAt?: string;
   updatedAt?: string;
 }

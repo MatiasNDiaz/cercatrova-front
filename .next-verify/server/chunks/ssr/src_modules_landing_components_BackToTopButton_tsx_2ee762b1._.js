@@ -1,0 +1,3 @@
+module.exports=[8860,a=>{"use strict";a.s(["BackToTopButton",()=>c]);var b=a.i(87924);let c=()=>(0,b.jsx)("button",{onClick:()=>{let a=document.getElementById("inicio");a?a.scrollIntoView({behavior:"smooth",block:"start"}):window.scrollTo({top:0,behavior:"smooth"})},className:"button","aria-label":"Volver al inicio",children:(0,b.jsx)("svg",{viewBox:"0 0 384 512",className:"svgIcon",children:(0,b.jsx)("path",{d:"M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"})})})}];
+
+//# sourceMappingURL=src_modules_landing_components_BackToTopButton_tsx_2ee762b1._.js.map

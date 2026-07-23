@@ -7,7 +7,8 @@ import { StatusProperty } from '../interfaces/status-property';
 const FILTERS_THAT_RESET_PAGE = [
   'search', 'operationType', 'typeOfPropertyId', 'localidad', 'barrio',
   'zone', 'provincia', 'rooms', 'bathrooms', 'minPrice', 'maxPrice',
-  'minM2', 'maxM2', 'maxAntiquity', 'garage', 'patio', 'property_deed', 'title', 'status'
+  'minM2', 'maxM2', 'maxAntiquity', 'garage', 'patio', 'property_deed', 'title', 'status',
+  'sortBy', 'order'
 ];
 
 export const usePropertyFilters = () => {
@@ -29,9 +30,10 @@ export const usePropertyFilters = () => {
     };
 
     return {
-      // Paginación
+      // Paginación — 12 por defecto (múltiplo de 4, coincide con la vista
+      // mosaico del catálogo y con el fetch inicial del server en page.tsx).
       page: getNum('page') || 1,
-      limit: getNum('limit') || 10,
+      limit: getNum('limit') || 12,
 
       // Texto e Inteligencia
       search: searchParams.get('search') || undefined,
@@ -63,6 +65,10 @@ export const usePropertyFilters = () => {
 
       // Enums
       operationType: searchParams.get('operationType') as OperationType || undefined,
+
+      // Ordenamiento
+      sortBy: (searchParams.get('sortBy') as PropertyFilters['sortBy']) || undefined,
+      order: (searchParams.get('order') as PropertyFilters['order']) || undefined,
     };
   }, [searchParams]);
 
@@ -99,7 +105,7 @@ export const usePropertyFilters = () => {
 
   // 3. LIMPIEZA: Para resetear todo de un golpe
   const clearFilters = useCallback(() => {
-    router.push('?page=1&limit=10');
+    router.push('?page=1&limit=12');
   }, [router]);
 
   return { filters, setFilters, clearFilters };

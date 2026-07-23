@@ -739,6 +739,69 @@ solo queda anotado.
 
 ---
 
+## Bloque LANDING (ritmo de fondos + fotos) — ajuste estructurado
+
+Dos cambios pedidos, aplicados tras aprobación explícita del plan.
+
+### Verificación previa
+Antes de tocar nada se corrió `tsc` + `lint` + `build` para confirmar que los ajustes
+manuales previos del usuario (sección "Publicá tu propiedad", tarjetas de Servicios
+revertidas, botones del Hero parejos) no habían roto nada. Resultado: TSC limpio, build
+exit 0, y solo warnings de lint **preexistentes** (imports sin usar en dashboard/admin),
+ninguno en los archivos editados a mano. Nada roto.
+
+### 1 — Ritmo de fondos predecible + fix de `gray-150`
+**Problema:** dos secciones (`Featuredproperties` y `RealEstateFAQ`) usaban `bg-gray-150`,
+que **no es un step de la escala de Tailwind** (va 100 → 200). Esa clase no generaba
+ninguna regla, así que ambas tomaban el color del `body` (`#f2f1f1`) por detrás — se veían
+gris por accidente, y era frágil (dependían del `body`).
+
+**Solución (plan aprobado):** alternancia predecible **Blanco / Verde-claro** en las
+secciones de contenido, con el verde oscuro (`.surface-brand-deep`) como puntuación. Solo
+cambiaron 2 secciones; el resto quedó igual, respetando el `brand-50` bloqueado de "Publicá
+tu propiedad". Mapa final de fondos, en orden real de `page.tsx`:
+
+| # | Sección | Fondo final |
+|---|---|---|
+| 1 | Hero | `bg-ink-950` + imagen (oscuro) |
+| 2 | Franja estudiantes | `.surface-brand-deep` (verde oscuro) |
+| 3 | Destacadas | **`bg-white`** *(era `gray-150` roto)* |
+| 4 | Publicá tu propiedad | `bg-brand-50` *(bloqueado, sin cambios)* |
+| 5 | Servicios | `bg-white` |
+| 6 | Trayectoria | `.surface-brand-deep` (verde oscuro) |
+| 7 | Reseñas | `bg-brand-50` |
+| 8 | Agente | `bg-white` |
+| 9 | FAQ | **`bg-brand-50`** *(era `gray-150` roto)* |
+
+Las secciones de contenido (3,4,5,7,8,9) quedan en alternancia perfecta
+**Blanco–Verde–Blanco–Verde–Blanco–Verde**, separadas por el verde oscuro de estudiantes
+(2) y trayectoria (6). Ya no queda ningún `gray-150` en el proyecto (verificado por grep).
+
+**Nota:** blanco ↔ `brand-50` es una alternancia sutil a propósito (el brand-50 es un verde
+muy pálido). Se eligió sobre la variante de más contraste (`bg-surface` gris) para no tocar
+Servicios/Agente, que están diseñados sobre blanco puro.
+
+### 2 — Fotos de personas en FAQ y Trayectoria
+Se identificaron las secciones sin foto de personas (Destacadas, Servicios, Trayectoria,
+FAQ). Se sumó foto a **FAQ** y **Trayectoria** (elección del usuario). Las 2 imágenes se
+verificaron descargándolas y mirándolas antes de usarlas.
+
+- **FAQ (`RealEstateFAQ.tsx`)** — de 1 columna centrada pasó a **2 columnas**: foto a la
+  izquierda (sticky en desktop), acordeón a la derecha; apiladas en mobile. Imagen: un
+  **apretón de manos cerrando una operación** (`photo-1521791136064-...`), con overlay
+  verde y el texto "Más de 7 años cerrando operaciones con confianza". El acordeón conserva
+  toda su lógica (`showAll`, `AnimatePresence`); el botón "ver más" pasó a alinearse a la
+  izquierda dentro de su columna.
+- **Trayectoria (`Confianza.tsx`)** — de 4 stats en fila pasó a **2 columnas**: foto de una
+  **familia feliz frente a su hogar** (`photo-1609220136736-...`, con cerca blanca) a la
+  izquierda, las 4 métricas en grilla 2×2 a la derecha. **Los contadores NO se tocaron**
+  (`useInView` + `requestAnimationFrame` intactos); solo se reacomodó el contenedor. La
+  marca de agua "CT" y el fondo verde profundo se mantienen.
+
+- **Estado:** ✅ build OK, 23/23 páginas, `/` sigue estático.
+
+---
+
 ## Nota de tooling — `NEXT_DIST_DIR` en `next.config.ts`
 
 En Windows, `npm run build` se cuelga indefinidamente si hay un `npm run dev` corriendo:
@@ -1118,3 +1181,215 @@ Se preservaron tal cual estaban, pero no tienen página: **`/forgot-password`** 
 LoginForm), **`/privacidad`** y **`/terminos`** (links en el footer). Los tres dan 404.
 
 - **Estado:** ✅ **Bloque H cerrado.** Build OK, 22/22 páginas.
+
+---
+
+# PARTE 3 — Refactor UI/UX del catálogo y rediseño del detalle de propiedad
+
+> Sesión enfocada en `/properties` (modal de filtros + tarjetas + animaciones) y el
+> rediseño completo de `/properties/[id]` al lenguaje visual de la Landing. Todo
+> verificado contra el backend real corriendo en `localhost:3000` (11 propiedades).
+
+## Bloque PROP-1 — Correcciones del modal de filtros
+
+**Archivos:** `src/modules/properties/components/FiltersModal.tsx`,
+`src/modules/properties/hooks/usePropertyFilters.ts` (sin cambios acá — ya tenía
+`clearFilters`).
+
+- **Bug del botón "Limpiar" (estado que no se reseteaba):** `handleClear` solo vaciaba el
+  borrador local (`setDraft({})` + `setNums(EMPTY)`) **sin commitear a la URL**, así que los
+  query params (ej. `operationType=venta`) seguían activos y el catálogo seguía filtrado.
+  **Solución:** `handleClear` ahora además llama a `clearFilters()` del hook
+  (`router.push('?page=1&limit=12')`, que borra **todos** los params incluido el texto de
+  búsqueda) y cierra el modal → la consulta limpia se aplica a la API de inmediato.
+- **Botón de cierre (X):** pasó de gris (`bg-ink-100`) a **rojo sólido** (`bg-red-500
+  hover:bg-red-600 text-white`, círculo). Decisión de diseño explícita del usuario (rojo
+  aunque no sea acción destructiva).
+- **Botón "Limpiar filtros":** pasó de texto gris a la izquierda (separado por
+  `justify-between`) a **rojo sólido** (`bg-red-500 hover:bg-red-600 text-white`) **en la
+  misma fila que "Ver N resultados"**, a la derecha del footer (`flex-col-reverse` en mobile
+  para que el principal quede arriba).
+- **Marca de agua de marca:** se agregó una capa decorativa (`aria-hidden`,
+  `pointer-events-none`) con dos íconos (`Home`, `Building2`) al ~5% de opacidad en esquinas
+  opuestas + un halo `brand-500/6` difuminado. El contenido (header/body/footer) lleva
+  `relative z-10` para superponerse siempre por encima de la marca de agua.
+
+## Bloque PROP-2 — Animación de cambio de vista + valoración en tarjetas
+
+**Archivos:** `src/app/(public)/properties/Propertiescatalog.tsx`,
+`src/modules/properties/components/PropertyCard.tsx`,
+`src/modules/properties/components/PropertyRow.tsx`,
+`src/modules/properties/interfaces/propertyInterface.ts`.
+
+- **Fix del "cabeceo" al alternar mosaico ↔ lista:** la causa era doble — al togglear la
+  vista, `changeView` cambiaba el `limit` (12↔10) y forzaba un **refetch** (parpadeo de
+  skeleton) + el contenedor remontaba con un stagger desde `y:22` (rebote). **Solución:**
+  (1) un único `PAGE_LIMIT = 12` para ambas vistas → el toggle ya no toca la URL ni pega a
+  la API, es puro re-layout en el cliente; (2) los resultados se envuelven en
+  `<AnimatePresence mode="wait">` con `exit` (fundido de salida) antes de montar la vista
+  entrante; (3) el `y` de entrada bajó de 22 a 10px y el stagger de 0.06 a 0.045 → slide
+  suave, sin rebote.
+- **Valoración por estrellas en las tarjetas:** `GET /properties/filter` **no** devuelve
+  `ratingAverage` (confirmado contra el backend: solo lo traen `GET /properties` y
+  `GET /properties/:id`). **Solución:** el catálogo hace **una** llamada extra a
+  `propertiesService.getAll()` (barata: 11 propiedades) y arma un mapa `id→ratingAverage`
+  que cruza con la página filtrada mostrada (`itemsWithRatings`). `PropertyCard` (badge
+  blanco con estrella ámbar, esquina inferior derecha de la imagen) y `PropertyRow` (chip
+  ámbar junto al tipo) muestran el promedio **solo si `> 0`**. Se agregó `ratingAverage?`
+  al tipo local `Property`.
+  - ⚠️ Si el inventario creciera mucho, `getAll()` (sin paginar) dejaría de ser barato; hoy
+    con 11 propiedades es despreciable. Lo ideal a futuro sería que `/properties/filter`
+    incluya `ratingAverage` y eliminar la llamada extra.
+
+## Bloque PROP-3 — Rediseño del detalle de propiedad (`/properties/[id]`)
+
+**Archivos:** `src/app/(public)/properties/[id]/PropertyDetail.tsx` (reescritura),
+`src/app/(public)/properties/[id]/page.tsx` (fix de `params`).
+
+- **`params` como Promise (Next.js 15):** `page.tsx` tipaba `params: { id: string }` y lo
+  usaba sin `await`. Se corrigió a `params: Promise<{ id: string }>` + `const { id } = await
+  params` (mismo patrón ya aplicado a `searchParams` en el catálogo).
+- **Botón de Favoritos en la barra de accesos rápidos:** se agregó `FavoriteButton`
+  (variante `default`, con texto "Guardar"/"En favoritos") a la derecha de la barra superior
+  (Volver / Ver dirección / Ver Comentarios / Ver Valoraciones). **Se reusó el componente
+  compartido**, no se creó uno nuevo: hereda el chequeo de `GET /favorites` al montar (marca
+  el estado si ya está en favoritos = persistencia) y el redirect a `/login` si no hay
+  sesión. Antes el detalle **no tenía** botón de favorito (gap documentado en CLAUDE.md).
+- **Tokenización completa:** se reemplazaron las ~41 ocurrencias de hex hardcodeado
+  (`#0b7a4b`, `#179e66`, `#249868`, `#f0f2f0`, gradientes `#0f8b57`/`#14a366`) por tokens
+  (`brand-*`, `ink-*`, `surface`, `var(--gradient-brand)`). Fondo de página `bg-surface`.
+- **Mapa de Google:** el campo `provincia` en realidad guarda **la dirección completa**
+  (calle + barrio + localidad + provincia, ej. *"Jorge Luis Borges 489, Barrio La
+  Estanzuela, La Calera, Córdoba."*), así que la query del iframe (`?q=...&output=embed`) ya
+  era precisa; se mantuvo esa fuente, se envolvió en una tarjeta `rounded-2xl` con borde de
+  marca + sombra suave (hover glow), `loading="lazy"` y `referrerPolicy`.
+- **Estructura estilo Landing:** card de precio + CTA de WhatsApp con `var(--gradient-brand)`
+  y barrido de luz en hover (mismo patrón que `CtaButton`); badges de características en
+  `brand-700/8`; badge de estado **"disponible"** con ícono `ShieldCheck` en verde de marca.
+- **Sección nueva "Propiedades similares":** `SimilarProperties` hace
+  `getFilteredProperties({ operationType, typeOfPropertyId, limit: 4 })`, excluye la
+  propiedad actual y muestra hasta 3 con `PropertyCard`. Se oculta si no hay resultados.
+- **Verificación funcional (contra backend real):**
+  - Comentarios: `GET/POST/PATCH/DELETE /properties/:id/comments` — shape confirmado
+    (`user.name/surname/photo`, `created_at`). Los `catch` de editar/comentar/valorar
+    migraron a `getErrorMessage()` (antes tenían strings fijos).
+  - Valoraciones: `GET/POST /ratings/:id` — shape confirmado (`score`, `user.id/name/photo`).
+    Promedio se recalcula local y actualiza el header sin recargar.
+  - Favoritos: reusa `FavoriteButton` → persistencia heredada del flujo ya existente.
+
+## Bugs adicionales encontrados y arreglados
+- **Favorito decorativo en la vista lista** (ya arreglado en la sesión previa del catálogo:
+  `PropertyRow` usa el `FavoriteButton` real, no un ícono muerto). Se mantiene.
+
+- **Estado:** ✅ **Parte 3 cerrada.** `tsc --noEmit` limpio y `npm run build` OK (23/23
+  páginas) después de cada bloque. Los warnings de lint restantes son preexistentes
+  (imports sin usar en archivos admin, `exhaustive-deps` intencional en
+  `CommentsAndRatings`).
+
+---
+
+# PARTE 4 — 🐛 Bug real de subida multipart (400) + orden del catálogo + rediseño de filtros
+
+> Sesión de fullstack. El disparador fue un `400 Bad Request` al crear propiedades. La
+> investigación reveló que había DOS bugs encadenados (uno de frontend y otro de backend),
+> ambos verificados end-to-end contra el backend real (`localhost:3000`, login admin +
+> `curl`). Se documenta como hallazgo de bug, no como ajuste de estilo.
+
+## Bloque BUG-1 — Header `Content-Type: multipart/form-data` forzado sin boundary (FRONTEND)
+
+**Archivos:**
+`src/app/(admin)/dashboardAdmin/propiedades/PropertyForm.tsx` (create + edit de propiedad),
+`src/app/(private)/dashboard/perfil/page.tsx` (foto de perfil usuario),
+`src/app/(admin)/dashboardAdmin/perfil/page.tsx` (foto de perfil admin).
+
+- **Síntoma:** `POST /properties` (y `PATCH /users/:id/photo`) devolvían 400 con
+  `"title should not be empty · title must be a string · description should not be empty"`
+  aunque el formulario estuviera completo — el backend recibía los campos vacíos.
+- **Causa:** las tres llamadas seteaban a mano `headers: { 'Content-Type':
+  'multipart/form-data' }`. Un cuerpo multipart necesita un `boundary` dinámico en el header
+  (`multipart/form-data; boundary=----WebKit...`) que **solo el navegador puede generar** al
+  serializar el `FormData`. Al fijar el header a mano (sin boundary), el navegador no lo
+  completa y el body queda malformado → Multer/busboy no puede parsearlo → los campos llegan
+  vacíos. Peor: la instancia de axios (`shared/lib/axios.ts`) trae `Content-Type:
+  application/json` como default; si ese fuera el efectivo, axios haría `JSON.stringify` del
+  FormData y perdería los archivos.
+- **Fix:** `headers: { 'Content-Type': undefined }` en cada request multipart. `undefined`
+  **borra** el default de la instancia solo para esa llamada, y axios detecta el `FormData`
+  real y delega en el navegador el armado del header con boundary correcto.
+- **Verificado E2E:** `PATCH /users/1/photo` con multipart bien formado → **200**
+  (se resubió la MISMA foto del admin, sin cambiar su avatar). El fix de PropertyForm por sí
+  solo NO alcanzaba — ver BUG-2.
+
+## Bloque BUG-2 — El `ValidationPipe` global pisaba `@Body('data')` (BACKEND) 🔴
+
+> Repo backend: `../CercaTrova-Back`. Este era el bloqueador real del 400 de propiedades.
+
+**Archivo:** `src/modules/properties/properties.controller.ts` (endpoints `create` y `update`).
+
+- **Diagnóstico definitivo:** con un multipart PERFECTO (probado con `curl`), el `POST
+  /properties` seguía devolviendo 400 con todos los campos "empty". Test decisivo: mandar
+  `data=notjson` (JSON inválido) daba el MISMO error de campos vacíos en vez del
+  `"El campo 'data' debe ser JSON válido"` del `JsonToDtoPipe` → prueba de que el pipe custom
+  **nunca corría**.
+- **Causa:** el `ValidationPipe` global (`main.ts`, `transform: true`) corre ANTES que los
+  pipes de parámetro. Con el parámetro tipado `@Body('data', new JsonToDtoPipe(...)) dto:
+  CreatePropertyDto`, el pipe global tomaba el **string crudo** del campo multipart `data` y
+  lo validaba como si ya fuera `CreatePropertyDto` (`plainToInstance` sobre un string →
+  instancia vacía) → 400 "todos los campos faltan", sin llegar nunca al `JsonToDtoPipe` que
+  debía parsear el JSON.
+- **Fix:** tipar el parámetro como **`string`** (metatype primitivo). El `ValidationPipe`
+  global saltea los primitivos (`toValidate()` ignora String/Number/Boolean/Array/Object),
+  así que ya no lo toca y el `JsonToDtoPipe` queda como ÚNICO validador (parsea el JSON y
+  valida con las mismas reglas whitelist + forbidNonWhitelisted). Cast a `CreatePropertyDto`
+  para el service (la instancia real la produce el pipe en runtime). Aplicado a `create` y
+  `update`.
+- **Verificado E2E:** login admin → `POST /properties` multipart con imagen → **201** (crea
+  la propiedad) → `DELETE /properties/:id` → **200** (se limpió el dato de prueba). La
+  propiedad quedó realmente creada en la DB y luego borrada; no quedó basura.
+
+## Bloque ORD — Ordenamiento del catálogo (FULLSTACK)
+
+**Backend** (`property-filter.dto.ts`, `properties.service.ts`):
+- Se agregó `sortBy` (`price` | `antiquity` | `date` | `rating`) y `order` (`ASC` | `DESC`) al
+  `PropertyFilterDto`. Sin esto el `forbidNonWhitelisted` global rechazaba cualquier param de
+  orden con 400.
+- En `service.filter()` se reemplazó el `orderBy('p.created_at','DESC')` hardcodeado por un
+  `switch` con whitelist. El default (sin `sortBy`) sigue siendo `created_at DESC`.
+- **Rating:** la query del catálogo no joinea `ratings` (rompería la paginación con el join
+  de imágenes). Se ordena por una **subconsulta correlacionada** `AVG(r.score)` expuesta como
+  columna con alias (`addSelect(..., 'avgscore')` + `orderBy('avgscore', dir)`). Detalle no
+  obvio: ordenar por la subconsulta cruda directamente tiraba `TypeORMError: "(SELECT AVG..."
+  alias was not found` por la paginación DISTINCT de TypeORM — el alias seleccionado lo
+  resuelve.
+- **Verificado E2E** (endpoint público `/properties/filter`): precio ASC/DESC ✓, antigüedad ✓,
+  `rating DESC → [5,5,5,4.5,4.5,…]` y `rating ASC → [0,0,4.5,4.5,5,5]` ✓, y `sortBy=basura` →
+  **400** (whitelist funciona).
+
+**Frontend** (`property-filters.interface.ts`, `usePropertyFilters.ts`):
+- Se agregaron `sortBy`/`order` a `PropertyFilters` y al reader del hook (leen de la URL). Se
+  sumaron a `FILTERS_THAT_RESET_PAGE` (cambiar el orden vuelve a página 1). El service ya
+  spreadea todos los filtros, así que viajan como query params automáticamente.
+
+## Bloque UI-FILTROS — Rediseño de la barra de filtros de `/properties`
+
+**Archivos:** nuevo `CatalogFilterBar.tsx`; `PropertySearchBar.tsx` (ahora solo input);
+`FiltersModal.tsx` (sin operación); `Propertiescatalog.tsx` (usa el nuevo contenedor).
+
+- **Contenedor de 2 filas** (pedido de UX):
+  - **Fila 1:** toggle **Venta / Alquiler** (segmentado) + 3 selects de orden con nombres
+    claros — *"Ordenar por precio"* (menor↔mayor), *"Ordenar por antigüedad"* (más
+    recientes / más antiguas), *"Ordenar por valoración"* (mejor / peores valoradas) — y
+    **"Más filtros"** pegado a la derecha (abre el modal, con badge de filtros activos).
+  - **Fila 2:** la barra de búsqueda de texto libre, tal cual estaba.
+- **Operación fuera del modal:** el toggle Venta/Alquiler se sacó del `FiltersModal` (vive en
+  la fila 1). El modal preserva el `operationType` de la URL sin tocarlo, y su conteo en vivo
+  ahora incluye `filters.operationType` para reflejar el toggle activo.
+- **Orden único y excluyente:** los 3 selects comparten un solo estado `sortBy`/`order` —
+  elegir en uno resetea los otros a su placeholder. El badge de "Más filtros" **excluye**
+  `operationType`/`sortBy`/`order`/`search` (esos tienen su propio control a la vista).
+- `PropertySearchBar` pasó a ser solo el input (perdió el botón, que ahora es "Más filtros").
+
+- **Estado:** ✅ **Parte 4 cerrada.** Frontend: `tsc --noEmit` limpio y `npm run build` OK
+  (23/23). Backend: `tsc --noEmit` limpio; los 3 bugs/features verificados end-to-end contra
+  el backend real (201 create, 200 photo, 200 delete, sorts correctos). El dato de prueba
+  creado se borró.

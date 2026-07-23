@@ -45,7 +45,7 @@ export default async function FeaturedProperties() {
   }
 
   return (
-    <section id="propiedades" className="bg-gray-150 py-24 md:py-28">
+    <section id="propiedades" className="bg-white py-24 md:py-28">
       {/* Contenedor más ancho que el resto (1400 vs 1280) para que las 4
           tarjetas tengan cuerpo y la propiedad sea protagonista. */}
       <div className="mx-auto max-w-350 px-6">

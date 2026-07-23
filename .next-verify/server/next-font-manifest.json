@@ -1,0 +1,103 @@
+{
+  "app": {
+    "[project]/src/app/(admin)/dashboardAdmin/notificaciones/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(admin)/dashboardAdmin/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(admin)/dashboardAdmin/perfil/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(admin)/dashboardAdmin/propiedades/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(admin)/dashboardAdmin/propiedades/nueva/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(admin)/dashboardAdmin/propiedades/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(admin)/dashboardAdmin/solicitudes/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(admin)/dashboardAdmin/usuarios/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(admin)/dashboardAdmin/usuarios/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(auth)/login/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(auth)/register/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(private)/dashboard/favoritos/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(private)/dashboard/mis-solicitudes/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(private)/dashboard/notificaciones/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(private)/dashboard/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(private)/dashboard/perfil/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(private)/dashboard/preferencias/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(private)/publicar/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(public)/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(public)/properties/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(public)/properties/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/(public)/servicios/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/_not-found/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ],
+    "[project]/src/app/preview-ui/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+      "static/media/2a65768255d6b625-s.p.d19752fb.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}

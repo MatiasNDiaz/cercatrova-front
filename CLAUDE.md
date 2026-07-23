@@ -307,3 +307,159 @@ Mismo mecanismo de antes (`FormData` + `multipart/form-data`, sin librería de u
 - **Tailwind:** clases inline con template literals y ternarios condicionales directo en `className`, sin `clsx`/`cn()`. Ver sección de duplicación para los helpers locales (`inputCls`, `SectionTitle`, `Field`) redefinidos por archivo en vez de compartidos.
 - **CSS plano fuera de Tailwind:** vive en dos lugares — `globals.css` (el botón "volver arriba", clases `.button`/`.svgIcon`, con `@keyframes floating`) y un bloque `<style dangerouslySetInnerHTML>` autocontenido dentro de `Reseñas.tsx` (clases del carrusel circular de testimonios). No hay un tercer `.css` en el proyecto fuera de estos dos puntos.
 - Sin modo oscuro, sin sistema de tokens de diseño, sin componentes base compartidos (botón/input/card genéricos) — cada página define su propio estilo visual repitiendo patrones similares a mano.
+
+> ⚠️ **Nota sobre las dos secciones de abajo:** las secciones anteriores de este documento (paleta hardcodeada, "no existe `ConfirmDialog`", "swiper no se usa", GSAP en el Hero, etc.) describen el estado **previo al rediseño de la Landing**, que ya ocurrió en sesiones posteriores y no está reflejado arriba. Lo que sigue es exploración fresca y verificada contra el código real hoy. Para el detalle sesión-por-sesión de ese rediseño (Bloques LANDING, UI-1 a UI-7, Bloque H de login con Google), ver `FRONTEND_CHANGES.md`.
+
+## Sistema de diseño de la Landing (ya construido — referencia para reusar)
+
+Todo lo de esta sección vive bajo `src/modules/landing/components/` salvo que se indique lo contrario, y **ya está en producción en la Landing** — es el estándar a imitar, no una propuesta.
+
+### Tokens de color (`src/app/globals.css`, bloque `@theme`)
+Tailwind v4: los tokens se definen en `@theme { }` dentro de `globals.css`, no en `tailwind.config.*` (no existe ese archivo). Cada `--color-X` genera automáticamente `bg-X`, `text-X`, `border-X`, `from-X`, `ring-X`, `bg-X/NN`, etc.
+
+| Token | Hex | Uso |
+|---|---|---|
+| `brand-50` … `brand-950` (11 pasos) | `#eff9f4` → `#032315` | Escala de verde de marca. **`brand-700` = `#0b7a4b`** es el verde histórico del proyecto (581 usos antes de tokenizar); `brand-500`/`600`/`800` son los otros tonos que ya existían en gradientes/hovers. `brand-50` se usa como fondo de sección muy claro (Reseñas, FAQ); `brand-100`/`200` para marcas de agua sutiles. |
+| `brand` (alias) | `#0b7a4b` | Mismo valor que `brand-700`, sin pasar por `var()` — para que `bg-brand/10` no dé problemas de opacidad. |
+| `ink-50` … `ink-950` (11 pasos) | `#f6f7f6` → `#0a0c0b` | Escala neutra (negros/grises con un dejo verde). Se llama `ink` y **no** `gray` a propósito: nombrarla `gray` pisaría la escala nativa de Tailwind. `ink-900`/`950` para texto oscuro fuerte, `ink-500` para texto secundario, `ink-100`/`200` para bordes sutiles. |
+| `surface`, `surface-alt`, `surface-deep` | `#f5f7f5`, `#e5e7e5`, `#cbd8cd` | Fondos de sección/dashboard. Blanco puro **no tiene token**, se usa `bg-white` directo. |
+| `--gradient-brand`, `--gradient-brand-hover` (`:root`, no `@theme`) | `linear-gradient(135deg, brand-600, brand-500)` / `(..., brand-700, brand-600)` | Se usan vía `style={{ background: 'var(--gradient-brand)' }}` — no se pueden generar como utilidad de Tailwind porque son gradientes con dos paradas de token, no un solo color. |
+
+Además, dos **clases CSS planas** (no tokens de Tailwind) definidas en `globals.css`, fuera de `@theme`:
+- **`.surface-brand-deep`** — verde oscuro con textura (gradiente diagonal apagado + 2 halos radiales + trama de puntos en `::before`). Se usa en la franja de estudiantes del Hero y en la sección "Trayectoria" (`Confianza.tsx`).
+- **`.surface-brand-deepest`** — variante aún más oscura, usada solo en el footer (`FooterPublic.tsx`) para "cerrar" la página.
+
+### `CtaButton` (`src/modules/landing/components/CtaButton.tsx`)
+Botón de acción único de toda la Landing — reemplazó 3 estilos de botón distintos que había antes (gradiente con brillo permanente en el Hero, gradiente repetido en "Ver todas las propiedades", negro sólido en Servicios).
+
+```ts
+interface CtaButtonProps {
+  href: string;
+  variant?: 'primary' | 'outlineLight' | 'outlineDark'; // default 'primary'
+  children: React.ReactNode;
+  icon?: React.ReactNode;      // se renderiza a la derecha del texto
+  external?: boolean;          // true → <a target="_blank">, false → <Link>
+  className?: string;
+}
+```
+- **`primary`** — verde sólido `brand-700` (`brand-800` en hover), texto blanco. Para fondos claros.
+- **`outlineLight`** — contorno blanco translúcido, texto blanco, se rellena de blanco en hover con texto `brand-800`. Para fondos oscuros (Hero, secciones `.surface-brand-deep`).
+- **`outlineDark`** — contorno verde sobre blanco. Para fondos claros como alternativa al `primary`.
+- Geometría común: `rounded-xl`, `px-8 py-4` (más ancho que alto), `font-bold`, hover con elevación (`-translate-y-0.5`) + sombra + barrido de luz que **solo se dispara en hover** (no hay brillo permanente).
+- **Detalle de implementación no obvio:** el `border-2` vive en la clase `BASE` compartida (no en cada variante) — `primary` lo sobreescribe a `border-transparent`. Así las 3 variantes ocupan exactamente el mismo espacio en pantalla aunque solo 2 tengan borde visible; fue el fix a un bug real donde "Iniciar sesión" (outline) se veía 4px más grande que "Ver propiedades" (primary, sin borde) en la misma fila del Hero.
+- **⚠️ No usado todavía fuera de la Landing** — verificado por grep, cero imports en `src/app/(public)/properties/` ni en ningún otro flujo.
+
+### Patrón de tarjeta premium — `FeaturedPropertyCard` (`src/modules/landing/components/FeaturedPropertyCard.tsx`)
+Es la tarjeta de la sección "Propiedades destacadas" de la Landing, y es el estándar a reusar si se rediseña el catálogo. **Es un componente aparte de `PropertyCard`** (el del catálogo real, ver sección de Properties abajo) — no se tocó `PropertyCard` al crearla.
+
+- **Contenedor:** `rounded-xl` (no `rounded-3xl` como el resto de tarjetas del proyecto — deliberadamente "menos redondeado, más serio/empresarial"), `border border-ink-200/70`, sombra sutil en reposo (`shadow-[0_2px_10px_-2px_rgba(10,12,11,0.08)]`) que se intensifica mucho en hover (`shadow-[0_28px_55px_-18px_rgba(6,57,35,0.4)]`) junto con `-translate-y-1.5` y el borde pasando a `brand-700/40`.
+- **Imagen:** `h-64`, con gradiente `from-ink-950/80` para legibilidad del texto superpuesto, y `scale-105` en hover (zoom sutil de la imagen, no de la card).
+- **Badge de operación:** píldora `bg-brand-700` arriba a la izquierda, texto blanco uppercase.
+- **Badge de rating:** solo si `ratingAverage > 0` (viene de `shared/types/api.ts`, campo opcional) — píldora blanca semitransparente arriba a la derecha con ícono `Star` relleno ámbar + valor a 1 decimal.
+- **Precio:** superpuesto abajo a la izquierda de la imagen, `$` + `toLocaleString('es-AR')` + "USD" en tamaño menor — **con signo `$` explícito**, a diferencia de `PropertyCard` (catálogo), que no lo tiene.
+- **Contenido:** tipo de propiedad en `brand-700` uppercase chico, título `line-clamp-2` que cambia a `brand-700` en hover, ubicación con ícono `MapPin`, y una fila de características (habitaciones/baños/m²) separada por `border-t border-ink-100`, con una flecha `ArrowRight` que aparece en hover al final de la fila.
+- **Sin `FavoriteButton`** — decisión deliberada: la Landing es la puerta de entrada, y el corazón empujaba a `/login` a quien no tiene cuenta. `FavoriteButton` sigue existiendo y usándose en `PropertyCard` (catálogo).
+- Usa el tipo canónico `Property` de `@/modules/shared/types/api` (con `ratingAverage`), no el tipo local `modules/properties/interfaces/propertyInterface.ts` que usa el catálogo — ver "Gaps" abajo, es relevante para migrar el catálogo a este patrón.
+
+### `Reveal` (`src/modules/landing/components/Reveal.tsx`)
+Wrapper de animación de entrada al hacer scroll, usado en **todas** las secciones de la Landing:
+```tsx
+<Reveal delay={0.1} y={24} className="...">{children}</Reveal>
+```
+Por dentro es `framer-motion`: `initial={{opacity:0, y}} whileInView={{opacity:1, y:0}} viewport={{once:true, margin:'-60px'}} transition={{duration:0.55, ease:'easeOut', delay}}`. No hay ninguna otra forma de animación de entrada en la Landing — todo pasa por este componente o por `SectionHeading` (que trae su propia animación equivalente inline).
+
+### `SectionHeading` (`src/modules/landing/components/SectionHeading.tsx`)
+Encabezado estándar de cada sección de la Landing — eyebrow + `h2` + subtítulo opcional, centrado, con su propia animación de entrada (mismo patrón que `Reveal` pero con `margin: '-80px'`).
+```tsx
+<SectionHeading eyebrow="Servicios inmobiliarios" title={<>Hacemos que todo sea <span className="text-brand-700">más simple</span></>} subtitle="..." />
+```
+El eyebrow es una píldora **sólida** `bg-brand-700` con texto blanco (`rounded-full px-4 py-1.5 text-xs font-bold tracking-[0.22em] uppercase` + sombra) — reemplazó un `bg-brand-50` casi invisible que había en una iteración anterior. Este es el patrón de "badge/pill" que se repite en toda la Landing (también aparece suelto, sin `SectionHeading`, en el eyebrow del Hero y en los chips de operación de las tarjetas).
+
+### Estado real de adopción — `ConfirmDialog` / `Field` / `Input` / `Select`
+Verificado por grep en toda la sesión, no asumido:
+
+- **`ConfirmDialog`** (`src/modules/shared/ui/ConfirmDialog.tsx`, función `confirmDialog()`) — **sí adoptado, 8/8 usos reales** + su propia definición + `preview-ui`. Reemplaza por completo el patrón viejo de `toast.custom` a mano. Se usa en: `dashboard/layout.tsx` y `dashboardAdmin/layout.tsx` (logout), `NavbarPrivate.tsx` (logout), `dashboardAdmin/usuarios/page.tsx`, `usuarios/[id]/page.tsx`, `solicitudes/page.tsx`, `dashboardAdmin/propiedades/page.tsx` (los 4 de borrado admin), y **`PropertyDetail.tsx`** (borrar comentario — es el único lugar donde el flujo de Properties ya usa una pieza del sistema de diseño nuevo).
+- **`Field` / `Input` / `Select`** (`src/modules/shared/ui/{Field,Input,Select}.tsx`) — adoptados en **3 formularios**: `dashboardAdmin/propiedades/PropertyForm.tsx`, `(private)/publicar/page.tsx`, `dashboard/preferencias/page.tsx` (+ `preview-ui`). **No** se usan en `LoginForm`/`RegisterForm`: esos usan un componente hermano propio, `AuthField` (`src/modules/auth/components/AuthField.tsx`), documentado en el propio archivo como decisión deliberada — `Field`/`Input` tienen `px-4` fijo en su clase base y los campos de auth necesitan `pl-10` para el ícono interno; sin `tailwind-merge` en el proyecto, forzarlo por `className` generaría dos paddings compitiendo. **No hay ningún uso de `Field`/`Input`/`Select` en el flujo de Properties** (catálogo, filtros ni detalle) — todos sus inputs son manuales.
+- **`ensureExists`** — no existe ningún archivo ni función con ese nombre en el frontend (grep sin resultados). No es un patrón de este proyecto.
+
+### Otros patrones reusables confirmados
+- **Contacto centralizado:** `src/modules/shared/lib/contact.ts` exporta `WHATSAPP_NUMBER` y `whatsappLink(mensaje)` — antes el número estaba repetido a mano en 3+ archivos.
+- **Fondos alternados por sección:** cada sección de la Landing define su propio `py-24 md:py-28` (padding simétrico) y alterna fondo blanco / `surface` / `.surface-brand-deep` / `brand-50` entre secciones consecutivas, en vez de que la página imponga márgenes — así cada sección es autocontenida y reordenable.
+- **Iconografía:** exclusivamente `lucide-react` en toda la Landing (`react-icons/bs` solo para los 3 íconos de marca externa: WhatsApp/Instagram/Facebook, que no existen en lucide con el trazo oficial).
+- **Consideración de arquitectura:** `CtaButton`, `FeaturedPropertyCard`, `Reveal` y `SectionHeading` viven en `src/modules/landing/components/`, no en `shared/ui/`. Importarlos desde `src/app/(public)/properties/` (dominio distinto) funciona técnicamente pero cruza el límite de módulo tal como está organizado el proyecto hoy — si se van a reusar ahí de forma permanente, moverlos a `shared/ui/` sería más prolijo que importar cruzado desde `landing/`.
+
+## Flujo completo de Properties — catálogo, detalle, filtros
+
+### `/properties` — `src/app/(public)/properties/Propertiescatalog.tsx` (Client Component)
+Recibe `initialItems`/`initialTotal` desde el Server Component `page.tsx` (que ya hace el primer fetch con los filtros de la URL) y desde ahí vive 100% del lado del cliente:
+- **Fetch:** en cada cambio de `filters` (vía `usePropertyFilters()`) hace `propertiesService.getFilteredProperties(filters)` → `GET /properties/filter`. El primer render usa los datos que ya vinieron del servidor (`isFirstRender` evita un fetch duplicado).
+- **Header propio, no `SectionHeading`:** eyebrow + `h1` con hex hardcodeado (`text-[#0b7a4b]`), no usa el componente compartido de la Landing.
+- **Barra de búsqueda + filtros:** `SearchBar` (input de texto libre) + botón "Filtros" que abre/cierra `FiltersPanel` — **implementación propia**, no reusa `HeaderSearch` (ver más abajo).
+- **Toggle grilla/lista:** estado local `viewMode`. Grilla usa `PropertyCard`; lista usa `PropertyCardList`, una **segunda tarjeta definida al final de este mismo archivo** (no es un componente compartido), con imagen a la izquierda, datos al medio, precio + botón de WhatsApp a la derecha.
+  - **⚠️ Bug encontrado:** `PropertyCardList` tiene un botón de favorito (ícono `Heart`) que es **puramente decorativo** — no tiene `onClick`, no recibe `propertyId`, no llama a ningún endpoint. Da la impresión de que favoritos funciona en la vista de lista y no es así.
+- **Paginación:** numérica con elipsis (`...`) cuando hay muchas páginas, calculada a mano (no una librería), sobre `total` / `filters.limit`.
+- **Estados:** loading → 6 skeletons `animate-pulse`; vacío → ícono `Search` + mensaje; ambos manuales, sin componente compartido de estado vacío.
+- **Sin animaciones de scroll** — no usa `Reveal` ni ningún framer-motion.
+
+### `FiltersPanel` — `src/modules/properties/components/FiltersPanel .tsx`
+⚠️ El nombre de archivo tiene un **espacio antes de `.tsx`** (`'FiltersPanel '`) — así están todos los imports en el proyecto, no es un error de este documento.
+
+Campos que expone hoy (todos conectados a `usePropertyFilters()` vía `applyFilter`, que en el catálogo llama directo a `setFilters`):
+- **Localidad / Zona / Barrio** — 3 dropdowns custom (no `<select>` nativo) poblados desde `propertiesService.getLocationFilters()` (`GET /properties/filters/locations`).
+- **Operación** — toggle Venta/Alquiler (dos botones, no checkbox).
+- **Tipo de propiedad** — `<select>` con **valores hardcodeados `1`–`5`** (Casa/Depto/Local/Oficina/Terreno) en vez de traerlos de `GET /property-types` (que sí se usa en otras partes del proyecto, como `PropertyForm` y `preferencias`) — inconsistencia a tener en cuenta si cambian los IDs en el backend.
+- **Habitaciones, baños, precio min/max, m² min/max, antigüedad máx.** — inputs numéricos con **estado local propio** (`localNumbers`) y debounce de 700ms antes de aplicarse a la URL — para no disparar un `router.push` en cada tecla.
+- **Cochera / Patio / Escritura** — checkboxes (`garage`, `patio`, `property_deed`).
+- **Contador de resultados en vivo:** al cambiar cualquier filtro, tras 400ms hace un fetch con `limit: 1` solo para leer `meta.totalItems` y mostrarlo en el botón "Ver N resultados".
+- **Limpiar / Ver resultados:** limpiar resetea todo (`clearFilters()` en catálogo); "Ver resultados" solo aparece si hay algún filtro activo.
+- **⚠️ Rama de código muerta:** el componente tiene una bifurcación completa `isLanding = pathname === '/'` (con su propio estado `landingFilters` separado de la URL, y un `handleVerResultados` que arma query params a mano y navega a `/properties?...`). Esa rama **ya no se puede alcanzar**: `FiltersPanel` dejó de renderizarse en `/` cuando se sacó `HeaderSearch` del Hero (ver punto siguiente). Si se confirma que no se va a reusar, es candidato a limpieza.
+- **Persistencia:** enteramente vía `usePropertyFilters()` → URL. No hay estado de filtros en `localStorage` ni Context.
+
+### `SearchBar` — `src/modules/properties/components/SearchBar.tsx`
+Input de texto libre independiente de `FiltersPanel`. Estado local `inputValue` con debounce de 600ms antes de escribir `filters.search` en la URL (para que tipear no dispare un fetch por letra); se resincroniza si `filters.search` cambia desde afuera (ej. al limpiar filtros). Estilo propio (`rounded-4xl`, borde `#0b7a4b`), no comparte clases con `FiltersPanel` ni con ningún input de la Landing.
+
+### `HeaderSearch` — `src/modules/properties/components/HeaderSearch.tsx` — confirmado: sigue sin ningún uso
+Grep exhaustivo: el único archivo que menciona `HeaderSearch` es su propia definición. Antes envolvía `SearchBar` + `FiltersPanel` colapsable y se usaba en el Hero de la Landing (`Slider.tsx`); se sacó de ahí en el rediseño de la Landing y **no se volvió a usar en ningún otro lado, ni se borró**. Sigue en el repo, sin importar en ninguna parte, a la espera de una decisión.
+
+### `/properties/:id` — `src/app/(public)/properties/[id]/PropertyDetail.tsx` (Client Component)
+`page.tsx` hace `propertiesService.getOne(id)` server-side (`GET /properties/:id`) y pasa la propiedad completa como prop.
+
+- **`ImageSlider`** (función interna del archivo): slider a mano con miniaturas clickeables abajo, sin librería (no usa Swiper, a diferencia de la Landing ya migrada). Estado vacío con ícono `Home` si no hay imágenes.
+- **Título + badges:** operación, tipo de propiedad, estado (`disponible` en verde / lo demás en rojo) — todos con hex hardcodeado, no tokens.
+- **Descripción, Características (grid de specs), atributos booleanos** (cochera/patio/escritura, con check verde o X gris) — cards blancas `rounded-3xl` con sombra sutil, patrón repetido.
+- **`CommentsAndRatings`** (función interna, la pieza más grande del archivo): valoraciones (promedio, lista, `StarPicker` para calificar 1-5) + comentarios (crear/editar/eliminar, con avatar, "Tú" badge si es el propio comentario). Fetch propio a `GET /properties/:id/comments` y `GET /ratings/:propertyId` en un `useEffect`, independiente del fetch inicial del padre. **Usa `confirmDialog` del sistema de diseño nuevo** para confirmar el borrado de un comentario — es la única integración real hoy entre Properties y el sistema de diseño de la Landing.
+- **`GoogleMapSection`:** iframe embebido de Google Maps con la dirección (usa `provincia` como query — no la dirección completa, dato a verificar si se quiere mostrar una ubicación más precisa).
+- **Sidebar sticky (columna derecha):** tarjeta de precio + botón "Consultar por WhatsApp" (gradiente hardcodeado, no `CtaButton`), tarjeta de agente (si `agent` viene en la respuesta), tarjeta de resumen (lista de specs filtrando los que tienen valor).
+- **⚠️ No hay botón de favorito en esta página.** Verificado por grep: cero menciones de `FavoriteButton` o `Favoritebutton` en todo el archivo. El comentario de `FeaturedPropertyCard.tsx` que dice *"Favoritos sigue funcionando igual en `/properties` y en el detalle"* es **impreciso** — funciona en el catálogo (`PropertyCard` lo incluye), pero **no en el detalle de una propiedad individual**, que es probablemente donde más sentido tendría.
+- **⚠️ `params` sin `Promise` en la página contenedora:** `[id]/page.tsx` tipa `params: { id: string }` y lo usa sin `await` (`Number(params.id)`). Es el mismo patrón que ya se corrigió para `searchParams` en `(public)/properties/page.tsx` (documentado en `FRONTEND_CHANGES.md`, Bloque UI-6) — acá no se tocó. No se confirmó si hoy tira warning en consola (no se corrió el dev server en esta sesión de solo lectura), pero es el mismo tipo de deuda ya identificada y arreglada en otro lugar.
+
+### `PropertyCard` — `src/modules/properties/components/PropertyCard.tsx` (tarjeta del catálogo)
+Distinta de `FeaturedPropertyCard` en código y en estilo — comparación directa:
+
+| | `PropertyCard` (catálogo, hoy) | `FeaturedPropertyCard` (Landing, ya rediseñada) |
+|---|---|---|
+| Bordes | `rounded-3xl` | `rounded-xl` (más serio) |
+| Colores | Hex hardcodeado (`#0b7a4b`, `#179144`) | Tokens (`brand-700`, `ink-*`) |
+| Precio | Superpuesto centrado sobre la imagen, sin `$` | Esquina inferior izquierda, con `$` explícito |
+| Badge de rating | No tiene | Sí, si `ratingAverage > 0` |
+| Favorito | Sí (`FavoriteButton variant="card"`) | No (deliberado) |
+| Tipo de dato | `Property` de `properties/interfaces/propertyInterface.ts` (sin `ratingAverage`) | `Property` canónico de `shared/types/api.ts` |
+| Animación de imagen | `scale-105` en 1200ms | `scale-105` en 700ms |
+
+Usada en 2 lugares: `Propertiescatalog.tsx` (vista grilla) y `PropertiesList.tsx`.
+
+**⚠️ `PropertiesList.tsx` es código muerto.** Verificado por grep: no lo importa ningún otro archivo del proyecto. Es una versión anterior de la sección de destacados (mismo copy "propiedades elegidas por su ubicación, calidad y potencial" que tenía `Featuredproperties.tsx` antes del rediseño de la Landing), reemplazada y nunca borrada.
+
+### Gaps — inconsistencias visuales/técnicas entre Properties y la Landing ya rediseñada
+Lista concreta, cada ítem verificado por lectura directa del código (no estimado):
+
+1. **Cero adopción de tokens de color.** Grep de hex de marca hardcodeado: **22 ocurrencias en `Propertiescatalog.tsx`**, **41 en `PropertyDetail.tsx`**, **8 en `PropertyCard.tsx`** — 71 en total en estos 3 archivos, cero usos de `brand-*`/`ink-*`.
+2. **Dos tipos de `Property` incompatibles conviviendo.** El catálogo/detalle usa el tipo local `modules/properties/interfaces/propertyInterface.ts` (sin `ratingAverage`); la Landing usa el canónico de `shared/types/api.ts` (con `ratingAverage`). Migrar el catálogo al patrón de `FeaturedPropertyCard` (que sí muestra rating) requiere primero resolver este desalineamiento de tipos — y confirmar que `GET /properties/filter` realmente devuelve `ratingAverage` (en el rediseño de la Landing se confirmó que **no** lo devuelve; solo `GET /properties` y `GET /properties/:id` sí).
+3. **Ningún componente del sistema de diseño nuevo, salvo `confirmDialog`** en `PropertyDetail.tsx` (borrar comentario). Ni `CtaButton`, ni `SectionHeading`, ni `Reveal`, ni `Field`/`Input`/`Select`.
+4. **Botón de favorito roto (decorativo) en `PropertyCardList`** (vista de lista del catálogo) — ver arriba.
+5. **Favoritos ausente en el detalle de propiedad** — ver arriba.
+6. **Dos implementaciones de "search bar + botón de filtros"** con JSX casi idéntico pero sin componente compartido: la de `Propertiescatalog.tsx` (a mano) y la de `HeaderSearch.tsx` (sin uso hoy).
+7. **`FiltersPanel` con rama muerta** (`isLanding`) desde que se sacó del Hero.
+8. **Tipo de propiedad hardcodeado como IDs `1`–`5`** en `FiltersPanel`, en vez de consumir `GET /property-types` como hacen `PropertyForm`/`preferencias`.
+9. **`PropertiesList.tsx` es código muerto** — candidato a borrar (confirmar con el usuario antes, mismo criterio que con `HeaderSearch`).
+10. **Sin animaciones de scroll** (`Reveal`) en ninguna parte del flujo de Properties, a diferencia de toda la Landing.

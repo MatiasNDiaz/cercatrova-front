@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { toast } from 'sonner';
@@ -10,7 +10,7 @@ import Link from 'next/link';
 import {
   Users, Search, Trash2, Mail, FileText,
   User, Shield, ChevronDown, ChevronUp,
-  ArrowLeft, Phone,
+  ArrowLeft, ArrowUpDown,
 } from 'lucide-react';
 
 interface UserType {
@@ -46,13 +46,14 @@ interface UserCardProps {
   u: UserType;
   isExpanded: boolean;
   isDeleting: boolean;
+  requestCount: number;
   onToggle: (id: number) => void;
   onDelete: (id: number, name: string) => void;
   whatsappUrl: (phone: string) => string;
   gmailUrl: (email: string, name: string) => string;
 }
 
-function UserCard({ u, isExpanded, isDeleting, onToggle, onDelete, whatsappUrl, gmailUrl }: UserCardProps) {
+function UserCard({ u, isExpanded, isDeleting, requestCount, onToggle, onDelete, whatsappUrl, gmailUrl }: UserCardProps) {
   return (
     <div
       className={`bg-white rounded-2xl mb-2 border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-sm hover:border-gray-200 ${
@@ -86,6 +87,11 @@ function UserCard({ u, isExpanded, isDeleting, onToggle, onDelete, whatsappUrl, 
             {u.profileIncomplete && (
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
                 Perfil incompleto
+              </span>
+            )}
+            {requestCount > 0 && (
+              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#0b7a4b]/10 text-[#0b7a4b] shrink-0">
+                <FileText size={9} /> {requestCount} {requestCount === 1 ? 'solicitud' : 'solicitudes'}
               </span>
             )}
           </div>
@@ -210,10 +216,14 @@ function UserCard({ u, isExpanded, isDeleting, onToggle, onDelete, whatsappUrl, 
 }
 
 // ── PÁGINA PRINCIPAL ──────────────────────────────────────────────────────────
+type UserSortBy = 'recent' | 'requests';
+
 export default function UsuariosAdminPage() {
   const [users, setUsers] = useState<UserType[]>([]);
+  const [requestCounts, setRequestCounts] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<UserSortBy>('recent');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -222,6 +232,18 @@ export default function UsuariosAdminPage() {
       .then(r => setUsers(r.data))
       .catch(() => toast.error('No se pudieron cargar los usuarios'))
       .finally(() => setLoading(false));
+
+    // Conteo de solicitudes por usuario — para el badge y el orden por cantidad.
+    // Una sola llamada; se agrupa client-side por userId (no bloquea la lista).
+    api.get('/property-requests')
+      .then(r => {
+        const map: Record<number, number> = {};
+        (Array.isArray(r.data) ? r.data : []).forEach((req: { userId: number }) => {
+          if (req?.userId != null) map[req.userId] = (map[req.userId] ?? 0) + 1;
+        });
+        setRequestCounts(map);
+      })
+      .catch(() => { /* silencioso — el badge simplemente no aparece */ });
   }, []);
 
   const handleToggle = (id: number) => {
@@ -250,12 +272,23 @@ export default function UsuariosAdminPage() {
     });
   };
 
+  const sortUsers = useMemo(() => {
+    return (list: UserType[]) =>
+      [...list].sort((a, b) => {
+        if (sortBy === 'requests') {
+          return (requestCounts[b.id] ?? 0) - (requestCounts[a.id] ?? 0);
+        }
+        // 'recent' — más recientes primero por fecha de registro
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }, [sortBy, requestCounts]);
+
   const filtered = users.filter(u =>
     `${u.name} ${u.surname} ${u.email}`.toLowerCase().includes(search.toLowerCase())
   );
 
-  const regularUsers = filtered.filter(u => u.role === 'user');
-  const adminUsers   = filtered.filter(u => u.role === 'admin');
+  const regularUsers = sortUsers(filtered.filter(u => u.role === 'user'));
+  const adminUsers   = sortUsers(filtered.filter(u => u.role === 'admin'));
 
   const whatsappUrl = (phone: string) =>
     `https://wa.me/${phone.replace(/\D/g, '')}`;
@@ -300,15 +333,30 @@ export default function UsuariosAdminPage() {
         </div>
       </div>
 
-      {/* Buscador */}
-      <div className="relative">
-        <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar por nombre o email..."
-          className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-gray-100 bg-white focus:outline-none focus:border-[#0b7a4b]/30 focus:ring-2 focus:ring-[#0b7a4b]/8 transition-all placeholder:text-gray-400"
-        />
+      {/* Toolbar: búsqueda + orden */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por nombre o email..."
+            className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-gray-100 bg-white focus:outline-none focus:border-[#0b7a4b]/30 focus:ring-2 focus:ring-[#0b7a4b]/8 transition-all placeholder:text-gray-400"
+          />
+        </div>
+        <div className="relative shrink-0">
+          <ArrowUpDown size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0b7a4b]" />
+          <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <select
+            aria-label="Ordenar usuarios"
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as UserSortBy)}
+            className="w-full cursor-pointer appearance-none rounded-xl border border-gray-100 bg-white py-3 pl-10 pr-9 text-sm font-semibold text-gray-700 transition-all focus:border-[#0b7a4b]/30 focus:outline-none focus:ring-2 focus:ring-[#0b7a4b]/8 sm:w-60"
+          >
+            <option value="recent">Registro: más recientes</option>
+            <option value="requests">Más solicitudes primero</option>
+          </select>
+        </div>
       </div>
 
       {/* Loading skeleton */}
@@ -353,6 +401,7 @@ export default function UsuariosAdminPage() {
               u={u}
               isExpanded={expandedId === u.id}
               isDeleting={deletingId === u.id}
+              requestCount={requestCounts[u.id] ?? 0}
               onToggle={handleToggle}
               onDelete={handleDelete}
               whatsappUrl={whatsappUrl}
@@ -377,6 +426,7 @@ export default function UsuariosAdminPage() {
               u={u}
               isExpanded={expandedId === u.id}
               isDeleting={deletingId === u.id}
+              requestCount={requestCounts[u.id] ?? 0}
               onToggle={handleToggle}
               onDelete={handleDelete}
               whatsappUrl={whatsappUrl}

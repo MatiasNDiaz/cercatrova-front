@@ -11,9 +11,10 @@ import { FooterPublic } from '@/modules/landing/components/FooterPublic';
  * completo (CTA + 3 columnas de links + mapa) aparecía también debajo de la
  * pantalla de login.
  *
- * Solo se excluyen `/login` y `/register`, que son pantallas de alto completo.
- * Los dashboards se dejaron como estaban a propósito: sacar el footer de ahí
- * también sería razonable, pero es un cambio que no se pidió en esta sesión.
+ * Se excluyen `/login` y `/register` (pantallas de alto completo) y TODA la
+ * zona de dashboards (`/dashboard` y `/dashboardAdmin`, ambas empiezan con
+ * `/dashboard`): son layouts SaaS de pantalla completa con su propio sidebar y
+ * scroll interno, donde el footer público (CTA + links + mapa) no tiene sentido.
  */
 
 const HIDDEN_ON = ['/login', '/register'];
@@ -22,6 +23,7 @@ export function FooterSelector() {
   const pathname = usePathname();
 
   if (HIDDEN_ON.includes(pathname)) return null;
+  if (pathname.startsWith('/dashboard')) return null;
 
   return <FooterPublic />;
 }

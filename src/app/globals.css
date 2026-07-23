@@ -121,6 +121,49 @@ body {
   background-size: 26px 26px;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   PANEL DE FILTROS DEL CATÁLOGO — verde vivo, intensidad reducida
+   ───────────────────────────────────────────────────────────────────────────
+   A diferencia de `.surface-brand-deep` (casi negro, para secciones ancla),
+   este es un verde de marca VIVO y luminoso — sirve solo para "enmarcar" los
+   controles blancos del panel, sin competir con las tarjetas del catálogo
+   (que viven en `.surface-brand-soft`, mucho más clara, más abajo).
+   ═══════════════════════════════════════════════════════════════════════════ */
+.surface-brand-panel {
+  position: relative;
+  background: linear-gradient(135deg, var(--color-brand-700) 0%, var(--color-brand-600) 100%);
+}
+.surface-brand-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+  background-size: 22px 22px;
+  border-radius: inherit;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SECCIÓN DE RESULTADOS DEL CATÁLOGO — verde muy claro, casi imperceptible
+   ───────────────────────────────────────────────────────────────────────────
+   Mismo lenguaje de textura que las superficies oscuras de arriba (trama de
+   puntos en ::before), pero en un verde apenas perceptible — separa
+   visualmente "buscar" (sección clara, arriba) de "explorar resultados"
+   (esta sección) sin competir con las tarjetas blancas que van encima.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.surface-brand-soft {
+  position: relative;
+  background-color: #eef8f2; /* más claro que brand-50, con más aire */
+}
+.surface-brand-soft::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(11, 122, 75, 0.05) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
 @source "../app/**/*.{js,ts,jsx,tsx}";
 @source "../src/**/*.{js,ts,jsx,tsx}";
 

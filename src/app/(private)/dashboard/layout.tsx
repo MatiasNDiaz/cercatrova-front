@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import {
   User, Heart, Home, Settings, Bell, FileText,
-  LogOut, ChevronRight, Pencil, ArrowLeft,
+  LogOut, ChevronRight, Pencil, ArrowLeft, Shield,
 } from 'lucide-react';
 
 // ── NAVEGACIÓN DEL SIDEBAR ────────────────────────────────────────────────────
@@ -125,8 +125,18 @@ function Sidebar() {
       </nav>
 
       {/* Footer / Logout */}
-      <div className="p-4 pb-10 mt-auto border-t border-gray-300">
-        <button 
+      <div className="p-4 pb-10 mt-auto border-t border-gray-300 space-y-1">
+        {/* Context switcher — solo para admins que están mirando la vista de usuario */}
+        {user?.role === 'admin' && (
+          <Link
+            href="/dashboardAdmin"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-500 hover:bg-[#0b7a4b]/10 hover:text-[#0b7a4b] transition-all duration-200 group"
+          >
+            <Shield size={19} className="group-hover:scale-110 transition-transform" />
+            Panel Admin
+          </Link>
+        )}
+        <button
           onClick={handleLogoutConfirm}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-[#0b7a4b] bg-  hover:bg-red-100 hover:text-red-600 transition-all duration-200 group"
         >
@@ -163,9 +173,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-surface-deep flex">
+    <div className="h-screen overflow-hidden bg-surface-deep flex">
       <Sidebar />
-      <main className="flex-1 h-screen overflow-y-auto custom-scrollbar pb-8">
+      <main className="flex-1 h-full overflow-y-auto custom-scrollbar pb-8">
         <div className="max-w-7xl mx-auto px-8 py-4">
           {children}
         </div>

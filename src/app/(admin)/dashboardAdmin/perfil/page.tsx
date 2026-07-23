@@ -97,8 +97,13 @@ export default function AdminPerfilPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      // `Content-Type: undefined` borra el default `application/json` de la
+      // instancia de axios SOLO para esta request, así el browser arma el
+      // multipart con su boundary. Forzar 'multipart/form-data' a mano (como
+      // estaba) deja el header sin boundary y el backend no puede parsear el
+      // archivo → 400. Mismo bug que se corrigió en PropertyForm.
       const { data: updated } = await api.patch(`/users/${user!.id}/photo`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': undefined },
       });
       updateUser({ photo: updated.photo });
       toast.success('Foto actualizada');
