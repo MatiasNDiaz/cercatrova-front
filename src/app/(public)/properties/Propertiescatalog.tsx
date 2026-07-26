@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useRef, useMemo } from 'react';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutGrid, List, SearchX } from 'lucide-react';
 import { usePropertyFilters } from '@/modules/properties/hooks/usePropertyFilters';
@@ -135,43 +134,26 @@ export default function PropertiesCatalog({ initialItems, initialTotal }: Props)
       {/* `relative z-20` para que los menús desplegables del panel de filtros,
           cuando se desbordan hacia abajo, queden POR ENCIMA de la sección 2
           (cuyo contenido tiene `relative z-10`) en vez de pasar por detrás.
-          OJO: nada de `overflow-hidden` acá — volvería a recortar los menús. */}
-      <section className="relative z-20 bg-[#F8FAF8] pt-28 pb-14">
+          OJO: nada de `overflow-hidden` acá — volvería a recortar los menús.
 
-        {/* ── FONDO: fresco "Cerca Trova" (Vasari) ──
-            Capa decorativa detrás del contenido. La imagen es muy detallada, así
-            que va con un velo claro encima: se percibe la obra como textura pero
-            el título y el buscador conservan todo su contraste. Los degradados
-            de arriba/abajo la funden con el navbar y con la sección 2. */}
-        <div aria-hidden className="absolute inset-0 z-0">
-          <Image
-            src="/antimano.png"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-center"
-          />
-          {/* Velo principal — mantiene la sección "clara" y legible */}
-          <div className="absolute inset-0 bg-black/45" />
-          {/* Fundido superior (hacia el navbar) */}
-          <div className="absolute inset-x-0 top-0 h-28 bg-linear-to-b from-[#1c221c] to-transparent" />
-          {/* Fundido inferior (hacia la sección de resultados) */}
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-b from-transparent to-[#000000]" />
-        </div>
-
-        <div className="relative z-10 mx-auto max-w-350 px-4 sm:px-6">
+          Fondo: `brand-50`, el verde muy suave que ya usan otras secciones de la
+          Landing. Se eligió sobre blanco a propósito: el panel de filtros y sus
+          controles son BLANCOS, así que sobre blanco no habría contraste. */}
+      <section className="relative z-20 bg-brand-50 pt-28 pb-14">
+        <div className="mx-auto max-w-350 px-4 sm:px-6">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
             <div className="mx-auto mb-8 max-w-2xl text-center">
-              
-              <h1 className="mt-5 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
-                Encontrá tu próxima <span className="text-black-700">propiedad</span>
+              <span className="inline-block rounded-full bg-brand-700 px-4 py-1.5 text-xs font-bold tracking-[0.22em] text-white uppercase shadow-[0_4px_12px_-4px_rgba(11,122,75,0.6)]">
+                Catálogo de propiedades
+              </span>
+              <h1 className="mt-5 text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl md:text-5xl">
+                Encontrá tu próxima <span className="text-brand-700">propiedad</span>
               </h1>
-              <p className="mt-4 text-base leading-relaxed text-white md:text-lg">
+              <p className="mt-4 text-base leading-relaxed text-ink-500 md:text-lg">
                 Explorá el catálogo completo, filtrá por lo que buscás y encontrá tu lugar en Córdoba.
               </p>
             </div>

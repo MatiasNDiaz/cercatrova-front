@@ -99,14 +99,26 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
   }, [open]);
 
   // Bloqueo del scroll de fondo + Escape.
+  //
+  // FIX de scroll: además de `overflow: hidden` en el body, se compensa el ancho
+  // de la scrollbar con `padding-right`. Sin eso, al ocultar la barra la página
+  // de fondo se corre unos píxeles y se ve un "salto" al abrir/cerrar el modal.
+  // (El otro origen del bug — dos contenedores scrolleables anidados — se
+  // resolvió sacando el `overflow-y-auto` del wrapper exterior, más abajo.)
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
+    const prevOverflow = document.body.style.overflow;
+    const prevPadding = document.body.style.paddingRight;
+    const scrollbar = window.innerWidth - document.documentElement.clientWidth;
+
     document.body.style.overflow = 'hidden';
+    if (scrollbar > 0) document.body.style.paddingRight = `${scrollbar}px`;
+
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => {
-      document.body.style.overflow = prev;
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPadding;
       window.removeEventListener('keydown', onKey);
     };
   }, [open, onClose]);
@@ -181,7 +193,12 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4 sm:items-center sm:p-6">
+        // ⚠️ El wrapper NO lleva `overflow-y-auto`. Antes lo tenía, y como el
+        // body del panel TAMBIÉN scrollea, quedaban dos contenedores
+        // scrolleables anidados peleándose (ese era el bug de scroll). Ahora
+        // solo scrollea el body del panel, y únicamente si la pantalla es muy
+        // baja: en desktop el contenido entra completo.
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 sm:p-6">
           {/* Fondo borroso + oscurecido */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -201,7 +218,7 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 380, damping: 32, mass: 0.9 }}
-            className="relative z-10 my-auto flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-[0_30px_80px_-20px_rgba(10,12,11,0.5)]"
+            className="relative z-10 my-auto flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-[0_40px_100px_-20px_rgba(10,12,11,0.65),0_0_0_1px_rgba(10,12,11,0.05)]"
           >
             {/* ── MARCA DE AGUA (decorativa, ~5% opacidad, en las esquinas) ──
                 Va como capa de fondo con z auto; el contenido real lleva
@@ -220,28 +237,31 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
               <div className="absolute -top-24 left-1/3 h-64 w-64 rounded-full bg-brand-500/6 blur-3xl" />
             </div>
 
-            {/* ── HEADER ── */}
-            <div className="relative z-10 flex items-center justify-between border-b border-ink-100 px-7 py-5">
-              <div>
-                <h2 className="text-lg font-bold tracking-tight text-ink-900">Filtrá tu búsqueda</h2>
-                <p className="mt-0.5 text-sm text-ink-500">Ajustá los criterios y aplicá para ver los resultados.</p>
-              </div>
+            {/* ── HEADER — título centrado en verde de marca ── */}
+            <div className="relative z-10 border-b border-ink-100 px-7 py-5 text-center">
+              <h2 className="text-xl font-bold tracking-tight text-brand-700">Filtrá tu búsqueda</h2>
+              <p className="mt-1 text-sm text-ink-500">Ajustá los criterios y aplicá para ver los resultados.</p>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Cerrar filtros"
-                className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600"
+                className="absolute top-1/2 right-6 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* ── BODY (scrollable) ── */}
+            {/* ── BODY — 2 columnas en desktop ──
+                Repartir las 4 secciones en dos columnas hace que el modal entre
+                COMPLETO sin scroll interno en desktop (antes eran 4 filas
+                apiladas y siempre había que scrollear). El `overflow-y-auto`
+                queda solo como red de seguridad para pantallas muy bajas. */}
             <div className="relative z-10 flex-1 overflow-y-auto px-7 py-6">
+              <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2">
 
               {/* Ubicación */}
               <FilterGroup icon={MapPin} label="Ubicación">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3">
                   <LocationDropdown
                     label="Localidad" placeholder="Todas las localidades"
                     value={draft.localidad} options={locations.localidades}
@@ -265,7 +285,7 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
 
               {/* Tipo y ambientes */}
               <FilterGroup icon={Bed} label="Tipo y ambientes">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3">
                   <IconSelect
                     icon={Home}
                     value={draft.typeOfPropertyId?.toString() ?? ''}
@@ -284,7 +304,7 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
 
               {/* Presupuesto y superficie */}
               <FilterGroup icon={DollarSign} label="Presupuesto y superficie">
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-3">
                   <IconNumber icon={DollarSign} placeholder="Precio mín." value={nums.minPrice} onChange={(v) => setNum('minPrice', v)} />
                   <IconNumber icon={DollarSign} placeholder="Precio máx." value={nums.maxPrice} onChange={(v) => setNum('maxPrice', v)} />
                   <IconNumber icon={Calendar} placeholder="Antigüedad máx." value={nums.maxAntiquity} onChange={(v) => setNum('maxAntiquity', v)} />
@@ -294,8 +314,8 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
               </FilterGroup>
 
               {/* Adicionales */}
-              <FilterGroup icon={Car} label="Adicionales" last>
-                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+              <FilterGroup icon={Car} label="Adicionales">
+                <div className="grid grid-cols-1 gap-2.5">
                   {([
                     { key: 'garage', label: 'Cochera', icon: Car },
                     { key: 'patio', label: 'Patio', icon: TreePine },
@@ -327,6 +347,8 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
                   })}
                 </div>
               </FilterGroup>
+
+              </div>
             </div>
 
             {/* ── FOOTER ──
@@ -348,7 +370,10 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
                 type="button"
                 onClick={handleApply}
                 style={{ background: 'var(--gradient-brand)' }}
-                className="flex cursor-pointer items-center justify-center gap-2 rounded-xl px-7 py-3 text-sm font-bold text-white shadow-[0_10px_24px_-8px_rgba(6,57,35,0.6)] transition-all duration-300 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.98]"
+                /* `min-w` fijo + `tabular-nums`: el ancho del botón NO cambia
+                   según la cantidad de dígitos del contador (antes se agrandaba
+                   o achicaba y movía el layout del footer en cada búsqueda). */
+                className="flex min-w-50 cursor-pointer items-center justify-center gap-2 rounded-xl px-7 py-3 text-sm font-bold text-white tabular-nums shadow-[0_10px_24px_-8px_rgba(6,57,35,0.6)] transition-all duration-300 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.98]"
               >
                 <Search size={16} />
                 {loadingCount
@@ -369,15 +394,22 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
 /* ── Sub-componentes ────────────────────────────────────────────────────────── */
 
 function FilterGroup({
-  icon: Icon, label, children, last = false,
+  icon: Icon, label, children,
 }: {
-  icon: React.ElementType; label: string; children: React.ReactNode; last?: boolean;
+  icon: React.ElementType; label: string; children: React.ReactNode;
 }) {
+  // Encabezado de sub-sección con el lenguaje de la Landing: ícono en verde de
+  // marca sobre pastilla clara + texto en negro (`ink-900`). Antes era todo gris
+  // chico en mayúsculas y se perdía.
+  // El espaciado entre secciones lo da el `gap-y` de la grilla de 2 columnas.
   return (
-    <div className={last ? '' : 'mb-7'}>
-      <h3 className="mb-3.5 flex items-center gap-2 border-b border-ink-100 pb-2 text-[11px] font-black tracking-[0.14em] text-brand-700 uppercase">
-        <Icon size={14} />
-        {label}
+    <div>
+      <h3 className="mb-3.5 flex items-center gap-2.5">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-700/10 text-brand-700">
+          <Icon size={15} />
+        </span>
+        <span className="text-sm font-bold tracking-tight text-ink-900">{label}</span>
+        <span className="ml-1 h-px flex-1 bg-ink-100" />
       </h3>
       {children}
     </div>
