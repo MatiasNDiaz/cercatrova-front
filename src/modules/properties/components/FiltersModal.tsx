@@ -143,6 +143,21 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
     [draftAsFilters]
   );
 
+  // ¿Hay ALGO que limpiar? No alcanza con mirar el borrador del modal: si el
+  // usuario llegó desde el navbar a `/properties?operationType=venta`, o escribió
+  // en el buscador, o eligió un orden, el borrador está vacío pero la URL no.
+  // Antes el botón "Limpiar" miraba solo `activeCount` y quedaba deshabilitado
+  // justo en ese caso — no había forma de volver a "todas las propiedades" desde
+  // el modal. Ahora se habilita con cualquier filtro vigente en la URL.
+  const hasUrlFilters = useMemo(
+    () =>
+      Object.entries(filters).some(
+        ([k, v]) => !['page', 'limit'].includes(k) && v !== undefined && v !== null && v !== ''
+      ),
+    [filters]
+  );
+  const canClear = activeCount > 0 || hasUrlFilters;
+
   // Conteo de resultados en vivo del borrador (debounce 450ms).
   useEffect(() => {
     if (!open) return;
@@ -237,15 +252,23 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
               <div className="absolute -top-24 left-1/3 h-64 w-64 rounded-full bg-brand-500/6 blur-3xl" />
             </div>
 
-            {/* ── HEADER — título centrado en verde de marca ── */}
-            <div className="relative z-10 border-b border-ink-100 px-7 py-5 text-center">
-              <h2 className="text-xl font-bold tracking-tight text-brand-700">Filtrá tu búsqueda</h2>
-              <p className="mt-1 text-sm text-ink-500">Ajustá los criterios y aplicá para ver los resultados.</p>
+            {/* ── HEADER — título centrado en verde de marca ──
+                Eyebrow en pastilla sólida `brand-700`, igual que `SectionHeading`
+                de la Landing, para que el modal hable el mismo idioma visual. */}
+            <div className="relative z-10 border-b border-ink-100 bg-linear-to-b from-brand-50/70 to-white px-7 py-6 text-center">
+              <span className="inline-block rounded-full bg-brand-700 px-3.5 py-1 text-[10px] font-bold tracking-[0.22em] text-white uppercase shadow-[0_4px_12px_-4px_rgba(11,122,75,0.6)]">
+                Filtros
+              </span>
+              <h2 className="mt-3 text-2xl font-bold tracking-tight text-brand-700">Filtrá tu búsqueda</h2>
+              <p className="mt-1.5 text-sm text-ink-500">Ajustá los criterios y aplicá para ver los resultados.</p>
+              {/* Cerrar: neutro en reposo, rojo recién en hover. El rojo sólido
+                  permanente que había antes competía con el título y era lo
+                  primero que saltaba a la vista al abrir el modal. */}
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Cerrar filtros"
-                className="absolute top-1/2 right-6 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600"
+                className="absolute top-1/2 right-6 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-ink-200 bg-white text-ink-400 shadow-sm transition-all duration-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
               >
                 <X size={18} />
               </button>
@@ -302,14 +325,20 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
                 </div>
               </FilterGroup>
 
-              {/* Presupuesto y superficie */}
+              {/* Presupuesto y superficie
+                  Orden por PARES semánticos: precio mín/máx, luego m² mín/máx, y
+                  antigüedad sola ocupando la fila entera. Antes el orden dejaba
+                  [antigüedad | m² mín] en la misma fila (dos cosas sin relación) y
+                  una celda huérfana vacía al final. */}
               <FilterGroup icon={DollarSign} label="Presupuesto y superficie">
                 <div className="grid grid-cols-2 gap-3">
                   <IconNumber icon={DollarSign} placeholder="Precio mín." value={nums.minPrice} onChange={(v) => setNum('minPrice', v)} />
                   <IconNumber icon={DollarSign} placeholder="Precio máx." value={nums.maxPrice} onChange={(v) => setNum('maxPrice', v)} />
-                  <IconNumber icon={Calendar} placeholder="Antigüedad máx." value={nums.maxAntiquity} onChange={(v) => setNum('maxAntiquity', v)} />
                   <IconNumber icon={Maximize} placeholder="M² mín." value={nums.minM2} onChange={(v) => setNum('minM2', v)} />
                   <IconNumber icon={Maximize} placeholder="M² máx." value={nums.maxM2} onChange={(v) => setNum('maxM2', v)} />
+                  <div className="col-span-2">
+                    <IconNumber icon={Calendar} placeholder="Antigüedad máx. (años)" value={nums.maxAntiquity} onChange={(v) => setNum('maxAntiquity', v)} />
+                  </div>
                 </div>
               </FilterGroup>
 
@@ -355,25 +384,31 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
                 "Limpiar" (rojo sólido) y "Ver N resultados" van JUNTOS en la
                 misma fila a la derecha. En mobile se apilan con el principal
                 arriba. */}
-            <div className="relative z-10 flex flex-col-reverse gap-3 border-t border-ink-100 bg-white px-7 py-5 sm:flex-row sm:items-center sm:justify-end">
+            <div className="relative z-10 flex flex-col-reverse gap-3 border-t border-ink-100 bg-ink-50/70 px-7 py-5 sm:flex-row sm:items-center sm:justify-end">
+              {/* Texto FIJO ("Limpiar filtros", sin el contador entre paréntesis)
+                  para que este botón tampoco cambie de ancho y empuje al de al
+                  lado. El estado se comunica con el `disabled`, no con el label. */}
               <button
                 type="button"
                 onClick={handleClear}
-                disabled={activeCount === 0}
-                className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-red-500 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_20px_-8px_rgba(239,68,68,0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
+                disabled={!canClear}
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-red-500 px-5 py-3 text-sm font-bold whitespace-nowrap text-white shadow-[0_8px_20px_-8px_rgba(239,68,68,0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 sm:w-auto"
               >
                 <Trash2 size={15} />
-                Limpiar filtros {activeCount > 0 && `(${activeCount})`}
+                Limpiar filtros
               </button>
 
+              {/* Ancho FIJO (no `min-w`) en desktop: el contador cambia de 1 a 5
+                  dígitos y el label alterna entre "Buscando...", "Ver N
+                  resultado(s)" y "Aplicar filtros". Con ancho fijo + `tabular-nums`
+                  (dígitos monoespaciados) solo cambia el número: el botón no se
+                  agranda ni achica y el footer nunca se mueve. 17rem cubre el
+                  texto más largo esperable ("Ver 10000 resultados"). */}
               <button
                 type="button"
                 onClick={handleApply}
                 style={{ background: 'var(--gradient-brand)' }}
-                /* `min-w` fijo + `tabular-nums`: el ancho del botón NO cambia
-                   según la cantidad de dígitos del contador (antes se agrandaba
-                   o achicaba y movía el layout del footer en cada búsqueda). */
-                className="flex min-w-50 cursor-pointer items-center justify-center gap-2 rounded-xl px-7 py-3 text-sm font-bold text-white tabular-nums shadow-[0_10px_24px_-8px_rgba(6,57,35,0.6)] transition-all duration-300 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.98]"
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-7 py-3 text-sm font-bold whitespace-nowrap text-white tabular-nums shadow-[0_10px_24px_-8px_rgba(6,57,35,0.6)] transition-all duration-300 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.98] sm:w-68"
               >
                 <Search size={16} />
                 {loadingCount
@@ -402,14 +437,17 @@ function FilterGroup({
   // marca sobre pastilla clara + texto en negro (`ink-900`). Antes era todo gris
   // chico en mayúsculas y se perdía.
   // El espaciado entre secciones lo da el `gap-y` de la grilla de 2 columnas.
+  // Cada grupo va dentro de su propia tarjeta clara: así las 4 secciones se leen
+  // como bloques separados en vez de una sopa de inputs sueltos, y los controles
+  // (que son BLANCOS) ganan contraste contra el fondo `ink-50` de la tarjeta.
   return (
-    <div>
+    <div className="rounded-2xl border border-ink-100 bg-ink-50/60 p-5">
       <h3 className="mb-3.5 flex items-center gap-2.5">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-700/10 text-brand-700">
           <Icon size={15} />
         </span>
         <span className="text-sm font-bold tracking-tight text-ink-900">{label}</span>
-        <span className="ml-1 h-px flex-1 bg-ink-100" />
+        <span className="ml-1 h-px flex-1 bg-ink-200/70" />
       </h3>
       {children}
     </div>

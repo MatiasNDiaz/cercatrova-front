@@ -169,10 +169,15 @@ export default function PropertiesCatalog({ initialItems, initialTotal }: Props)
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          SECCIÓN 2 — Resultados. Corte de fondo MUY evidente: acá empieza
-          "explorar", en verde suave con textura vegetal apenas perceptible.
+          SECCIÓN 2 — Resultados. Corte de fondo evidente contra el `brand-50`
+          de arriba: acá empieza "explorar".
+          Usa el token `surface-alt` (#e5e7e5) en vez del `bg-gray-200` que
+          había: ese gris es de la escala nativa de Tailwind, frío y fuera de la
+          paleta del proyecto (los neutros de la marca son la escala `ink`/
+          `surface`, con un dejo verde). Sobre él, las tarjetas blancas resaltan
+          igual pero el conjunto deja de verse "apagado".
           ═══════════════════════════════════════════════════════════════ */}
-      <section className="bg-gray-200 min-h-[70vh] pt-10 pb-16">
+      <section className="min-h-[70vh] bg-surface-alt pt-10 pb-16">
         <div className="relative z-10 mx-auto max-w-350 px-4 sm:px-6">
 
           {/* ── TOOLBAR: resultados + switch de vista ── */}

@@ -59,7 +59,9 @@ export default function Nosotros() {
         <Reveal>
           <div className="flex justify-center">
             {/* ── TARJETA EXPANSIBLE (efecto conservado) ── */}
-            <div className="group relative flex h-[550px] w-full max-w-[450px] cursor-pointer overflow-hidden rounded-[2rem] bg-white shadow-[0_20px_60px_-20px_rgba(10,12,11,0.35)] ring-1 ring-ink-100 transition-[max-width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hover:max-w-[1100px]">
+            {/* Ancho expandido = 380 (foto en hover) + 620 (bio, fijo) = 1000px
+                exactos. Antes era 1100 y sobraban 100px de blanco a la derecha. */}
+            <div className="group relative flex h-[550px] w-full max-w-[450px] cursor-pointer overflow-hidden rounded-[2rem] bg-white shadow-[0_20px_60px_-20px_rgba(10,12,11,0.35)] ring-1 ring-ink-100 transition-[max-width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hover:max-w-[1000px]">
 
               {/* ── LADO IZQUIERDO: carrusel de fotos ── */}
               <div className="relative h-full w-full shrink-0 overflow-hidden transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] lg:w-[450px] lg:group-hover:w-[380px]">
@@ -99,8 +101,22 @@ export default function Nosotros() {
                 </div>
               </div>
 
-              {/* ── LADO DERECHO: biografía ── */}
-              <div className="hidden min-w-[620px] flex-col justify-center gap-7 px-14 py-12 opacity-0 transition-opacity duration-500 delay-200 group-hover:opacity-100 lg:flex">
+              {/* ── LADO DERECHO: biografía ──
+                  FIX del "cabeceo escalonado" del texto en hover:
+                  antes este panel era `min-w-[620px]` sin ancho propio, o sea un
+                  flex item que ARRANCABA comprimido (la tarjeta mide 450px) y se
+                  iba ensanchando hasta su ancho natural mientras el contenedor
+                  animaba. Al cambiar el ancho frame a frame, los párrafos se
+                  re-wrapeaban, la altura del bloque cambiaba y `justify-center`
+                  lo re-centraba en cada recálculo → el texto "caía de a pasos".
+                  Con `w-[620px] shrink-0` el layout interno es fijo desde el
+                  primer frame (queda recortado por el `overflow-hidden` del
+                  padre hasta que la tarjeta se abre), así que ya no hay reflow y
+                  la aparición es solo un fade + slide continuo.
+                  El `delay` va únicamente en `group-hover:` para que al salir el
+                  texto se desvanezca de inmediato en vez de quedar colgado
+                  200ms mientras la tarjeta ya se está cerrando. */}
+              <div className="hidden w-[620px] shrink-0 translate-x-6 flex-col justify-center gap-7 px-14 py-12 opacity-0 transition-[opacity,transform] delay-0 duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-0 group-hover:opacity-100 group-hover:delay-150 lg:flex">
                 <header className="relative">
                   <span className="absolute -left-6 top-0 h-full w-1.5 rounded-full bg-brand-700" />
                   <h3 className="text-4xl font-black leading-[1.1] tracking-tight text-brand-700">

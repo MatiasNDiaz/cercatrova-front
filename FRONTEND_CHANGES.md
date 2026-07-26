@@ -1393,3 +1393,142 @@ LoginForm), **`/privacidad`** y **`/terminos`** (links en el footer). Los tres d
   (23/23). Backend: `tsc --noEmit` limpio; los 3 bugs/features verificados end-to-end contra
   el backend real (201 create, 200 photo, 200 delete, sorts correctos). El dato de prueba
   creado se borró.
+
+---
+
+# PARTE 5 — Pulido de `/properties` + fix de animación del Agente
+
+> Sesión de continuación: buena parte de los bloques 1-4 del pedido ya estaba implementada
+> de sesiones anteriores (banner sacado, layout de 2 filas, modal con título verde centrado,
+> bloqueo de scroll del body, grilla de 2 columnas). Lo que sigue es **solo lo que faltaba o
+> estaba mal**, verificado archivo por archivo contra el código real.
+
+## Bloque 1-3 — Cabecera de búsqueda: lo que ya estaba OK
+
+Verificado, **sin cambios necesarios**:
+- **§1 Banner de fondo:** ya no existe. La sección hero usa `bg-brand-50` (verde muy suave,
+  el mismo de otras secciones de la Landing), elegido sobre blanco a propósito porque el
+  panel de filtros y sus controles son blancos y sobre blanco no habría contraste.
+- **§2 Layout:** `CatalogFilterBar` ya tiene búsqueda ancho completo en la fila 1 y
+  operación + 3 órdenes + "Más filtros" en la fila 2. Ya no hay fondo verde plano: el
+  contenedor es blanco con sombra marcada.
+  > ⚠️ La entrada del **Bloque UI-FILTROS** de la Parte 4 describe el orden inverso
+  > (fila 1 = controles, fila 2 = búsqueda). Quedó desactualizada — manda esta.
+- **§3 Estilo de controles:** todos comparten `h-12 rounded-xl`, borde `ink-200`, foco
+  `brand-700` + ring, y tokens `brand-*`/`ink-*` sin hex hardcodeado.
+
+### Cambio aplicado — fondo de la sección de resultados
+**Archivo:** `src/app/(public)/properties/Propertiescatalog.tsx`
+- **Problema:** la sección de resultados usaba `bg-gray-200`, un gris de la escala **nativa
+  de Tailwind** — frío y fuera de la paleta (los neutros de la marca son `ink`/`surface`,
+  con un dejo verde). El conjunto se veía apagado.
+- **Solución:** `bg-surface-alt` (`#e5e7e5`), token del sistema de diseño.
+
+## Bloque 4 — Modal "Más filtros": apariencia y estabilidad del botón
+
+**Archivo:** `src/modules/properties/components/FiltersModal.tsx`
+
+Ya estaba bien: título "Filtrá tu búsqueda" centrado en verde de marca, bloqueo del scroll
+del body (con compensación del ancho de scrollbar para que la página no salte), un solo
+contenedor scrolleable, sombra marcada, grilla de 2 columnas. Lo que se corrigió:
+
+- **Botón "Ver X resultados" — el ancho ya no cambia con el número.** Tenía `min-w-50`
+  (200px), insuficiente: *"Ver 1000 resultados"* mide ~228px, así que el botón **sí** se
+  agrandaba y movía el footer. Ahora es **ancho fijo** `sm:w-68` (17rem = 272px) +
+  `tabular-nums` (dígitos monoespaciados) + `whitespace-nowrap`: cubre el texto más largo
+  esperable y solo cambia el número, nunca la caja.
+- **Botón "Limpiar filtros" — también estabilizado.** Se le sacó el contador entre
+  paréntesis del label (`Limpiar filtros (3)`), que lo hacía cambiar de ancho y empujar al
+  botón de al lado. El estado se comunica con el `disabled`, no con el texto.
+- **Secciones agrupadas en tarjetas.** Cada `FilterGroup` (Ubicación / Tipo y Ambientes /
+  Presupuesto y Superficie / Adicionales) va dentro de `rounded-2xl border border-ink-100
+  bg-ink-50/60 p-5`. Antes eran 4 bloques de inputs sueltos sin separación visual; ahora se
+  leen como secciones y los controles blancos ganan contraste contra el fondo claro.
+- **Header con el lenguaje de la Landing.** Se agregó el eyebrow en pastilla sólida
+  `brand-700` (mismo patrón que `SectionHeading`) + fondo `bg-linear-to-b from-brand-50/70`.
+- **Botón de cerrar neutro.** Era un círculo rojo sólido permanente que competía con el
+  título y era lo primero que saltaba a la vista al abrir. Ahora es neutro
+  (`bg-white border-ink-200 text-ink-400`) y recién se pone rojo en hover.
+- **Fila huérfana arreglada en "Presupuesto y superficie".** El orden dejaba
+  `[Antigüedad | M² mín.]` en la misma fila (dos cosas sin relación) y una celda vacía al
+  final. Ahora van por pares semánticos: precio mín/máx, m² mín/máx, y antigüedad sola
+  ocupando la fila entera (`col-span-2`).
+- **Footer** con fondo `bg-ink-50/70` para que se lea como barra separada del contenido.
+
+## Bloque 5 — Verificación funcional de los filtros
+
+Revisado handler por handler contra `usePropertyFilters` (la URL es la única fuente de
+verdad; no hay estado de filtros duplicado en Context ni `localStorage`).
+
+**Conectados y funcionando** (sin cambios): toggle Venta/Alquiler; los 3 selects de orden
+(comparten un único `sortBy`/`order` excluyente); búsqueda de texto libre (debounce 600ms,
+se resincroniza si la URL cambia desde afuera); y en el modal, ubicación ×3, tipo de
+propiedad (desde `GET /property-types`, ya no IDs hardcodeados), habitaciones, baños,
+precio mín/máx, m² mín/máx, antigüedad máx. y los 3 checkboxes de adicionales — todos
+pasan por el borrador local y se commitean juntos en "Aplicar".
+
+### Bug encontrado y corregido — "Limpiar filtros" quedaba deshabilitado
+- **Problema:** `disabled={activeCount === 0}` miraba **solo el borrador del modal**. Si el
+  usuario llegaba desde el navbar a `/properties?operationType=venta`, o había escrito en el
+  buscador, o elegido un orden, el borrador estaba vacío → botón deshabilitado → **no había
+  forma de volver a "todas las propiedades" desde el modal**.
+- **Solución:** se agregó `hasUrlFilters` (cualquier filtro vigente en la URL excepto
+  `page`/`limit`) y el botón se habilita con `activeCount > 0 || hasUrlFilters`.
+  `handleClear` ya llamaba a `clearFilters()`, que resetea la URL entera a
+  `?page=1&limit=12` — o sea que sí arrastra `operationType`, `search` y el orden.
+
+### Bug encontrado y corregido — quitar un filtro no reseteaba la página
+- **Problema:** `setFilters` solo resetea a página 1 cuando el filtro que cambia tiene un
+  valor real. Al **desactivar** uno (valor `undefined`) no lo hacía, así que si estabas en la
+  página 5 y sacabas un filtro, quedabas parado en una página que ya no existía → grilla
+  vacía sin explicación.
+- **Solución:** `page: 1` explícito en `toggleOperation`, en `setSort` y al quitar un chip.
+
+## Bloque 5b — Chips de filtros activos (nuevo)
+
+**Archivo:** `src/modules/properties/components/CatalogFilterBar.tsx`
+
+Responde al pedido de que *"si desde la navbar ponemos ventas/alquileres se muestre en los
+resultados de filtros"* y de que *"limpiar filtros cambie la URL a mostrar todas"*.
+
+- **El problema real:** los links del navbar (`/properties?operationType=venta`,
+  `?typeOfPropertyId=5`) **sí** filtraban correctamente — el server component los lee de
+  `searchParams` y el toggle refleja el estado. Pero salvo el toggle de operación, el resto
+  (ej. "Terrenos") no tenía **ninguna señal visible**: el catálogo mostraba menos propiedades
+  sin decir por qué.
+- **Solución:** una tercera fila que aparece solo si hay filtros activos, con un chip por
+  filtro vigente (venga del modal, del toggle o de un link del navbar). Cada chip muestra su
+  valor legible — `Venta`, la localidad, el nombre real del tipo de propiedad (se trae
+  `GET /property-types` para no mostrar `Tipo #5`), `Desde $80.000`, `Hasta 120 m²`,
+  `Cochera`… — y se puede quitar de a uno con su ✕.
+- **"Limpiar todo"** al final de la fila llama a `clearFilters()` → `?page=1&limit=12`, o
+  sea todas las propiedades, sin necesidad de abrir el modal.
+- Los labels de `rooms`/`bathrooms` van **sin "+"** (`3 ambientes`, no `3+ ambientes`):
+  en el backend son coincidencia **exacta**, no un mínimo.
+
+## Bloque 6 — Fix del "cabeceo escalonado" del texto del Agente
+
+**Archivo:** `src/modules/landing/components/Nosotros.tsx`
+
+- **Causa real (no era la transición):** el panel de biografía era `min-w-[620px]` **sin
+  ancho propio**. Como flex item arrancaba comprimido (la tarjeta mide 450px) y se iba
+  ensanchando hasta su ancho natural mientras el contenedor animaba a 1100px. Al cambiar de
+  ancho frame a frame, los párrafos **se re-wrapeaban**, la altura del bloque cambiaba, y el
+  `justify-center` lo **re-centraba en cada recálculo** → de ahí la sensación de que el texto
+  "caía de a pasos". Suavizar el easing no lo habría arreglado: era reflow de layout, no la
+  curva de animación.
+- **Solución:** `w-[620px] shrink-0` — ancho fijo desde el primer frame (queda recortado por
+  el `overflow-hidden` del padre hasta que la tarjeta se abre). Sin reflow, sin re-centrado.
+- **Aparición ahora es fade + slide sincronizado:** `translate-x-6 → translate-x-0` junto con
+  `opacity-0 → 100`, en una sola `transition-[opacity,transform]` de 500ms con la **misma
+  curva** que el ancho de la tarjeta (`cubic-bezier(0.22,1,0.36,1)`).
+- **Delay solo al entrar:** `delay-0` en base + `group-hover:delay-150`. Antes el `delay-200`
+  aplicaba en ambas direcciones, así que al sacar el cursor el texto quedaba colgado 200ms
+  mientras la tarjeta ya se estaba cerrando.
+- **El efecto de hover se conserva intacto** (era el pedido) — la tarjeta angosta que se
+  expande y revela la bio sigue igual.
+- **Bonus:** el ancho expandido pasó de `max-w-[1100px]` a `max-w-[1000px]` = 380 (foto en
+  hover) + 620 (bio) exactos. Antes sobraban 100px de blanco muerto a la derecha.
+
+- **Estado:** ✅ `npm run build` OK (exit 0, 23/23 rutas), sin errores ni warnings nuevos en
+  ninguno de los 4 archivos tocados.

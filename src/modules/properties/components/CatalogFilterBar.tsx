@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SlidersHorizontal, ChevronDown, ArrowUpNarrowWide, Clock, Star, Check } from 'lucide-react';
+import { SlidersHorizontal, ChevronDown, ArrowUpNarrowWide, Clock, Star, Check, X, Trash2 } from 'lucide-react';
 import { usePropertyFilters } from '@/modules/properties/hooks/usePropertyFilters';
 import { PropertyFilters } from '@/modules/properties/interfaces/property-filters.interface';
 import { OperationType } from '@/modules/properties/interfaces/operation-type';
 import { PropertySearchBar } from './PropertySearchBar';
+import api from '@/modules/shared/lib/axios';
 
 /**
  * Cabecera de búsqueda/filtros del catálogo.
@@ -37,17 +38,63 @@ type SortField = NonNullable<PropertyFilters['sortBy']>;
 const CONTROL = 'h-12 rounded-xl';
 
 export function CatalogFilterBar({ onOpenFilters, activeFiltersCount }: CatalogFilterBarProps) {
-  const { filters, setFilters } = usePropertyFilters();
+  const { filters, setFilters, clearFilters } = usePropertyFilters();
 
+  // Nombres de los tipos de propiedad, solo para poder etiquetar el chip como
+  // "Casa" en vez de "Tipo #1". Si el fetch falla, el chip cae al genérico.
+  const [propertyTypes, setPropertyTypes] = useState<{ id: number; name: string }[]>([]);
+  useEffect(() => {
+    api.get('/property-types').then((r) => setPropertyTypes(r.data || [])).catch(() => {});
+  }, []);
+
+  // ── Chips de filtros activos ──────────────────────────────────────────────
+  // Hacen VISIBLE lo que está filtrando la búsqueda, venga de donde venga: del
+  // modal, del toggle de acá arriba, o de un link del navbar
+  // (`/properties?operationType=venta`). Antes, al entrar desde "Venta" del
+  // navbar, el catálogo mostraba resultados filtrados sin ninguna señal de por
+  // qué faltaban propiedades. Cada chip se puede quitar de a uno, y "Limpiar
+  // todo" resetea la URL entera a `?page=1&limit=12` (= todas las propiedades).
+  const chips = useMemo(() => {
+    const out: { key: keyof PropertyFilters; label: string }[] = [];
+    const money = (n: number) => `$${n.toLocaleString('es-AR')}`;
+    const push = (key: keyof PropertyFilters, label: string) => out.push({ key, label });
+
+    if (filters.operationType) push('operationType', filters.operationType === 'venta' ? 'Venta' : 'Alquiler');
+    if (filters.search) push('search', `“${filters.search}”`);
+    if (filters.localidad) push('localidad', filters.localidad);
+    if (filters.zone) push('zone', filters.zone);
+    if (filters.barrio) push('barrio', filters.barrio);
+    if (filters.typeOfPropertyId) {
+      const name = propertyTypes.find((t) => t.id === filters.typeOfPropertyId)?.name;
+      push('typeOfPropertyId', name ?? 'Tipo de propiedad');
+    }
+    // Sin "+": `rooms`/`bathrooms` son coincidencia EXACTA en el backend
+    // (ver "Números exactos e IDs" en `usePropertyFilters`), no un mínimo.
+    if (filters.rooms) push('rooms', `${filters.rooms} ${filters.rooms === 1 ? 'ambiente' : 'ambientes'}`);
+    if (filters.bathrooms) push('bathrooms', `${filters.bathrooms} ${filters.bathrooms === 1 ? 'baño' : 'baños'}`);
+    if (filters.minPrice) push('minPrice', `Desde ${money(filters.minPrice)}`);
+    if (filters.maxPrice) push('maxPrice', `Hasta ${money(filters.maxPrice)}`);
+    if (filters.minM2) push('minM2', `Desde ${filters.minM2} m²`);
+    if (filters.maxM2) push('maxM2', `Hasta ${filters.maxM2} m²`);
+    if (filters.maxAntiquity) push('maxAntiquity', `Hasta ${filters.maxAntiquity} años`);
+    if (filters.garage) push('garage', 'Cochera');
+    if (filters.patio) push('patio', 'Patio');
+    if (filters.property_deed) push('property_deed', 'Escritura');
+
+    return out;
+  }, [filters, propertyTypes]);
+
+  // `page: 1` en ambos: al DESACTIVAR (valor `undefined`) `setFilters` no resetea
+  // la página por sí solo, y quedabas en una página inexistente del set nuevo.
   const toggleOperation = (op: OperationType) => {
-    setFilters({ operationType: filters.operationType === op ? undefined : op });
+    setFilters({ operationType: filters.operationType === op ? undefined : op, page: 1 });
   };
 
   // Un solo estado de orden: al elegir en un select se fija ese campo+dirección
   // (y los demás quedan en su placeholder automáticamente).
   const setSort = (field: SortField, order: '' | 'ASC' | 'DESC') => {
-    if (!order) setFilters({ sortBy: undefined, order: undefined });
-    else setFilters({ sortBy: field, order });
+    if (!order) setFilters({ sortBy: undefined, order: undefined, page: 1 });
+    else setFilters({ sortBy: field, order, page: 1 });
   };
 
   const valueFor = (field: SortField) => (filters.sortBy === field ? filters.order ?? '' : '');
@@ -136,6 +183,56 @@ export function CatalogFilterBar({ onOpenFilters, activeFiltersCount }: CatalogF
           )}
         </button>
       </div>
+
+      {/* ── FILA 3 — chips de filtros activos (solo si hay alguno) ── */}
+      <AnimatePresence initial={false}>
+        {chips.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-ink-100 pt-4">
+              <span className="mr-1 text-xs font-bold tracking-wide text-ink-400 uppercase">
+                Filtros activos
+              </span>
+
+              {chips.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  /* `page: 1` explícito: `setFilters` solo resetea la página
+                     cuando el filtro que cambia tiene un valor real, así que al
+                     QUITAR uno (valor `undefined`) no lo hacía y podías quedar
+                     parado en una página que ya no existe → grilla vacía. */
+                  onClick={() => setFilters({ [key]: undefined, page: 1 } as Partial<PropertyFilters>)}
+                  aria-label={`Quitar filtro ${label}`}
+                  className="group flex cursor-pointer items-center gap-1.5 rounded-full border border-brand-700/25 bg-brand-50 py-1.5 pr-2 pl-3.5 text-xs font-bold text-brand-700 transition-all duration-200 hover:border-brand-700/50 hover:bg-brand-100"
+                >
+                  {label}
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand-700/10 text-brand-700 transition-colors group-hover:bg-brand-700 group-hover:text-white">
+                    <X size={10} strokeWidth={3} />
+                  </span>
+                </button>
+              ))}
+
+              {/* Resetea la URL completa a `?page=1&limit=12` → todas las
+                  propiedades, sin importar si los filtros venían del modal, del
+                  toggle o de un link del navbar. */}
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="ml-auto flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-ink-400 transition-colors duration-200 hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash2 size={13} />
+                Limpiar todo
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
