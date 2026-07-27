@@ -9,6 +9,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, GraduationCap, LayoutDashboard, 
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import { Role } from '@/modules/shared/types/api';
 import { CtaButton } from './CtaButton';
+import LinktreeBand from './LinktreeBand';
 
 import 'swiper/css';
 import 'swiper/css/effect-fade';
@@ -36,32 +37,47 @@ import 'swiper/css/pagination';
 const slides = [
   {
     id: 1,
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2400&auto=format&fit=crop',
+    // Familia: es la puerta de entrada de la Landing, así que abre con personas
+    // y no con una fachada vacía.
+    image: 'https://blog.tokkobroker.com/hs-fs/hubfs/shutterstock_2038118741.jpg?width=2750&name=shutterstock_2038118741.jpg',
     title: 'Encontrá el lugar donde empieza tu historia',
     description:
       'Casas y departamentos seleccionados en Córdoba, con el acompañamiento de un martillero matriculado en cada paso.',
   },
   {
     id: 2,
-    // Fachada de departamentos: acompaña el mensaje urbano de Nueva Córdoba.
-    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=2400&auto=format&fit=crop',
+    // Archivo LOCAL de `public/` (no Unsplash): estudiante de espaldas en una
+    // calle a contraluz. Estaba sin usar en el proyecto.
+    image: '/buenpastor.png',
     title: 'Viví donde todo sucede',
     description:
       'Nueva Córdoba te conecta con shoppings, gastronomía, universidades y espacios verdes en minutos.',
   },
   {
     id: 3,
-    image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=2400&auto=format&fit=crop',
+    // Casa con jardín cuidado y luz de día plena (nada de atardecer).
+    image: 'https://img.magnific.com/foto-gratis/adorables-padres-hijos-casa_23-2148392255.jpg?t=st=1785150370~exp=1785153970~hmac=d728151a74f76f1c00a805e10bba8b0e22b543b8853e6faeb67aea053b1cc320&w=1480',
     title: 'Espacios para crecer en familia',
     description:
       'Departamentos amplios y funcionales en las ubicaciones más estratégicas de la ciudad.',
   },
   {
     id: 4,
+    // Casa moderna con galería y muebles de exterior: las "señales de vida"
+    // del brief, con luz de día.
     image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2400&auto=format&fit=crop',
     title: 'Invertí con visión de futuro',
     description:
       'Propiedades con alta demanda y excelente proyección de valor en Córdoba capital.',
+  },
+  {
+    id: 5,
+    // Slide NUEVO. Edificios de departamentos con bicicletas abajo: es lo más
+    // cercano a una calle de Nueva Córdoba que hay en stock (ver nota al pie).
+    image: '/estudiante.jpg',
+    title: 'Pensamos en los estudiantes',
+    description:
+      'Departamentos a minutos de las facultades, listos para mudarte. Vos ocupate de cursar, del resto nos ocupamos nosotros.',
   },
 ];
 
@@ -113,7 +129,7 @@ export const PropertySlider = () => {
                 {/* Doble capa: oscurece parejo y refuerza abajo, para que el
                     texto blanco tenga contraste sobre cualquier foto. */}
                 <div className="absolute inset-0 bg-ink-950/25" />
-                <div className="absolute inset-0 bg-linear-to-t from-ink-950/85 via-ink-950/25 to-ink-950/45" />
+                <div className="absolute inset-0 bg-linear-to-t from-ink-950/15 via-ink-950/25 to-ink-950/5" />
               </div>
             </SwiperSlide>
           ))}
@@ -214,6 +230,9 @@ export const PropertySlider = () => {
         `}</style>
       </section>
 
+      {/* Entre el Hero y la franja de estudiantes, tal como se pidió. */}
+      <LinktreeBand />
+
       <EstudiantesBand />
     </>
   );
@@ -233,7 +252,7 @@ export const PropertySlider = () => {
  */
 function EstudiantesBand() {
   return (
-    <section className="mt-14 surface-brand-deep relative overflow-hidden py-16 md:py-20">
+    <section className="surface-brand-deep relative overflow-hidden py-16 md:py-20">
       <div className="relative z-10 mx-auto flex max-w-7xl flex-col items-center gap-10 px-6 lg:flex-row lg:gap-16">
         {/* Imagen */}
         <div className="relative h-56 w-full shrink-0 overflow-hidden rounded-2xl shadow-[0_20px_50px_-20px_rgba(0,0,0,0.7)] sm:h-64 lg:h-72 lg:w-[42%]">
@@ -258,8 +277,8 @@ function EstudiantesBand() {
           </h2>
 
           <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/80 lg:mx-0 md:text-lg">
-            Consultanos por nuestros departamentos cerca de la Ciudad Universitaria:
-            monoambientes y unidades compartidas, listas para mudarte y a minutos de las facultades.
+            Consultanos por nuestros alquileres de departamentos cerca de la Ciudad
+            Universitaria, listos para mudarte y a minutos de las distintas facultades.
           </p>
 
           <div className="mt-8 flex justify-center lg:justify-start">

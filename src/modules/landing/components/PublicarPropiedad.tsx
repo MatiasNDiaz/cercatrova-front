@@ -33,7 +33,7 @@ export default function PublicarPropiedad() {
               <div className="relative h-[500px] overflow-hidden rounded-[36px] shadow-[0_35px_80px_-30px_rgba(0,0,0,.28)]">
                 <Image
                   src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=1600&auto=format&fit=crop"
-                  alt="Publicar propiedad"
+                  alt="Dos personas cerrando un acuerdo para publicar una propiedad"
                   fill
                   className="object-cover"
                   sizes="(max-width:1024px)100vw,50vw"
@@ -70,9 +70,14 @@ export default function PublicarPropiedad() {
           <Reveal delay={0.1}>
             <div className="max-w-xl">
 
+              {/* "Publicamos", no "Publicá": el mensaje es que la inmobiliaria
+                  se encarga del trabajo, no que el propietario haga el trámite.
+                  El párrafo de abajo se reescribió entero por lo mismo — decía
+                  "Publicala en pocos minutos", que devolvía la tarea al dueño y
+                  contradecía el título nuevo. */}
               <h2 className="text-5xl font-bold leading-[1.08] tracking-tight text-ink-900">
 
-                Publicá tu propiedad para
+                Publicamos tu propiedad para
 
                 <br />
 
@@ -83,9 +88,9 @@ export default function PublicarPropiedad() {
               </h2>
 
               <p className="mt-8 text-xl leading-relaxed text-ink-600">
-                Publicala en pocos minutos. Nosotros revisamos el aviso y lo
-                mostramos a compradores e inquilinos reales para aumentar sus
-                posibilidades de venta o alquiler.
+                Contanos qué querés vender o alquilar y nos ocupamos del resto:
+                armamos el aviso, lo revisamos y lo mostramos a compradores e
+                inquilinos reales para aumentar tus posibilidades.
               </p>
 
               <div className="mt-10">
@@ -99,7 +104,7 @@ export default function PublicarPropiedad() {
                     />
                   }
                 >
-                  Publicar mi propiedad
+                  Quiero publicar mi propiedad
                 </CtaButton>
               </div>
 

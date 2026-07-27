@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Key, BadgeDollarSign, Home, FileText, Gavel, MapPin, Calculator,
+  Key, BadgeDollarSign, FileText, Gavel, MapPin, Calculator,
   Plus, Minus, ChevronDown,
 } from 'lucide-react';
 import { SectionHeading } from './SectionHeading';
@@ -22,6 +22,10 @@ import { Reveal } from './Reveal';
  *
  * ⚠️ Corrección de contenido pedida: la ley de martilleros y corredores de
  * Córdoba es la **7191**, no la 9445 (que figuraba en 2 respuestas).
+ *
+ * ⚠️ Se eliminó la pregunta "¿Es seguro invertir en pozo o preventa hoy?" a
+ * pedido. Con eso quedan 6 preguntas: `INITIAL_VISIBLE = 4` sigue teniendo
+ * sentido (se muestran 4 y "Ver más" despliega las 2 restantes).
  */
 
 const faqData = [
@@ -48,12 +52,6 @@ const faqData = [
     answer:
       'Necesitás: escritura original, plano de mensura actualizado, DNI de los titulares y libre deuda de impuestos (Rentas y Municipalidad).',
     Icon: FileText,
-  },
-  {
-    question: '¿Es seguro invertir en pozo o preventa hoy?',
-    answer:
-      'Sí, con desarrollistas de trayectoria. En Córdoba permite dolarizar ahorros y obtener una capitalización de entre el 20% y 30%. Filtramos solo proyectos con respaldo jurídico.',
-    Icon: Home,
   },
   {
     question: '¿Ustedes gestionan el cobro de alquileres?',

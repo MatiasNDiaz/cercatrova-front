@@ -14,16 +14,24 @@ import 'swiper/css/pagination';
  * Testimonios (Bloque LANDING §4, rediseñado en §6).
  *
  * El carrusel circular 3D (con `@keyframes rotating` y ~80 líneas de CSS
- * inyectado) ya se había migrado a Swiper coverflow. En §6 se rediseñó la
- * tarjeta y se sumó verde a la sección:
- *  - Fondo `brand-50` (verde muy claro) en vez de blanco.
- *  - Cada tarjeta lleva una barra superior con el gradiente de marca, comilla
- *    verde, anillo verde en el avatar y chip verde con el tipo de operación.
- *  - Info nueva por testimonio: **operación** (Compra / Venta / Alquiler) y
- *    **zona**, para que el testimonio sea creíble y no un texto suelto.
- *  - Fotos: retratos reales de Unsplash (antes `i.pravatar.cc`). Las 10 URLs
- *    se verificaron una por una; `images.unsplash.com` ya estaba en
- *    `remotePatterns`, así que se usa `next/image`.
+ * inyectado) ya se había migrado a Swiper coverflow. Base que se mantiene:
+ * fondo `brand-50`, operación + zona por testimonio, y retratos de Unsplash
+ * vía `next/image` (`images.unsplash.com` ya está en `remotePatterns`).
+ *
+ * Rediseño de la tanda "Conocenos" — tarjeta más premium y menos amontonada:
+ *  - **Separación real:** `spaceBetween` 24 → 44 y `depth`/`modifier` del
+ *    coverflow bajados (130/2 → 90/1.5). Antes las laterales se montaban sobre
+ *    la central.
+ *  - **Jerarquía invertida en la cabecera:** la valoración encabeza la tarjeta
+ *    (antes quedaba perdida entre el texto y el pie), la operación va enfrente,
+ *    el comentario crece a 17px como protagonista y la identidad cierra abajo.
+ *  - **Se fue la barra de gradiente superior** (se leía como banner y
+ *    envejecía la tarjeta): ahora la marca la da una comilla gigante al ~5% de
+ *    opacidad, en el mismo patrón de marca de agua que usan `Confianza.tsx` y
+ *    la tarjeta de la frase de `Nosotros.tsx`.
+ *  - **Foco en la tarjeta central:** las laterales quedan al 50% de opacidad y
+ *    `scale(0.94)`; hover con elevación y sombra progresiva. Todo respeta
+ *    `prefers-reduced-motion`.
  *
  * Los 10 testimonios siguen hardcodeados (no vienen del backend).
  */
@@ -122,6 +130,10 @@ export default function Resenas() {
         />
       </div>
 
+      {/* `depth`/`modifier` bajados y `spaceBetween` casi al doble (24 → 44): con
+          los valores anteriores las tarjetas laterales se montaban sobre la
+          central y la fila se veía amontonada. Ahora respiran y el coverflow
+          aporta profundidad sin encimar nada. */}
       <Swiper
         modules={[Autoplay, EffectCoverflow, Pagination]}
         effect="coverflow"
@@ -129,59 +141,70 @@ export default function Resenas() {
         centeredSlides
         loop
         slidesPerView="auto"
-        spaceBetween={24}
-        autoplay={{ delay: 3800, disableOnInteraction: false, pauseOnMouseEnter: true }}
-        coverflowEffect={{ rotate: 0, stretch: 0, depth: 130, modifier: 2, slideShadows: false }}
+        spaceBetween={44}
+        autoplay={{ delay: 4200, disableOnInteraction: false, pauseOnMouseEnter: true }}
+        coverflowEffect={{ rotate: 0, stretch: 0, depth: 90, modifier: 1.5, slideShadows: false }}
         pagination={{
           el: '.reviews-dots',
           clickable: true,
           bulletClass: 'review-dot',
           bulletActiveClass: 'review-dot-active',
         }}
-        className="px-6! pb-4!"
+        className="reviews-swiper px-6! pb-2!"
       >
         {reviews.map((review) => (
-          <SwiperSlide key={review.name} className="w-84! py-6 sm:w-96!">
-            <figure className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-brand-100 bg-white p-7 shadow-[0_8px_30px_-12px_rgba(6,57,35,0.18)] transition-shadow duration-300 hover:shadow-[0_22px_45px_-18px_rgba(6,57,35,0.35)]">
-              {/* Barra superior de marca */}
-              <span
+          // `py-12` reserva el espacio vertical donde se dibujan la sombra y la
+          // elevación del hover — sin eso el `overflow-hidden` del Swiper las corta.
+          <SwiperSlide key={review.name} className="w-82.5! py-12 sm:w-95!">
+            <figure className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-ink-100 bg-white p-8 shadow-[0_2px_8px_-2px_rgba(10,12,11,0.06),0_12px_32px_-12px_rgba(6,57,35,0.14)] transition-[transform,box-shadow,border-color] duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1.5 hover:border-brand-700/30 hover:shadow-[0_4px_10px_-2px_rgba(10,12,11,0.06),0_30px_60px_-20px_rgba(6,57,35,0.32)]">
+              {/* Comilla como marca de agua: reemplaza la barra de gradiente
+                  superior, que se leía como un banner y envejecía la tarjeta. */}
+              <Quote
                 aria-hidden
-                className="absolute inset-x-0 top-0 h-1.5"
-                style={{ background: 'var(--gradient-brand)' }}
+                size={130}
+                strokeWidth={1.5}
+                className="pointer-events-none absolute -top-6 -right-6 rotate-12 text-brand-700/5.5 transition-all duration-500 select-none group-hover:-top-4 group-hover:text-brand-700/9"
               />
 
-              <div className="flex items-start justify-between gap-3">
-                <Quote size={28} className="shrink-0 text-brand-300" strokeWidth={2.5} />
-                <span className="rounded-full bg-brand-50 px-3 py-1 text-[10px] font-bold tracking-[0.12em] text-brand-800 uppercase">
+              {/* ── Cabecera: valoración a la izquierda, operación a la derecha ──
+                  Las estrellas suben al tope (antes iban entre el texto y el pie,
+                  perdidas): la valoración es lo primero que se escanea en un
+                  testimonio, así que encabeza la jerarquía. */}
+              <div className="relative flex items-center justify-between gap-3">
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      size={16}
+                      className={i < review.stars ? 'fill-amber-400 text-amber-400' : 'text-ink-200'}
+                    />
+                  ))}
+                </div>
+                <span className="shrink-0 rounded-full border border-brand-100 bg-brand-50 px-3 py-1 text-[10px] font-bold tracking-[0.12em] text-brand-800 uppercase">
                   {review.operacion}
                 </span>
               </div>
 
-              <blockquote className="mt-3 grow text-[15px] leading-relaxed text-ink-600">
+              {/* Comentario: el protagonista. Más grande y con más interlineado
+                  que antes (15px → 17px) para que sea lo que domina la tarjeta. */}
+              <blockquote className="relative mt-6 grow text-[17px] leading-[1.65] font-medium text-ink-700">
                 &ldquo;{review.text}&rdquo;
               </blockquote>
 
-              <div className="mt-5 flex gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    size={15}
-                    className={i < review.stars ? 'fill-amber-400 text-amber-400' : 'text-ink-200'}
-                  />
-                ))}
-              </div>
-
-              <figcaption className="mt-5 flex items-center gap-3.5 border-t border-brand-100 pt-5">
+              {/* Pie: identidad. Separador sutil y avatar con anillo de marca. */}
+              <figcaption className="relative mt-7 flex items-center gap-4 border-t border-ink-100 pt-6">
                 <Image
                   src={review.photo}
                   alt={review.name}
-                  width={48}
-                  height={48}
-                  className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-brand-600 ring-offset-2"
+                  width={52}
+                  height={52}
+                  className="h-13 w-13 shrink-0 rounded-full object-cover ring-2 ring-brand-600/70 ring-offset-2 transition-all duration-400 group-hover:ring-brand-700"
                 />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-ink-900">{review.name}</p>
-                  <p className="truncate text-xs font-medium text-brand-700">{review.zona}</p>
+                  <p className="truncate text-[15px] font-bold tracking-tight text-ink-900">
+                    {review.name}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs font-medium text-ink-500">{review.zona}</p>
                 </div>
               </figcaption>
             </figure>
@@ -189,9 +212,34 @@ export default function Resenas() {
         ))}
       </Swiper>
 
-      <div className="reviews-dots mt-6 flex justify-center gap-2" />
+      <div className="reviews-dots mt-4 flex justify-center gap-2" />
 
       <style>{`
+        /* TODAS las tarjetas con la misma altura (la de la más larga).
+           Swiper le pone height:100% a cada slide, así que cada una se ajustaba
+           a su propio contenido y la fila quedaba despareja según el largo del
+           testimonio. Con height:auto + align-items:stretch el flex las estira
+           todas por igual, y el h-full de la figure las llena.
+           (Ojo: nada de backticks en estos comentarios — están dentro de un
+           template literal y lo cortarían.) */
+        .reviews-swiper .swiper-wrapper { align-items: stretch; }
+        .reviews-swiper .swiper-slide { height: auto; }
+
+        /* Foco en la tarjeta central: las laterales quedan atenuadas.
+           Solo opacity. Nada de transform acá: el efecto coverflow escribe su
+           propio transform INLINE en cada slide, y competir con él desde la
+           hoja de estilos no se aplica (gana el inline) y encima ensucia la
+           transición del carrusel. La profundidad ya la da coverflow. */
+        .reviews-swiper .swiper-slide {
+          opacity: 0.45;
+          transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .reviews-swiper .swiper-slide-active { opacity: 1; }
+
+        /* Quien pidió menos movimiento ve todas las tarjetas planas e iguales. */
+        @media (prefers-reduced-motion: reduce) {
+          .reviews-swiper .swiper-slide { opacity: 1; transition: none; }
+        }
         .review-dot {
           display: block;
           width: 8px;

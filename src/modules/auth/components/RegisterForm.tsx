@@ -57,9 +57,12 @@ export function RegisterForm() {
 
   return (
     <AuthShell
-      image="https://images.unsplash.com/photo-1568605114967-8130f3a36994?q=80&w=1600&auto=format&fit=crop"
-      imageAlt="Casa moderna iluminada al atardecer"
-      panelTitle={<>Tu próximo hogar <span className="text-brand-300">empieza acá</span></>}
+      image="https://images.unsplash.com/photo-1580894732444-8ecded7900cd?q=80&w=1600&auto=format&fit=crop"
+      imageAlt="Persona joven sonriendo en un ambiente luminoso"
+      // La protagonista está sobre la derecha de la foto original; centrada, el
+      // recorte alto dejaba media pared vacía y a ella cortada contra el borde.
+      imagePosition="72% center"
+      panelTitle={<>Tu próximo hogar <span className="whitespace-nowrap text-brand-400">empieza acá</span></>}
       panelText="Creá tu cuenta para guardar propiedades favoritas, enviar solicitudes de publicación y recibir avisos cuando entre lo que buscás."
       title="Crear cuenta"
       subtitle="Completá tus datos para comenzar"

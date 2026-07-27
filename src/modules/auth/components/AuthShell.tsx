@@ -9,19 +9,28 @@ import { ArrowLeft } from 'lucide-react';
  * Estructura compartida de las pantallas de auth (Bloque H §2).
  *
  * Mantiene el esquema de 2 columnas que ya existía (imagen a la izquierda,
- * formulario a la derecha), pero rehecho:
- *  - El panel de imagen ahora lleva un overlay verde profundo de la misma
- *    familia que la landing (`brand-950`), con un mensaje encima. Antes era una
- *    foto suelta con 7 círculos decorativos y un `<div></div>` vacío al centro.
+ * formulario a la derecha).
  *  - Se eliminó el `mt-15` que tenía RegisterForm para esquivar el navbar: en
  *    estas rutas ya no se renderiza navbar ni footer (ver NavbarSelector /
  *    FooterSelector), así que la pantalla es realmente de alto completo.
  *  - Como no hay navbar, se agrega un link propio "Volver al inicio".
+ *  - **Panel de imagen sin tinte de color** (ver comentario en el JSX): la foto
+ *    se muestra nítida, con un degradado neutro solo abajo para legibilidad, y
+ *    el texto en un bloque amplio alineado a la izquierda. Antes había un
+ *    overlay verde a pantalla completa + logo superpuesto + copy apretado en la
+ *    esquina inferior.
  */
 
 interface AuthShellProps {
   image: string;
   imageAlt: string;
+  /**
+   * Punto focal del recorte (valor de `object-position`, ej. `'70% center'`).
+   * El panel es una columna ALTA y las fotos de stock son apaisadas, así que
+   * `object-cover` recorta a lo ancho: si el sujeto no está centrado en la foto
+   * original, queda pegado al borde o directamente fuera. Default: `'center'`.
+   */
+  imagePosition?: string;
   /** Título grande sobre la imagen. */
   panelTitle: React.ReactNode;
   panelText: string;
@@ -33,6 +42,7 @@ interface AuthShellProps {
 export function AuthShell({
   image,
   imageAlt,
+  imagePosition = 'center',
   panelTitle,
   panelText,
   title,
@@ -42,19 +52,38 @@ export function AuthShell({
   return (
     <div className="flex min-h-screen w-full bg-surface">
 
-      {/* ── PANEL IZQUIERDO — imagen + mensaje ── */}
+      {/* ── PANEL IZQUIERDO — imagen + mensaje ──
+          Rediseño: la foto se ve NÍTIDA y real. Antes llevaba encima un
+          `bg-brand-950/75` (tinte verde a pantalla completa) más un segundo
+          degradado verde: la imagen quedaba teñida y apagada, y el logo
+          superpuesto no aportaba nada. Ahora:
+           - Sin tinte de color. Solo un degradado NEUTRO abajo
+             (`from-black/85`), y únicamente en la mitad inferior, que es donde
+             va el texto — el resto de la foto queda limpia.
+           - Sin logo superpuesto (ya está el link "Volver al inicio" arriba).
+           - El texto es un bloque alineado a la izquierda con aire real
+             (`p-14`, `max-w-xl`), no un párrafo apretado en la esquina. */}
       <div className="relative hidden w-1/2 overflow-hidden lg:block">
-        <Image src={image} alt={imageAlt} fill priority sizes="50vw" className="object-cover" />
+        <Image
+          src={image}
+          alt={imageAlt}
+          fill
+          priority
+          sizes="50vw"
+          className="object-cover"
+          style={{ objectPosition: imagePosition }}
+        />
 
-        {/* Overlay verde profundo: misma familia que las secciones ancla de la
-            landing. Garantiza contraste para el texto blanco de encima. */}
-        <div className="absolute inset-0 bg-brand-950/75" />
-        <div className="absolute inset-0 bg-linear-to-t from-brand-950/90 via-brand-950/30 to-brand-950/60" />
+        {/* Degradado de legibilidad — neutro, solo abajo. */}
+        <div className="absolute inset-x-0 bottom-0 h-3/5 bg-linear-to-t from-black/85 via-black/45 to-transparent" />
+        {/* Velo mínimo y parejo: sostiene el contraste del botón de arriba sin
+            llegar a leerse como un tinte. */}
+        <div className="absolute inset-0 bg-black/10" />
 
-        <div className="absolute inset-0 flex flex-col justify-between p-12">
+        <div className="absolute inset-0 flex flex-col justify-between p-14">
           <Link
             href="/"
-            className="group inline-flex w-fit items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white hover:text-brand-800"
+            className="group inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white hover:text-brand-800"
           >
             <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-0.5" />
             Volver al inicio
@@ -64,19 +93,20 @@ export function AuthShell({
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}
-            className="max-w-md"
+            className="max-w-2xl"
           >
-            <Image
-              src="/LogoInmobiliaria.png"
-              alt="Cerca Trova"
-              width={150}
-              height={60}
-              className="mb-8 h-auto w-36 rounded-xl bg-white p-2.5"
+            {/* Filete de marca: aporta el verde sin teñir la foto. */}
+            <span
+              aria-hidden
+              className="mb-7 block h-1.5 w-16 rounded-full"
+              style={{ background: 'var(--gradient-brand)' }}
             />
-            <h2 className="text-4xl font-bold leading-tight tracking-tight text-white">
+            <h2 className="text-[2.75rem] leading-[1.1] font-bold tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
               {panelTitle}
             </h2>
-            <p className="mt-4 text-base leading-relaxed text-white/75">{panelText}</p>
+            <p className="mt-5 max-w-lg text-[17px] leading-relaxed text-white/85 drop-shadow-[0_1px_8px_rgba(0,0,0,0.5)]">
+              {panelText}
+            </p>
           </motion.div>
         </div>
       </div>

@@ -26,6 +26,24 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'img.magnific.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cordobapropiedades.com.ar',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'blog.tokkobroker.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'www.unc.edu.ar',
         port: '',
         pathname: '/**',

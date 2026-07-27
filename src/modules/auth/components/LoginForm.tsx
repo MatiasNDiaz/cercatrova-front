@@ -51,10 +51,10 @@ export function LoginForm() {
 
   return (
     <AuthShell
-      image="https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=1600&auto=format&fit=crop"
-      imageAlt="Llaves de una casa nueva sobre una mesa"
-      panelTitle={<>Bienvenido de nuevo a <span className="text-brand-500">Cerca Trova</span></>}
-      panelText="Accedé a tus favoritos, seguí el estado de tus solicitudes y gestioná tu perfil desde un solo lugar."
+      image="https://images.unsplash.com/photo-1560184897-ae75f418493e?q=80&w=1600&auto=format&fit=crop"
+      imageAlt="Galería de una casa con la puerta de entrada y luz natural de la mañana"
+      panelTitle={<>Bienvenido de nuevo a <span className="whitespace-nowrap text-brand-400">Cerca Trova</span></>}
+      panelText="¿Te gusta estar actualizado sobre las nuevas propiedades y el mercado inmobiliario?"
       title="Iniciar sesión"
       subtitle="Ingresá tus datos para continuar"
     >

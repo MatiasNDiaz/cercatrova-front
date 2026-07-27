@@ -1532,3 +1532,316 @@ resultados de filtros"* y de que *"limpiar filtros cambie la URL a mostrar todas
 
 - **Estado:** ✅ `npm run build` OK (exit 0, 23/23 rutas), sin errores ni warnings nuevos en
   ninguno de los 4 archivos tocados.
+
+---
+
+# PARTE 6 — Rediseño de la sección "Conocenos" (Nosotros + Reseñas)
+
+> **Verificado en el navegador, no solo compilado.** Se levantó el dev server y se
+> manejó Chrome headless por CDP (script propio con `WebSocket` nativo de Node 22 —
+> **no** se agregó playwright/puppeteer ni nada al `package.json`), capturando la
+> tarjeta del agente en reposo y en hover, y el carrusel de reseñas, a 1600px y a
+> 390px. Dos defectos de esta tanda se encontraron **mirando las capturas**, no
+> leyendo el código — están marcados abajo.
+
+**Archivos:** `src/modules/landing/components/Nosotros.tsx`, `.../Reseñas.tsx`.
+
+## Bloque 1 — Tarjeta principal y tarjeta de la frase
+
+- **Más aire, que era el pedido central.** La tarjeta pasó de `h-[550px]` a
+  `lg:h-[660px]`; expandida, de 1000px a **1180px**. El panel de biografía pasó de
+  620px a **760px** con `lg:px-14 lg:py-12`. La geometría cierra exacta:
+  420 (foto en hover) + 760 (bio) = 1180, sin blanco muerto a la derecha.
+- **El hover se conserva y se refuerza.** Se mantiene la expansión + fade/slide
+  sincronizado de la Parte 5, y se le sumó una sombra que se intensifica al abrir
+  (`lg:hover:shadow-[0_34px_90px_-28px_...]`).
+- **⚠️ NO volver a `min-w` en el panel de bio.** El comentario extenso en el archivo
+  explica por qué: con `min-w` el panel arranca comprimido y se re-wrapea frame a
+  frame mientras la tarjeta anima → el texto "cae de a pasos". `lg:w-[760px]
+  lg:shrink-0` es el fix, no un detalle de estilo.
+- **Marca de agua de rey de ajedrez** en la tarjeta de la frase: SVG inline
+  (`ChessKing`), porque `lucide-react` no trae piezas de ajedrez. Silueta sólida a
+  propósito — al 7% de opacidad un ícono de trazo fino no se vería.
+  - **Defecto encontrado en la captura:** en la primera versión iba sangrada contra
+    la esquina (`-right-3 -bottom-5 h-44`) y el `overflow-hidden` le comía la base:
+    se leía como una mancha, no como un rey. Corregido a `h-30` centrada en
+    vertical y **completa** dentro de la tarjeta, con `pr-36` en la cita para que
+    nunca se cruce con el texto.
+- La cita ganó padding (`py-9 pl-9`), fondo en degradé `brand-50 → white`, barra de
+  acento con `--gradient-brand` y una firma "EDGAR DÍAZ" que antes no tenía.
+
+## Bloque 2 — Las 4 tarjetas inferiores
+
+- **Eran píldoras, no tarjetas.** Estaban en `flex flex-wrap gap-3`, así que cada
+  una medía distinto según el largo del texto ("Empatía" vs "Profesionalismo") y
+  nunca quedaban alineadas ni parejas.
+- Ahora son una **grilla** (`grid-cols-2` en mobile, `lg:grid-cols-4`): mismo ancho,
+  misma altura, misma separación. Cada una con ícono en pastilla + label.
+- **Hover limpio:** `-translate-y-0.5` + sombra progresiva + borde e ícono que pasan
+  a verde. `transform`/`box-shadow`/`color` no reflowean, así que no hay saltos de
+  layout, ni cortes, ni overflow.
+- **Bonus:** "Cercania" → "**Cercanía**" (faltaba la tilde) y pasó a usar el ícono
+  `Handshake`; antes repetía el `ShieldCheck` de "Profesionalismo".
+
+## Bloque 2b — Mobile: la sección dejaba de existir
+
+**Encontrado revisando la captura a 390px.** El panel de bio era `hidden lg:flex` y
+en touch no hay hover: abajo de `lg` la frase, el rey y los 4 atributos eran
+**inaccesibles**. Solo se veía la foto y una pastilla "Conoceme" que no se podía
+activar. Es previo a esta tanda, pero contradice el pedido de que se vea equilibrado
+en responsive.
+
+- Debajo de `lg` la tarjeta ahora es una **columna normal**: foto arriba (`h-[440px]`),
+  biografía abajo, todo desplegado y siempre visible. El efecto de expansión queda
+  como comportamiento **exclusivo de desktop** (`lg:flex-row`, `lg:cursor-pointer`).
+- El nombre sobre la foto pasa a ser visible siempre en mobile
+  (`opacity-100 lg:opacity-0 lg:group-hover:opacity-100`), y la pastilla "Conoceme"
+  se oculta abajo de `lg` (invitaba a una interacción inexistente).
+- El rey se oculta abajo de `sm` (no entra sin comerse el texto) y el `h3` baja a
+  `1.75rem` en mobile.
+
+## Bloque 3 — Reseñas
+
+- **Separación real:** `spaceBetween` 24 → **44**, y el coverflow bajado de
+  `depth:130/modifier:2` a `depth:90/modifier:1.5`. Antes las laterales se montaban
+  sobre la central y la fila se veía amontonada.
+- **Jerarquía rearmada:** la **valoración encabeza** la tarjeta (antes quedaba
+  perdida entre el comentario y el pie), con el chip de operación enfrente; el
+  **comentario** crece a 17px con `leading-[1.65]` como protagonista; la
+  **identidad** cierra abajo, separada por un borde sutil, con el avatar más grande
+  (48 → 52px) y anillo de marca.
+- **Se fue la barra de gradiente superior** (se leía como banner y envejecía la
+  tarjeta). La marca ahora la da una comilla gigante al ~5% de opacidad, el mismo
+  patrón de marca de agua que usan `Confianza.tsx` y la tarjeta de la frase.
+- **Bordes y sombras:** `rounded-2xl` → `rounded-3xl`, borde `ink-100`, sombra en dos
+  capas y hover con `-translate-y-1.5` + sombra profunda + borde verde, todo en
+  400ms con la curva `cubic-bezier(0.22,1,0.36,1)` que ya usa la Landing. `p-7` → `p-8`.
+- **Foco en la central:** las laterales quedan al 45% de opacidad. Respeta
+  `prefers-reduced-motion`.
+- **Defecto encontrado en la captura — alturas desparejas.** Swiper le pone
+  `height:100%` a cada slide, así que cada tarjeta se ajustaba a su propio contenido
+  y la fila quedaba despareja según el largo del testimonio. Corregido con
+  `align-items: stretch` en el wrapper + `height: auto` en los slides, y el `h-full`
+  de la `<figure>` llenando.
+- **Detalle no obvio corregido:** la primera versión también aplicaba
+  `transform: scale()` a los slides desde el CSS. **No sirve y molesta**: el efecto
+  coverflow escribe su propio `transform` **inline** en cada slide, que gana por
+  especificidad, y encima la transición declarada competía con la del carrusel.
+  Quedó solo `opacity`; la profundidad ya la aporta coverflow.
+
+## Trampa que costó un 500 (para la próxima)
+
+El `<style>{\`...\`}</style>` de `Reseñas.tsx` es un **template literal**: un backtick
+dentro de un comentario CSS lo corta y tira `Expected '</', got 'height'` → la home
+entera responde **500**. Pasó al escribir `` `height: 100%` `` en un comentario.
+Hay una nota en el archivo para que no se repita. Vale la pena remarcar que
+`npm run build` había pasado **antes** de ese edit: lo agarró levantar la app de
+verdad, no el compilador.
+
+- **Estado:** ✅ `npm run build` exit 0, 23/23 rutas, sin errores ni warnings nuevos
+  en los 2 archivos tocados. Verificado en navegador a 1600×1000 y 390×844:
+  reposo, hover y carrusel, sin cortes, sin overflow y sin saltos de layout.
+
+---
+
+# PARTE 7 — Tanda de contenido e imágenes (auth, Hero, copy, FAQ, Conocenos)
+
+> **Fotos verificadas de verdad, no solo por status 200.** Se bajaron 47 candidatas
+> de Unsplash en 4 tandas, se armó una hoja de contactos HTML con cada una y se
+> miró el render en Chrome headless. Hacía falta: varias devolvían 200 pero el
+> contenido no era el esperado (un oso, un perro, una hamburguesa, unos auriculares).
+> Solo se usaron fotos cuyo contenido se confirmó visualmente.
+
+## Bloque 1 — Panel de imagen de Login / Register
+
+**Archivos:** `AuthShell.tsx`, `LoginForm.tsx`, `RegisterForm.tsx`.
+
+- **Se fue el tinte verde.** Había DOS capas encima de la foto: `bg-brand-950/75`
+  a pantalla completa más un degradado verde de arriba a abajo. La imagen quedaba
+  teñida y apagada. Ahora la foto se ve nítida: solo un **degradado neutro**
+  (`from-black/85`) en el 60% inferior —donde va el texto— más un velo parejo de
+  `black/10` que sostiene el contraste del botón de arriba.
+- **Se fue el logo superpuesto** (`LogoInmobiliaria.png` sobre la foto). No
+  aportaba nada y el link "Volver al inicio" ya identifica la salida.
+- **Texto reubicado.** Bloque alineado a la izquierda con aire real (`p-14`,
+  `max-w-2xl`), título a `2.75rem` y un filete con `--gradient-brand` arriba —
+  que es lo que aporta el verde ahora que la foto no está teñida. Antes el copy
+  se apretaba en la esquina inferior.
+- **Fix de tipografía encontrado en la captura:** el título partía feo
+  (`Bienvenido de nuevo a Cerca` / `Trova`, y `Tu próximo hogar empieza` / `acá`).
+  Se le puso `whitespace-nowrap` al span resaltado y se ensanchó el bloque a
+  `max-w-2xl`, así el corte cae entre frases y no dentro del nombre de marca.
+  De paso el resalte de Register pasó de `brand-300` a `brand-400`, igual que
+  Login, para unificar.
+- **Fotos nuevas, con personas** (antes eran dos fachadas vacías):
+  - Login → `photo-1543269865-cbf427effbad` — tres personas conversando alrededor
+    de una mesa. Acompaña el copy nuevo sobre estar al día con el mercado.
+  - Register → `photo-1556742049-0cfed4f6a45d` — una pareja en un espacio luminoso.
+  - Los `imageAlt` se reescribieron: describían las fotos viejas ("Llaves de una
+    casa nueva sobre una mesa", "Casa moderna al atardecer").
+
+## Bloque 2 — Hero con personas
+
+**Archivo:** `Slider.tsx`. Se cambiaron **2 de los 4** slides, no todos.
+
+Lo importante fue **cuáles**: la primera pasada cambió los slides 2 y 4, pero el
+copy no daba — el slide 2 habla del barrio ("Viví donde todo sucede", shoppings y
+universidades) y le quedaba un apretón de manos encima. Se rehizo emparejando foto
+y texto:
+
+| Slide | Copy | Foto |
+|---|---|---|
+| 1 | "Encontrá el lugar donde empieza tu historia" | sin cambios |
+| 2 | "Viví donde todo sucede" (barrio) | **sin cambios** — la fachada urbana es lo que corresponde |
+| 3 | "Espacios para crecer en familia" | **nueva:** `photo-1609220136736-443140cffec6` — un padre con sus dos hijos |
+| 4 | "Invertí con visión de futuro" | **nueva:** `photo-1521791136064-7986c2920216` — apretón de manos / operación acordada |
+
+## Bloque 3 — Copy
+
+- **Franja de estudiantes** (`Slider.tsx` → `EstudiantesBand`): texto reemplazado
+  por el pedido, palabra por palabra.
+- **Login** (`LoginForm.tsx`): el `panelText` pasó a ser *"¿Te gusta estar
+  actualizado sobre las nuevas propiedades y el mercado inmobiliario?"*. Va sobre
+  la foto, como texto de apoyo del título; el subtítulo del formulario se dejó
+  funcional ("Ingresá tus datos para continuar").
+- **Publicá → Publicamos** (`PublicarPropiedad.tsx`): el título ahora es
+  *"Publicamos tu propiedad para alquiler o venta"*. **El párrafo se reescribió
+  entero**, no solo el título: decía *"Publicala en pocos minutos"*, que devolvía
+  la tarea al propietario y contradecía el enfoque nuevo. Ahora arranca "Contanos
+  qué querés vender o alquilar y nos ocupamos del resto". El CTA pasó a "Quiero
+  publicar mi propiedad" por lo mismo.
+- **Bonus:** el `alt` de la imagen de esa sección decía "Publicar propiedad", pero
+  la foto son en realidad dos personas cerrando un acuerdo en una oficina. Corregido.
+
+## Bloque 4 — FAQ y franja de Linktree
+
+- **Pregunta eliminada:** *"¿Es seguro invertir en pozo o preventa hoy?"* (era la
+  5ª del array). Con eso quedan **6 preguntas**, así que `INITIAL_VISIBLE = 4`
+  sigue teniendo sentido: se muestran 4 y "Ver más" despliega las 2 restantes.
+  También se sacó el import de `Home` de lucide, que era exclusivo de esa pregunta
+  y quedaba sin uso.
+- **`LinktreeBand.tsx` (nuevo)**, montado en `Slider.tsx` **entre el Hero y la
+  franja de estudiantes**, tal como se pidió. Tarjeta centrada con ícono en
+  pastilla de gradiente, título "Seguinos y enterate de todo", bajada y botón
+  "Ver nuestro Linktree" hacia `linktr.ee/inmobiliariacercatrova`.
+  - Abre en pestaña nueva con `rel="noopener noreferrer"`: sin `noopener` la
+    página destino recibe `window.opener` y puede redirigir la pestaña original
+    (tabnabbing).
+  - No usa `CtaButton` porque ese componente no expone `rel`.
+- **Fix encontrado en la captura:** entre la franja blanca del Linktree y la verde
+  de estudiantes aparecía una banda gris del fondo del body. Era el `mt-14` que
+  `EstudiantesBand` traía de cuando iba pegada al Hero; ya no hace falta porque
+  LinktreeBand aporta su propia separación. Eliminado.
+
+## Bloque 5 — Tarjeta del agente más baja
+
+**Archivo:** `Nosotros.tsx`. De `lg:h-[660px]` a **`lg:h-[580px]`** (−80px, ~12%).
+
+Lo no obvio: la altura se recortó **sin apretar el contenido**. El panel de
+biografía se **ensanchó** (760 → 820px) y la foto se achicó (420 → 400px en hover),
+así que expandida mide 1220px. Con más ancho los párrafos ocupan menos renglones,
+que es de donde salía la altura. Además: `gap-7 → gap-5`, `py-12 → py-10`, cuerpo a
+15px/1.6 y `h3` a `2.1rem`. El efecto de hover queda intacto (incluido el
+`lg:w-[820px] lg:shrink-0` que evita el "cabeceo escalonado" — ver Parte 5).
+
+## Bloque 6 — Los 4 atributos pasan a píldoras *(confirmado con el usuario)*
+
+Había **dos candidatas** y se preguntó antes de tocar: los 4 atributos de
+`Nosotros.tsx` y los íconos del acordeón de `RealEstateFAQ.tsx`. Se confirmó la
+primera (los del FAQ son uno por fila en lista vertical: no se pueden alinear "todos
+en una fila" sin rehacer el acordeón).
+
+- De 4 tarjetas cuadradas en grilla a **píldoras `rounded-full`**, más anchas que
+  altas, en una sola fila (`flex` + `flex-wrap`, así en mobile bajan solas sin
+  romperse). Los 4 labels entran holgados en el ancho del panel, así que en desktop
+  no wrapean.
+- Hover: elevación de 2px + relleno verde. Solo `transform`/`box-shadow`/color, que
+  no reflowean — sin saltos de layout.
+
+## Bloque 7 — El ícono "del rey" *(confirmado con el usuario)*
+
+Era el **`ChessKing`**, un SVG inline a medida agregado en la Parte 6, dentro de la
+tarjeta de la frase de `Nosotros.tsx`. Se confirmó el reemplazo: **`Crown` de
+lucide-react**, que conserva la idea de realeza/premium pero con el mismo trazo que
+el resto de la iconografía de la Landing. El componente `ChessKing` se eliminó.
+
+- **Detalle:** la corona va al **12%** de opacidad, no al 7% del rey. El rey era una
+  silueta **sólida**; la corona es de **trazo**, y al 7% no se veía.
+
+- **Estado:** ✅ `npm run build` exit 0 tras cada bloque y al cierre; 23/23 rutas,
+  11 warnings preexistentes, ninguno en los archivos tocados. Verificado en
+  navegador: Login, Register, Hero, franja de Linktree, franja de estudiantes y la
+  tarjeta del agente en reposo y en hover.
+
+---
+
+# PARTE 8 — Fotos del Hero y de auth (segunda pasada, con briefs del cliente)
+
+> **Alcance acotado a pedido explícito:** solo el **Hero** de la Landing y
+> **login/register**. La franja "VIDA UNIVERSITARIA" (`EstudiantesBand`) **no se
+> tocó**, y la sección nueva de estudiantes se resolvió como un **slide más del
+> Hero**, no como una sección aparte.
+>
+> **No hay generación de imágenes en esta sesión.** Los briefs del cliente
+> describían fotos a generar; se acordó buscar en Unsplash lo más parecido. Se
+> bajaron ~60 candidatas en 4 tandas y se miró cada una renderizada en una hoja de
+> contactos. Necesario: varias devolvían 200 con contenido equivocado (rascacielos
+> donde se buscaban llaves, un gato, un disco rígido, un obrero).
+
+## Hero — de 4 a 5 slides
+
+**Archivo:** `Slider.tsx`.
+
+| # | Copy | Imagen | Estado |
+|---|---|---|---|
+| 1 | "Encontrá el lugar donde empieza tu historia" | `photo-1609220136736` — padre con dos hijos | **nueva** (antes interior vacío) |
+| 2 | "Viví donde todo sucede" | **`/estudiante.jpg`** — archivo LOCAL de `public/` | **nueva** |
+| 3 | "Espacios para crecer en familia" | `photo-1570129477492` — casa con jardín cuidado, luz de día | **nueva** |
+| 4 | "Invertí con visión de futuro" | `photo-1512917774080` — casa moderna con galería y muebles de exterior | **nueva** |
+| 5 | **"Pensamos en los estudiantes"** | `photo-1596276020587` — edificios de departamentos con bicicletas | **slide NUEVO** |
+
+- **`estudiante.jpg` estaba en `public/` sin usarse en ningún lado** (verificado por
+  grep antes de cablearlo). Es un archivo local, no Unsplash: `next/image` lo sirve
+  igual sin tocar `remotePatterns`.
+- **Copy del slide 5** (redactado acá, a pedido): *"Departamentos a minutos de las
+  facultades, listos para mudarte. Vos ocupate de cursar, del resto nos ocupamos
+  nosotros."* El título es "Pensamos en los estudiantes".
+- **Sobre "luz de mañana":** los briefs pedían luz de mañana y descartaban
+  atardecer/noche. Las fotos elegidas para los slides 3 y 4 son de día pleno, que es
+  lo más cercano disponible; se descartaron varias candidatas justamente por estar
+  en golden hour.
+
+## Login / Register
+
+**Archivos:** `LoginForm.tsx`, `RegisterForm.tsx`, `AuthShell.tsx`.
+
+- **Login → `photo-1560184897-ae75f418493e`** — galería de una casa con la puerta de
+  entrada, sillones de mimbre, plantas y luz natural.
+  **⚠️ No es la foto del brief.** Se pedían "llaves de casa con llavero moderno sobre
+  una mesa de madera". Se buscó en 4 tandas y **no apareció ninguna foto de llaves
+  utilizable**. Se eligió esta por la segunda mitad del brief ("imagen refrescante"):
+  es cálida, minimalista, con luz natural, y temáticamente es *la puerta que abre la
+  llave*. **Candidata a reemplazar** si más adelante se genera la imagen del brief.
+- **Register → `photo-1580894732444-8ecded7900cd`** — persona joven sonriendo en un
+  ambiente luminoso. El brief pedía además que estuviera escribiendo en una notebook;
+  las opciones con notebook que aparecieron eran manos sin cara, y a la escala del
+  panel (columna alta, foto grande detrás del título) una persona sonriendo funciona
+  mucho mejor que una pantalla.
+- **`imagePosition` — prop nueva en `AuthShell`.** El panel es una columna ALTA y las
+  fotos de stock son apaisadas, así que `object-cover` recorta a lo ancho: si el
+  sujeto no está centrado en el original, queda contra el borde. Se vio en la captura
+  — la protagonista de Register quedaba cortada contra el borde derecho con media
+  pared vacía ocupando el cuadro. La prop expone `object-position` (default
+  `'center'`); Register usa `"72% center"`.
+- El **degradado oscuro inferior** que pedían los briefs para superponer texto ya
+  existía de la Parte 7 (`from-black/85` en el 60% inferior). Sin cambios.
+
+## Limpieza
+
+- `LinktreeBand.tsx` había quedado importando `Instagram` de lucide sin usarlo (el
+  ícono se cambió a `Share2`). Eliminado: el build vuelve a 11 warnings, todos
+  preexistentes y ninguno en archivos de esta tanda.
+
+- **Estado:** ✅ `npm run build` exit 0, 23/23 rutas, 11 warnings preexistentes.
+  Verificado en navegador a 1600×1000: los 5 slides del Hero uno por uno (clickeando
+  los dots), `/login` y `/register`.
