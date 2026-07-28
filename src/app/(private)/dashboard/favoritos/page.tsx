@@ -12,6 +12,8 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 
+// Shape reducido: solo los campos de `Property` que esta pantalla renderiza.
+// Los nombres deben coincidir con el tipo canónico (`shared/types/api.ts`).
 interface FavoriteProperty {
   user_id: number;
   property_id: number;
@@ -23,7 +25,7 @@ interface FavoriteProperty {
     price: number;
     operationType: string;
     status: string;
-    m2: number;
+    supTotal: number | null;
     rooms: number;
     bathrooms: number;
     images?: { url: string; isCover?: boolean }[];
@@ -181,7 +183,9 @@ export default function FavoritosPage() {
                     <div className="flex items-center gap-3 text-xs text-gray-400">
                       <span className="flex items-center gap-1"><Bed size={11} /> {property.rooms}</span>
                       <span className="flex items-center gap-1"><Bath size={11} /> {property.bathrooms}</span>
-                      <span className="flex items-center gap-1"><Maximize size={11} /> {property.m2} m²</span>
+                      {property.supTotal != null && (
+                        <span className="flex items-center gap-1"><Maximize size={11} /> {property.supTotal} m²</span>
+                      )}
                     </div>
                     <Link href={`/properties/${property_id}`}
                       className="flex items-center gap-1 text-xs font-semibold text-[#0b7a4b] hover:gap-2 transition-all">

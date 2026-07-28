@@ -22,7 +22,7 @@ import { BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor } from '../lib/
  */
 export function PropertyRow({ property }: { property: Property }) {
   const {
-    id, title, price, rooms, bathrooms, m2, antiquity,
+    id, title, price, rooms, bathrooms, supTotal, supCubierta, antiquity,
     localidad, barrio, description, images, typeOfProperty, operationType, ratingAverage,
   } = property;
 
@@ -61,7 +61,7 @@ export function PropertyRow({ property }: { property: Property }) {
             {typeOfProperty?.name || 'Propiedad'}
           </span>
           {rating && (
-            <span className="flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-bold text-ink-900">
+            <span className="flex items-center gap-1 rounded-md bg-amber-100 border border-amber-300 px-2 py-0.5 text-xs font-bold text-ink-900">
               <Star size={12} className="fill-amber-400 text-amber-400" />
               {rating.toFixed(1)}
             </span>
@@ -89,7 +89,13 @@ export function PropertyRow({ property }: { property: Property }) {
             { icon: Bed, value: rooms, label: 'Hab.' },
             { icon: Toilet, value: bathrooms, label: 'Baños' },
             { icon: Hourglass, value: antiquity, label: 'Años' },
-            { icon: Maximize, value: `${m2} m²`, label: 'Sup.' },
+            // En la vista lista hay espacio para las dos superficies
+            ...(supTotal != null
+              ? [{ icon: Maximize, value: `${supTotal} m²`, label: 'Sup. Total' }]
+              : []),
+            ...(supCubierta != null
+              ? [{ icon: Maximize, value: `${supCubierta} m²`, label: 'Sup. Cubierta' }]
+              : []),
           ].map(({ icon: Icon, value, label }, i) => (
             <span key={i} className="flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs">
               <Icon size={14} className="text-brand-700" />

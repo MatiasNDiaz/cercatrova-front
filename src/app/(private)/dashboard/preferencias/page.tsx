@@ -41,9 +41,13 @@ interface FormState {
   preferredPrice: string;
   minRooms: string;
   minBathrooms: string;
-  m2: string;
+  supTotal: string;
+  supCubierta: string;
   maxAntiquity: string;
+  // Documentación legal: independientes entre sí, se pueden combinar
   property_deed: boolean;
+  tractoAbreviado: boolean;
+  boleto: boolean;
   garage: boolean;
   patio: boolean;
   notifyNewMatches: boolean;
@@ -64,13 +68,16 @@ function SummaryCard({ form, propertyTypes, onEdit }: SummaryCardProps) {
     form.localidad || form.barrio || form.zone ||
     form.operationType || form.typeOfPropertyId ||
     form.preferredPrice || form.minRooms || form.minBathrooms ||
-    form.m2 || form.maxAntiquity ||
-    form.property_deed || form.garage || form.patio;
+    form.supTotal || form.supCubierta || form.maxAntiquity ||
+    form.property_deed || form.tractoAbreviado || form.boleto ||
+    form.garage || form.patio;
 
   const activeBadges = [
-    form.property_deed && { label: 'escritura', icon: FileCheck },
-    form.garage        && { label: 'garage',    icon: Car },
-    form.patio         && { label: 'patio',     icon: Trees },
+    form.property_deed   && { label: 'escritura',        icon: FileCheck },
+    form.tractoAbreviado && { label: 'tracto abreviado', icon: FileCheck },
+    form.boleto          && { label: 'boleto',           icon: FileCheck },
+    form.garage          && { label: 'garage',           icon: Car },
+    form.patio           && { label: 'patio',            icon: Trees },
   ].filter(Boolean) as { label: string; icon: React.ElementType }[];
 
   // ── Construye la oración narrativa ──────────────────────
@@ -111,7 +118,8 @@ if (fullLoc) {
     const chars: React.ReactNode[] = [];
     if (form.minRooms)     chars.push(hi(`${form.minRooms} habitación${Number(form.minRooms) > 1 ? 'es' : ''}`, 'rooms'));
     if (form.minBathrooms) chars.push(hi(`${form.minBathrooms} baño${Number(form.minBathrooms) > 1 ? 's' : ''}`, 'baths'));
-    if (form.m2)           chars.push(hi(`${form.m2} m²`, 'm2'));
+    if (form.supTotal)     chars.push(hi(`${form.supTotal} m² totales`, 'supTotal'));
+    if (form.supCubierta)  chars.push(hi(`${form.supCubierta} m² cubiertos`, 'supCubierta'));
 
     if (chars.length > 0) {
       parts.push(', con al menos ');
@@ -238,9 +246,12 @@ export default function PreferenciasPage() {
     preferredPrice:   '',
     minRooms:         '',
     minBathrooms:     '',
-    m2:               '',
+    supTotal:         '',
+    supCubierta:      '',
     maxAntiquity:     '',
     property_deed:    false,
+    tractoAbreviado:  false,
+    boleto:           false,
     garage:           false,
     patio:            false,
     notifyNewMatches: true,
@@ -271,9 +282,12 @@ export default function PreferenciasPage() {
             preferredPrice:   data.preferredPrice ?? '',
             minRooms:         data.minRooms ?? '',
             minBathrooms:     data.minBathrooms ?? '',
-            m2:               data.m2 ?? '',
+            supTotal:         data.supTotal ?? '',
+            supCubierta:      data.supCubierta ?? '',
             maxAntiquity:     data.maxAntiquity ?? '',
             property_deed:    data.property_deed ?? false,
+            tractoAbreviado:  data.tractoAbreviado ?? false,
+            boleto:           data.boleto ?? false,
             garage:           data.garage ?? false,
             patio:            data.patio ?? false,
             notifyNewMatches: data.notifyNewMatches ?? true,
@@ -301,9 +315,12 @@ export default function PreferenciasPage() {
         preferredPrice:   form.preferredPrice ? Number(form.preferredPrice) : undefined,
         minRooms:         form.minRooms ? Number(form.minRooms) : undefined,
         minBathrooms:     form.minBathrooms ? Number(form.minBathrooms) : undefined,
-        m2:               form.m2 ? Number(form.m2) : undefined,
+        supTotal:         form.supTotal ? Number(form.supTotal) : undefined,
+        supCubierta:      form.supCubierta ? Number(form.supCubierta) : undefined,
         maxAntiquity:     form.maxAntiquity ? Number(form.maxAntiquity) : undefined,
         property_deed:    form.property_deed,
+        tractoAbreviado:  form.tractoAbreviado,
+        boleto:           form.boleto,
         garage:           form.garage,
         patio:            form.patio,
         notifyNewMatches: form.notifyNewMatches,
@@ -458,13 +475,22 @@ export default function PreferenciasPage() {
                   placeholder="Ej: 1" />
               </div>
             </Field>
-            <Field label="Superficie (m²)" hint="±15% de tolerancia en el matching">
+            <Field label="Sup. Total (m²)" hint="±15% de tolerancia en el matching">
               <div className="relative">
                 <Ruler size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0b7a4b]" />
-                <input type="number" min="0" value={form.m2}
-                  onChange={e => set('m2', e.target.value)}
+                <input type="number" min="0" value={form.supTotal}
+                  onChange={e => set('supTotal', e.target.value)}
                   className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0b7a4b] focus:bg-white transition-all placeholder:text-gray-400"
                   placeholder="Ej: 80" />
+              </div>
+            </Field>
+            <Field label="Sup. Cubierta (m²)" hint="±15% de tolerancia en el matching">
+              <div className="relative">
+                <Ruler size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0b7a4b]" />
+                <input type="number" min="0" value={form.supCubierta}
+                  onChange={e => set('supCubierta', e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0b7a4b] focus:bg-white transition-all placeholder:text-gray-400"
+                  placeholder="Ej: 60" />
               </div>
             </Field>
             <Field label="Antigüedad máxima (años)" hint="+2 años de tolerancia en el matching">
@@ -480,9 +506,12 @@ export default function PreferenciasPage() {
 
           <div className="flex flex-wrap gap-3 mt-5">
             {[
-              { key: 'property_deed', label: 'Con escritura', icon: FileCheck },
-              { key: 'garage',        label: 'Con garage',    icon: Car },
-              { key: 'patio',         label: 'Con patio',     icon: Trees },
+              // Documentación legal: independientes entre sí, se pueden combinar
+              { key: 'property_deed',   label: 'Con escritura',   icon: FileCheck },
+              { key: 'tractoAbreviado', label: 'Tracto abreviado', icon: FileCheck },
+              { key: 'boleto',          label: 'Con boleto',      icon: FileCheck },
+              { key: 'garage',          label: 'Con garage',      icon: Car },
+              { key: 'patio',           label: 'Con patio',       icon: Trees },
             ].map(({ key, label, icon: Icon }) => (
               <button key={key} type="button"
                 onClick={() => set(key, !form[key as keyof FormState])}

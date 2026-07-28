@@ -86,13 +86,17 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
     provincia:       'Córdoba',
     localidad:       '',
     barrio:          '',
+    direccion:       '',
     zone:            '',
     rooms:           '',
     bathrooms:       '',
-    m2:              '',
+    supTotal:        '',
+    supCubierta:     '',
     antiquity:       '',
     price:           '',
     property_deed:   false,
+    tractoAbreviado: false,
+    boleto:          false,
     garage:          false,
     patio:           false,
   });
@@ -119,13 +123,17 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
           provincia:        data.provincia ?? 'Córdoba',
           localidad:        data.localidad ?? '',
           barrio:           data.barrio ?? '',
+          direccion:        data.direccion ?? '',
           zone:             data.zone ?? '',
           rooms:            data.rooms?.toString() ?? '',
           bathrooms:        data.bathrooms?.toString() ?? '',
-          m2:               data.m2?.toString() ?? '',
+          supTotal:         data.supTotal?.toString() ?? '',
+          supCubierta:      data.supCubierta?.toString() ?? '',
           antiquity:        data.antiquity?.toString() ?? '',
           price:            data.price?.toString() ?? '',
           property_deed:    data.property_deed ?? false,
+          tractoAbreviado:  data.tractoAbreviado ?? false,
+          boleto:           data.boleto ?? false,
           garage:           data.garage ?? false,
           patio:            data.patio ?? false,
         });
@@ -219,8 +227,10 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
 
   // ── Submit ──
   const handleSubmit = async () => {
-    if (!form.title || !form.typeOfPropertyId || !form.price) {
-      toast.error('Completá título, tipo de propiedad y precio');
+    // `direccion` es obligatoria en el DTO de creación del backend
+    // (@IsNotEmpty): sin este chequeo el submit se comía un 400 genérico.
+    if (!form.title || !form.typeOfPropertyId || !form.price || !form.direccion) {
+      toast.error('Completá título, tipo de propiedad, dirección y precio');
       return;
     }
 
@@ -235,13 +245,17 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
         provincia:        form.provincia,
         localidad:        form.localidad,
         barrio:           form.barrio,
+        direccion:        form.direccion,
         zone:             form.zone,
         rooms:            Number(form.rooms) || 0,
         bathrooms:        Number(form.bathrooms) || 0,
-        m2:               Number(form.m2) || 0,
+        supTotal:         Number(form.supTotal) || 0,
+        supCubierta:      Number(form.supCubierta) || 0,
         antiquity:        Number(form.antiquity) || 0,
         price:            Number(form.price),
         property_deed:    form.property_deed,
+        tractoAbreviado:  form.tractoAbreviado,
+        boleto:           form.boleto,
         garage:           form.garage,
         patio:            form.patio,
         ...(isEdit && deletedImageIds.length > 0 && { deleteImages: deletedImageIds }),
@@ -513,6 +527,11 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
             <Input value={form.barrio} onChange={e => set('barrio', e.target.value)}
               placeholder="Ej: Nueva Córdoba" />
           </Field>
+          {/* Dirección: es la que alimenta el mapa del detalle */}
+          <Field label="Dirección">
+            <Input value={form.direccion} onChange={e => set('direccion', e.target.value)}
+              placeholder="Ej: Av. San Martín 1250" />
+          </Field>
           <Field label="Zona">
             <Input value={form.zone} onChange={e => set('zone', e.target.value)}
               placeholder="Ej: sierras, norte, centro" />
@@ -523,7 +542,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
       {/* ── CARACTERÍSTICAS ── */}
       <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
         <SectionTitle icon={Ruler} label="Características" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <Field label="Habitaciones">
             <Input type="number" min="0" value={form.rooms} onChange={e => set('rooms', e.target.value)}
               placeholder="0" />
@@ -532,8 +551,12 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
             <Input type="number" min="0" value={form.bathrooms} onChange={e => set('bathrooms', e.target.value)}
               placeholder="0" />
           </Field>
-          <Field label="Superficie (m²)">
-            <Input type="number" min="0" value={form.m2} onChange={e => set('m2', e.target.value)}
+          <Field label="Sup. Total (m²)">
+            <Input type="number" min="0" value={form.supTotal} onChange={e => set('supTotal', e.target.value)}
+              placeholder="0" />
+          </Field>
+          <Field label="Sup. Cubierta (m²)">
+            <Input type="number" min="0" value={form.supCubierta} onChange={e => set('supCubierta', e.target.value)}
               placeholder="0" />
           </Field>
           <Field label="Antigüedad (años)">
@@ -545,9 +568,12 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
         {/* Atributos booleanos */}
         <div className="flex flex-wrap gap-3 mt-5">
           {[
-            { key: 'property_deed', label: 'Con escritura' },
-            { key: 'garage',        label: 'Con garage' },
-            { key: 'patio',         label: 'Con patio' },
+            // Documentación legal: independientes entre sí, se pueden combinar
+            { key: 'property_deed',   label: 'Con escritura' },
+            { key: 'tractoAbreviado', label: 'Tracto abreviado' },
+            { key: 'boleto',          label: 'Con boleto' },
+            { key: 'garage',          label: 'Con garage' },
+            { key: 'patio',           label: 'Con patio' },
           ].map(({ key, label }) => (
             <button key={key} type="button"
               onClick={() => set(key, !form[key as keyof typeof form])}

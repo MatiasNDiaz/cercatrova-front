@@ -39,9 +39,13 @@ interface SearchPreference {
   preferredPrice?: number;
   minRooms?: number;
   minBathrooms?: number;
-  m2?: number;
+  supTotal?: number;
+  supCubierta?: number;
   maxAntiquity?: number;
+  // Documentación legal: independientes entre sí, se pueden combinar
   property_deed?: boolean;
+  tractoAbreviado?: boolean;
+  boleto?: boolean;
   garage?: boolean;
   patio?: boolean;
   notifyNewMatches?: boolean;
@@ -115,16 +119,19 @@ function DataField({ label, value, truncate }: { label: string; value: string; t
 function PreferencesBlock({ prefs, userName }: { prefs: SearchPreference | null; userName: string }) {
 
   const activeBadges = prefs ? [
-    prefs.property_deed && { label: 'escritura', icon: FileCheck },
-    prefs.garage        && { label: 'garage',    icon: Car },
-    prefs.patio         && { label: 'patio',     icon: Trees },
+    prefs.property_deed   && { label: 'escritura',        icon: FileCheck },
+    prefs.tractoAbreviado && { label: 'tracto abreviado', icon: FileCheck },
+    prefs.boleto          && { label: 'boleto',           icon: FileCheck },
+    prefs.garage          && { label: 'garage',           icon: Car },
+    prefs.patio           && { label: 'patio',            icon: Trees },
   ].filter(Boolean) as { label: string; icon: React.ElementType }[] : [];
 
   const hasAnyData = prefs && (
     prefs.localidad || prefs.barrio || prefs.zone || prefs.operationType ||
     prefs.typeOfProperty || prefs.preferredPrice || prefs.minRooms ||
-    prefs.minBathrooms || prefs.m2 || prefs.maxAntiquity ||
-    prefs.property_deed || prefs.garage || prefs.patio
+    prefs.minBathrooms || prefs.supTotal || prefs.supCubierta || prefs.maxAntiquity ||
+    prefs.property_deed || prefs.tractoAbreviado || prefs.boleto ||
+    prefs.garage || prefs.patio
   );
 
   const buildStory = (): React.ReactNode[] => {
@@ -156,7 +163,8 @@ if (fullLoc) parts.push(' en ', hi(fullLoc, 'loc'));
     const chars: React.ReactNode[] = [];
     if (prefs.minRooms)     chars.push(hi(`${prefs.minRooms} habitación${prefs.minRooms > 1 ? 'es' : ''}`, 'rooms'));
     if (prefs.minBathrooms) chars.push(hi(`${prefs.minBathrooms} baño${prefs.minBathrooms > 1 ? 's' : ''}`, 'baths'));
-    if (prefs.m2)           chars.push(hi(`${prefs.m2} m²`, 'm2'));
+    if (prefs.supTotal)     chars.push(hi(`${prefs.supTotal} m² totales`, 'supTotal'));
+    if (prefs.supCubierta)  chars.push(hi(`${prefs.supCubierta} m² cubiertos`, 'supCubierta'));
 
     if (chars.length > 0) {
       parts.push(', con al menos ');
@@ -196,7 +204,7 @@ if (fullLoc) parts.push(' en ', hi(fullLoc, 'loc'));
           <p className="text-sm text-gray-600 leading-relaxed">{buildStory()}</p>
 
           {/* Mini stats numéricas */}
-          {prefs && (prefs.minRooms || prefs.minBathrooms || prefs.m2 || prefs.maxAntiquity || prefs.preferredPrice) && (
+          {prefs && (prefs.minRooms || prefs.minBathrooms || prefs.supTotal || prefs.supCubierta || prefs.maxAntiquity || prefs.preferredPrice) && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {prefs.minRooms && (
                 <div className="bg-gray-50 rounded-xl px-3 py-2 border border-gray-100">
@@ -216,12 +224,21 @@ if (fullLoc) parts.push(' en ', hi(fullLoc, 'loc'));
                   </div>
                 </div>
               )}
-              {prefs.m2 && (
+              {prefs.supTotal && (
                 <div className="bg-gray-50 rounded-xl px-3 py-2 border border-gray-100">
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Superficie</p>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Sup. Total</p>
                   <div className="flex items-center gap-1.5">
                     <Ruler size={12} className="text-[#0b7a4b]" />
-                    <p className="text-xs font-semibold text-gray-700">{prefs.m2} m²</p>
+                    <p className="text-xs font-semibold text-gray-700">{prefs.supTotal} m²</p>
+                  </div>
+                </div>
+              )}
+              {prefs.supCubierta && (
+                <div className="bg-gray-50 rounded-xl px-3 py-2 border border-gray-100">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Sup. Cubierta</p>
+                  <div className="flex items-center gap-1.5">
+                    <Ruler size={12} className="text-[#0b7a4b]" />
+                    <p className="text-xs font-semibold text-gray-700">{prefs.supCubierta} m²</p>
                   </div>
                 </div>
               )}

@@ -25,16 +25,21 @@ export interface PropertyFilters {
   // --- FILTROS DE RANGO ---
   minPrice?: number;
   maxPrice?: number;
-  minM2?: number;
-  maxM2?: number;
+  minSupTotal?: number;
+  maxSupTotal?: number;
+  minSupCubierta?: number;
+  maxSupCubierta?: number;
   maxAntiquity?: number;
 
   // --- FILTROS BOOLEANOS ---
-  // Nota: En la interfaz los definimos como boolean. 
+  // Nota: En la interfaz los definimos como boolean.
   // El Hook se encargará de convertirlos a string 'true'/'false' para la URL.
   garage?: boolean;
   patio?: boolean;
+  // Documentación legal: independientes entre sí (pueden convivir)
   property_deed?: boolean;
+  tractoAbreviado?: boolean;
+  boleto?: boolean;
 
   // --- ENUMS ---
   operationType?: OperationType;

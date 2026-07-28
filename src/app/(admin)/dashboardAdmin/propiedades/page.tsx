@@ -28,7 +28,7 @@ interface Property {
   barrio: string;
   rooms: number;
   bathrooms: number;
-  m2: number;
+  supTotal: number | null;
   images: PropertyImage[];
   typeOfProperty: { id: number; name: string };
   created_at?: string;
@@ -266,7 +266,7 @@ export default function PropiedadesAdminPage() {
                       {p.price?.toLocaleString('es-AR')}
                     </span>
                     <span className="text-xs text-gray-500">
-                      {p.rooms} hab · {p.bathrooms} baños · {p.m2} m²
+                      {p.rooms} hab · {p.bathrooms} baños{p.supTotal != null ? ` · ${p.supTotal} m²` : ''}
                     </span>
                   </div>
                 </div>

@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Bed, Toilet, Maximize, MapPin, ArrowRight, Star } from 'lucide-react';
+import { Bed, Toilet, Maximize, Hourglass, MapPin, ArrowRight, Star } from 'lucide-react';
 import { Property, PropertyImage } from '../interfaces/propertyInterface';
 import { FavoriteButton } from '@/modules/shared/ui/Favoritebutton';
 import { BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor } from '../lib/badgeStyles';
@@ -21,7 +21,7 @@ import { BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor } from '../lib/
  */
 export const PropertyCard = ({ property }: { property: Property }) => {
   const {
-    id, title, price, rooms, bathrooms, m2,
+    id, title, price, rooms, bathrooms, supTotal, antiquity,
     localidad, barrio, images, typeOfProperty, operationType, ratingAverage,
   } = property;
 
@@ -89,23 +89,35 @@ export const PropertyCard = ({ property }: { property: Property }) => {
             </span>
           </div>
 
-          {/* Características */}
-          <div className="mt-auto flex items-center gap-5 border-t border-ink-100 pt-5 pb-0.5 text-sm text-ink-600">
-            <span className="flex items-center gap-1.5">
-              <Bed size={16} className="text-brand-700" />
+          {/* Características — 4 datos en una sola fila: ambientes, baños,
+              Sup. Total y antigüedad.
+              Sup. Cubierta NO va acá a propósito: con 5 datos la fila se
+              desalineaba y quedaba recargada en el mosaico (sí aparece en el
+              detalle, en la vista lista `PropertyRow`, el form y los filtros).
+              Sin labels visibles (no hay lugar), así que cada dato lleva ícono
+              propio + `title` para identificarlo. */}
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-ink-100 pt-5 pb-0.5 text-sm text-ink-600">
+            <span className="flex items-center gap-1.5 whitespace-nowrap" title={`${rooms} ambientes`}>
+              <Bed size={16} className="shrink-0 text-brand-700" />
               <span className="font-semibold">{rooms}</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <Toilet size={16} className="text-brand-700" />
+            <span className="flex items-center gap-1.5 whitespace-nowrap" title={`${bathrooms} baños`}>
+              <Toilet size={16} className="shrink-0 text-brand-700" />
               <span className="font-semibold">{bathrooms}</span>
             </span>
-            {m2 != null && (
-              <span className="flex items-center gap-1.5">
-                <Maximize size={16} className="text-brand-700" />
-                <span className="font-semibold">{m2} m²</span>
+            {supTotal != null && (
+              <span className="flex items-center gap-1.5 whitespace-nowrap" title={`Sup. Total: ${supTotal} m²`}>
+                <Maximize size={16} className="shrink-0 text-brand-700" />
+                <span className="font-semibold">{supTotal} m²</span>
               </span>
             )}
-            <span className="ml-auto flex items-center text-brand-700 opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100">
+            {antiquity != null && (
+              <span className="flex items-center gap-1.5 whitespace-nowrap" title={`Antigüedad: ${antiquity} años`}>
+                <Hourglass size={16} className="shrink-0 text-brand-700" />
+                <span className="font-semibold">{antiquity} años</span>
+              </span>
+            )}
+            <span className="flex shrink-0 items-center text-brand-700 opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100">
               <ArrowRight size={18} />
             </span>
           </div>

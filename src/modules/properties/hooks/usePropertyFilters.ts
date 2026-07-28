@@ -7,8 +7,9 @@ import { StatusProperty } from '../interfaces/status-property';
 const FILTERS_THAT_RESET_PAGE = [
   'search', 'operationType', 'typeOfPropertyId', 'localidad', 'barrio',
   'zone', 'provincia', 'rooms', 'bathrooms', 'minPrice', 'maxPrice',
-  'minM2', 'maxM2', 'maxAntiquity', 'garage', 'patio', 'property_deed', 'title', 'status',
-  'sortBy', 'order'
+  'minSupTotal', 'maxSupTotal', 'minSupCubierta', 'maxSupCubierta',
+  'maxAntiquity', 'garage', 'patio', 'property_deed', 'tractoAbreviado', 'boleto',
+  'title', 'status', 'sortBy', 'order'
 ];
 
 export const usePropertyFilters = () => {
@@ -54,14 +55,18 @@ export const usePropertyFilters = () => {
       // Rangos
       minPrice: getNum('minPrice'),
       maxPrice: getNum('maxPrice'),
-      minM2: getNum('minM2'),
-      maxM2: getNum('maxM2'),
+      minSupTotal: getNum('minSupTotal'),
+      maxSupTotal: getNum('maxSupTotal'),
+      minSupCubierta: getNum('minSupCubierta'),
+      maxSupCubierta: getNum('maxSupCubierta'),
       maxAntiquity: getNum('maxAntiquity'),
 
       // Booleanos
       garage: getBool('garage'),
       patio: getBool('patio'),
       property_deed: getBool('property_deed'),
+      tractoAbreviado: getBool('tractoAbreviado'),
+      boleto: getBool('boleto'),
 
       // Enums
       operationType: searchParams.get('operationType') as OperationType || undefined,

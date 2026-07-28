@@ -23,7 +23,7 @@ import { Property } from '@/modules/shared/types/api';
 
 export function FeaturedPropertyCard({ property }: { property: Property }) {
   const {
-    id, title, price, rooms, bathrooms, m2,
+    id, title, price, rooms, bathrooms, supTotal,
     localidad, barrio, images, typeOfProperty, operationType, ratingAverage,
   } = property;
 
@@ -101,10 +101,10 @@ export function FeaturedPropertyCard({ property }: { property: Property }) {
             <Toilet size={16} className="text-brand-700" />
             <span className="font-semibold">{bathrooms}</span>
           </span>
-          {m2 != null && (
+          {supTotal != null && (
             <span className="flex items-center gap-1.5">
               <Maximize size={16} className="text-brand-700" />
-              <span className="font-semibold">{m2} m²</span>
+              <span className="font-semibold">{supTotal} m²</span>
             </span>
           )}
 

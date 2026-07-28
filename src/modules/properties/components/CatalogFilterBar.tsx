@@ -74,12 +74,16 @@ export function CatalogFilterBar({ onOpenFilters, activeFiltersCount }: CatalogF
     if (filters.bathrooms) push('bathrooms', `${filters.bathrooms} ${filters.bathrooms === 1 ? 'baño' : 'baños'}`);
     if (filters.minPrice) push('minPrice', `Desde ${money(filters.minPrice)}`);
     if (filters.maxPrice) push('maxPrice', `Hasta ${money(filters.maxPrice)}`);
-    if (filters.minM2) push('minM2', `Desde ${filters.minM2} m²`);
-    if (filters.maxM2) push('maxM2', `Hasta ${filters.maxM2} m²`);
+    if (filters.minSupTotal) push('minSupTotal', `Sup. Total desde ${filters.minSupTotal} m²`);
+    if (filters.maxSupTotal) push('maxSupTotal', `Sup. Total hasta ${filters.maxSupTotal} m²`);
+    if (filters.minSupCubierta) push('minSupCubierta', `Sup. Cubierta desde ${filters.minSupCubierta} m²`);
+    if (filters.maxSupCubierta) push('maxSupCubierta', `Sup. Cubierta hasta ${filters.maxSupCubierta} m²`);
     if (filters.maxAntiquity) push('maxAntiquity', `Hasta ${filters.maxAntiquity} años`);
     if (filters.garage) push('garage', 'Cochera');
     if (filters.patio) push('patio', 'Patio');
     if (filters.property_deed) push('property_deed', 'Escritura');
+    if (filters.tractoAbreviado) push('tractoAbreviado', 'Tracto abreviado');
+    if (filters.boleto) push('boleto', 'Boleto');
 
     return out;
   }, [filters, propertyTypes]);

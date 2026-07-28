@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -40,10 +40,15 @@ interface PropertyType {
 }
 
 const EMPTY_NUMS = {
-  rooms: '', bathrooms: '', minPrice: '', maxPrice: '', minM2: '', maxM2: '', maxAntiquity: '',
+  rooms: '', bathrooms: '', minPrice: '', maxPrice: '',
+  minSupTotal: '', maxSupTotal: '', minSupCubierta: '', maxSupCubierta: '',
+  maxAntiquity: '',
 };
 
 type NumsKey = keyof typeof EMPTY_NUMS;
+
+/** Los campos de ubicación llegan como `string[]`; el Dropdown pide `{value,label}`. */
+const toOptions = (values: string[]) => values.map((v) => ({ value: v, label: v }));
 
 export function FiltersModal({ open, onClose }: FiltersModalProps) {
   const { filters, setFilters, clearFilters } = usePropertyFilters();
@@ -59,7 +64,7 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
     localidades: [], barrios: [], zones: [],
   });
 
-  const [openDrop, setOpenDrop] = useState<'loc' | 'zone' | 'barrio' | null>(null);
+  const [openDrop, setOpenDrop] = useState<'loc' | 'zone' | 'barrio' | 'type' | null>(null);
   const [resultCount, setResultCount] = useState<number | null>(null);
   const [loadingCount, setLoadingCount] = useState(false);
 
@@ -84,14 +89,18 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
       garage: filters.garage,
       patio: filters.patio,
       property_deed: filters.property_deed,
+      tractoAbreviado: filters.tractoAbreviado,
+      boleto: filters.boleto,
     });
     setNums({
       rooms: filters.rooms?.toString() ?? '',
       bathrooms: filters.bathrooms?.toString() ?? '',
       minPrice: filters.minPrice?.toString() ?? '',
       maxPrice: filters.maxPrice?.toString() ?? '',
-      minM2: filters.minM2?.toString() ?? '',
-      maxM2: filters.maxM2?.toString() ?? '',
+      minSupTotal: filters.minSupTotal?.toString() ?? '',
+      maxSupTotal: filters.maxSupTotal?.toString() ?? '',
+      minSupCubierta: filters.minSupCubierta?.toString() ?? '',
+      maxSupCubierta: filters.maxSupCubierta?.toString() ?? '',
       maxAntiquity: filters.maxAntiquity?.toString() ?? '',
     });
     setOpenDrop(null);
@@ -132,8 +141,10 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
       bathrooms: n(nums.bathrooms),
       minPrice: n(nums.minPrice),
       maxPrice: n(nums.maxPrice),
-      minM2: n(nums.minM2),
-      maxM2: n(nums.maxM2),
+      minSupTotal: n(nums.minSupTotal),
+      maxSupTotal: n(nums.maxSupTotal),
+      minSupCubierta: n(nums.minSupCubierta),
+      maxSupCubierta: n(nums.maxSupCubierta),
       maxAntiquity: n(nums.maxAntiquity),
     };
   }, [draft, nums]);
@@ -184,6 +195,10 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
   }, [draftAsFilters, filters.search, filters.operationType, open]);
 
   const setNum = (key: NumsKey, value: string) => setNums((p) => ({ ...p, [key]: value }));
+
+  // Referencia estable: la usan los `Dropdown` como dependencia del efecto de
+  // click-afuera, así no se re-suscribe el listener en cada render.
+  const closeDrop = useCallback(() => setOpenDrop(null), []);
 
   const handleApply = () => {
     setFilters({ ...draftAsFilters, page: 1 });
@@ -256,10 +271,7 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
                 Eyebrow en pastilla sólida `brand-700`, igual que `SectionHeading`
                 de la Landing, para que el modal hable el mismo idioma visual. */}
             <div className="relative z-10 border-b border-ink-100 bg-linear-to-b from-brand-50/70 to-white px-7 py-6 text-center">
-              <span className="inline-block rounded-full bg-brand-700 px-3.5 py-1 text-[10px] font-bold tracking-[0.22em] text-white uppercase shadow-[0_4px_12px_-4px_rgba(11,122,75,0.6)]">
-                Filtros
-              </span>
-              <h2 className="mt-3 text-2xl font-bold tracking-tight text-brand-700">Filtrá tu búsqueda</h2>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-brand-700">Filtrá tu búsqueda</h2>
               <p className="mt-1.5 text-sm text-ink-500">Ajustá los criterios y aplicá para ver los resultados.</p>
               {/* Cerrar: neutro en reposo, rojo recién en hover. El rojo sólido
                   permanente que había antes competía con el título y era lo
@@ -283,24 +295,24 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
               <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2">
 
               {/* Ubicación */}
-              <FilterGroup icon={MapPin} label="Ubicación">
+              <FilterGroup icon={MapPin} label="Ubaicación">
                 <div className="grid grid-cols-1 gap-3">
-                  <LocationDropdown
+                  <Dropdown
                     label="Localidad" placeholder="Todas las localidades"
-                    value={draft.localidad} options={locations.localidades}
-                    isOpen={openDrop === 'loc'} onToggle={() => setOpenDrop(openDrop === 'loc' ? null : 'loc')}
+                    value={draft.localidad} options={toOptions(locations.localidades)}
+                    isOpen={openDrop === 'loc'} onToggle={() => setOpenDrop(openDrop === 'loc' ? null : 'loc')} onClose={closeDrop}
                     onSelect={(v) => { setDraft((p) => ({ ...p, localidad: v })); setOpenDrop(null); }}
                   />
-                  <LocationDropdown
+                  <Dropdown
                     label="Zona" placeholder="Todas las zonas"
-                    value={draft.zone} options={locations.zones}
-                    isOpen={openDrop === 'zone'} onToggle={() => setOpenDrop(openDrop === 'zone' ? null : 'zone')}
+                    value={draft.zone} options={toOptions(locations.zones)}
+                    isOpen={openDrop === 'zone'} onToggle={() => setOpenDrop(openDrop === 'zone' ? null : 'zone')} onClose={closeDrop}
                     onSelect={(v) => { setDraft((p) => ({ ...p, zone: v })); setOpenDrop(null); }}
                   />
-                  <LocationDropdown
+                  <Dropdown
                     label="Barrio" placeholder="Todos los barrios"
-                    value={draft.barrio} options={locations.barrios}
-                    isOpen={openDrop === 'barrio'} onToggle={() => setOpenDrop(openDrop === 'barrio' ? null : 'barrio')}
+                    value={draft.barrio} options={toOptions(locations.barrios)}
+                    isOpen={openDrop === 'barrio'} onToggle={() => setOpenDrop(openDrop === 'barrio' ? null : 'barrio')} onClose={closeDrop}
                     onSelect={(v) => { setDraft((p) => ({ ...p, barrio: v })); setOpenDrop(null); }}
                   />
                 </div>
@@ -309,17 +321,19 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
               {/* Tipo y ambientes */}
               <FilterGroup icon={Bed} label="Tipo y ambientes">
                 <div className="grid grid-cols-1 gap-3">
-                  <IconSelect
+                  {/* Mismo dropdown custom que los tres de Ubicación — antes acá
+                      había un `<select>` nativo con el estilo del navegador. */}
+                  <Dropdown
+                    label="Tipo de propiedad" placeholder="Cualquier tipo"
                     icon={Home}
-                    value={draft.typeOfPropertyId?.toString() ?? ''}
-                    onChange={(v) => setDraft((p) => ({ ...p, typeOfPropertyId: v ? Number(v) : undefined }))}
-                    ariaLabel="Tipo de propiedad"
-                  >
-                    <option value="">Cualquier tipo</option>
-                    {propertyTypes.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </IconSelect>
+                    value={draft.typeOfPropertyId?.toString()}
+                    options={propertyTypes.map((t) => ({ value: String(t.id), label: t.name }))}
+                    isOpen={openDrop === 'type'} onToggle={() => setOpenDrop(openDrop === 'type' ? null : 'type')} onClose={closeDrop}
+                    onSelect={(v) => {
+                      setDraft((p) => ({ ...p, typeOfPropertyId: v ? Number(v) : undefined }));
+                      setOpenDrop(null);
+                    }}
+                  />
                   <IconNumber icon={Bed} placeholder="Habitaciones" value={nums.rooms} onChange={(v) => setNum('rooms', v)} />
                   <IconNumber icon={Bath} placeholder="Baños" value={nums.bathrooms} onChange={(v) => setNum('bathrooms', v)} />
                 </div>
@@ -334,8 +348,10 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
                 <div className="grid grid-cols-2 gap-3">
                   <IconNumber icon={DollarSign} placeholder="Precio mín." value={nums.minPrice} onChange={(v) => setNum('minPrice', v)} />
                   <IconNumber icon={DollarSign} placeholder="Precio máx." value={nums.maxPrice} onChange={(v) => setNum('maxPrice', v)} />
-                  <IconNumber icon={Maximize} placeholder="M² mín." value={nums.minM2} onChange={(v) => setNum('minM2', v)} />
-                  <IconNumber icon={Maximize} placeholder="M² máx." value={nums.maxM2} onChange={(v) => setNum('maxM2', v)} />
+                  <IconNumber icon={Maximize} placeholder="Sup. Total mín." value={nums.minSupTotal} onChange={(v) => setNum('minSupTotal', v)} />
+                  <IconNumber icon={Maximize} placeholder="Sup. Total máx." value={nums.maxSupTotal} onChange={(v) => setNum('maxSupTotal', v)} />
+                  <IconNumber icon={Maximize} placeholder="Sup. Cubierta mín." value={nums.minSupCubierta} onChange={(v) => setNum('minSupCubierta', v)} />
+                  <IconNumber icon={Maximize} placeholder="Sup. Cubierta máx." value={nums.maxSupCubierta} onChange={(v) => setNum('maxSupCubierta', v)} />
                   <div className="col-span-2">
                     <IconNumber icon={Calendar} placeholder="Antigüedad máx. (años)" value={nums.maxAntiquity} onChange={(v) => setNum('maxAntiquity', v)} />
                   </div>
@@ -348,7 +364,11 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
                   {([
                     { key: 'garage', label: 'Cochera', icon: Car },
                     { key: 'patio', label: 'Patio', icon: TreePine },
+                    // Documentación legal: independientes entre sí, se pueden
+                    // combinar (una propiedad puede tener escritura Y boleto).
                     { key: 'property_deed', label: 'Escritura', icon: FileText },
+                    { key: 'tractoAbreviado', label: 'Tracto abreviado', icon: FileText },
+                    { key: 'boleto', label: 'Boleto', icon: FileText },
                   ] as const).map(({ key, label, icon: Icon }) => {
                     const active = !!draft[key];
                     return (
@@ -441,12 +461,12 @@ function FilterGroup({
   // como bloques separados en vez de una sopa de inputs sueltos, y los controles
   // (que son BLANCOS) ganan contraste contra el fondo `ink-50` de la tarjeta.
   return (
-    <div className="rounded-2xl border border-ink-100 bg-ink-50/60 p-5">
+    <div className="rounded-2xl border border-ink-100 bg-ink-100 p-5">
       <h3 className="mb-3.5 flex items-center gap-2.5">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-700/10 text-brand-700">
           <Icon size={15} />
         </span>
-        <span className="text-sm font-bold tracking-tight text-ink-900">{label}</span>
+        <span className="text-sm font-bold tracking-tight text-ink-950">{label}</span>
         <span className="ml-1 h-px flex-1 bg-ink-200/70" />
       </h3>
       {children}
@@ -458,9 +478,9 @@ const inputBase =
   'h-11 w-full rounded-xl border border-ink-200 bg-white pr-3 text-sm text-ink-900 outline-none transition-all duration-200 placeholder:text-ink-400 hover:border-brand-700/40 focus:border-brand-700 focus:ring-4 focus:ring-brand-700/10';
 
 function IconNumber({
-  icon: Icon, placeholder, value, onChange,
+  icon: Icon, placeholder, value, onChange, ariaLabel,
 }: {
-  icon: React.ElementType; placeholder: string; value: string; onChange: (v: string) => void;
+  icon: React.ElementType; placeholder: string; value: string; onChange: (v: string) => void; ariaLabel?: string;
 }) {
   return (
     <div className="relative">
@@ -469,49 +489,69 @@ function IconNumber({
         type="number" min="0" inputMode="numeric"
         value={value} onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        aria-label={ariaLabel ?? placeholder}
         className={`${inputBase} pl-10`}
       />
     </div>
   );
 }
 
-function IconSelect({
-  icon: Icon, value, onChange, ariaLabel, children,
+/**
+ * Dropdown custom del modal (reemplaza al `<select>` nativo).
+ *
+ * Antes era `LocationDropdown` y solo servía para los tres campos de ubicación
+ * (opciones `string[]`, ícono `MapPin` fijo). Se generalizó a opciones
+ * `{ value, label }` + ícono configurable para que el select de tipo de
+ * propiedad — que usaba el `<select>` nativo del navegador y desentonaba —
+ * pueda usar exactamente el mismo componente.
+ */
+function Dropdown({
+  label, placeholder, value, options, icon: Icon = MapPin, isOpen, onToggle, onSelect, onClose,
 }: {
-  icon: React.ElementType; value: string; onChange: (v: string) => void; ariaLabel: string; children: React.ReactNode;
+  label: string; placeholder: string; value?: string;
+  options: { value: string; label: string }[];
+  icon?: React.ElementType;
+  isOpen: boolean; onToggle: () => void; onSelect: (v: string | undefined) => void; onClose: () => void;
 }) {
-  return (
-    <div className="relative">
-      <Icon size={16} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-brand-700" />
-      <ChevronDown size={15} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-ink-400" />
-      <select
-        aria-label={ariaLabel}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`${inputBase} cursor-pointer appearance-none pl-10`}
-      >
-        {children}
-      </select>
-    </div>
-  );
-}
+  const selectedLabel = options.find((o) => o.value === value)?.label;
+  const containerRef = useRef<HTMLDivElement>(null);
 
-function LocationDropdown({
-  label, placeholder, value, options, isOpen, onToggle, onSelect,
-}: {
-  label: string; placeholder: string; value?: string; options: string[];
-  isOpen: boolean; onToggle: () => void; onSelect: (v: string | undefined) => void;
-}) {
+  // Click afuera → cerrar. Solo cierra el panel: NO toca la selección, así el
+  // valor ya elegido se conserva (antes el dropdown quedaba abierto para
+  // siempre hasta volver a hacer click en su propio botón).
+  // Se escucha `mousedown` y no `click` para que cierre antes de que el click
+  // llegue a otro elemento; el botón de toggle está DENTRO del contenedor, así
+  // que sigue siendo `onToggle` quien maneja el cierre al clickearlo.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onPointerDown = (e: MouseEvent | TouchEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
+    };
+  }, [isOpen, onClose]);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
         type="button"
         onClick={onToggle}
+        aria-label={label}
+        aria-expanded={isOpen}
         className={`${inputBase} flex cursor-pointer items-center gap-2 pl-10 text-left`}
       >
-        <MapPin size={16} className="pointer-events-none absolute left-3.5 text-brand-700" />
-        <span className={`truncate ${value ? 'text-ink-900' : 'text-ink-400'}`}>{value || placeholder}</span>
-        <ChevronDown size={15} className="ml-auto shrink-0 text-ink-400" />
+        <Icon size={16} className="pointer-events-none absolute left-3.5 text-brand-700" />
+        <span className={`truncate ${selectedLabel ? 'text-ink-900' : 'text-ink-400'}`}>
+          {selectedLabel || placeholder}
+        </span>
+        <ChevronDown
+          size={15}
+          className={`ml-auto shrink-0 text-ink-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {isOpen && (
@@ -525,17 +565,18 @@ function LocationDropdown({
           </button>
           {options.map((opt) => (
             <button
-              key={opt}
+              key={opt.value}
               type="button"
-              onClick={() => onSelect(opt)}
-              className="w-full px-4 py-2.5 text-left text-sm font-medium text-ink-700 transition-colors hover:bg-brand-50 hover:text-brand-700"
+              onClick={() => onSelect(opt.value)}
+              className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors hover:bg-brand-50 hover:text-brand-700 ${
+                opt.value === value ? 'bg-brand-50 text-brand-700' : 'text-ink-700'
+              }`}
             >
-              {opt}
+              {opt.label}
             </button>
           ))}
         </div>
       )}
-      <span className="sr-only">{label}</span>
     </div>
   );
 }

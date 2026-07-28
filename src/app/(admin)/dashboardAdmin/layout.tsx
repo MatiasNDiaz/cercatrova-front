@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import {
   User, Home, FileText, LogOut, ChevronRight,
-  ArrowLeft, Users, Building2, BarChart2, Shield, Bell, Eye,
+  ArrowLeft, Users, Building2, BarChart2, Shield, Bell, Eye, PlusSquare,
 } from 'lucide-react';
 import api from '@/modules/shared/lib/axios';
 
@@ -102,12 +102,16 @@ function Sidebar() {
     notificaciones: unread.length,
   };
 
+  // Orden pedido: Inicio · Publicar · Usuarios · Solicitudes (+ campanita).
+  // "Propiedades" se mantiene porque es el único acceso al listado/CRUD de
+  // publicaciones existentes; "Publicar" es el atajo directo al alta.
   const mainNavItems = [
-    { href: '/dashboardAdmin',                  label: 'Inicio',          icon: Home,      badge: 0 },
-    { href: '/dashboardAdmin/propiedades',       label: 'Propiedades',     icon: Building2, badge: 0 },
-    { href: '/dashboardAdmin/solicitudes',       label: 'Solicitudes',     icon: FileText,  badge: counts.solicitudes },
-    { href: '/dashboardAdmin/usuarios',          label: 'Usuarios',        icon: Users,     badge: counts.usuarios },
-    { href: '/dashboardAdmin/notificaciones',    label: 'Notificaciones',  icon: Bell,      badge: counts.notificaciones },
+    { href: '/dashboardAdmin',                    label: 'Inicio',          icon: Home,      badge: 0 },
+    { href: '/dashboardAdmin/propiedades/nueva',  label: 'Publicar',        icon: PlusSquare, badge: 0 },
+    { href: '/dashboardAdmin/usuarios',           label: 'Usuarios',        icon: Users,     badge: counts.usuarios },
+    { href: '/dashboardAdmin/solicitudes',        label: 'Solicitudes',     icon: FileText,  badge: counts.solicitudes },
+    { href: '/dashboardAdmin/propiedades',        label: 'Propiedades',     icon: Building2, badge: 0 },
+    { href: '/dashboardAdmin/notificaciones',     label: 'Notificaciones',  icon: Bell,      badge: counts.notificaciones },
   ];
 
   const accountNavItems = [
@@ -176,9 +180,16 @@ function Sidebar() {
               key={item.href}
               {...item}
               isActive={
-                item.href === '/dashboardAdmin'
-                  ? pathname === '/dashboardAdmin'
-                  : pathname.startsWith(item.href)
+                // `/dashboardAdmin` y `/dashboardAdmin/propiedades/nueva` matchean
+                // exacto: el primero porque es prefijo de todo lo demás, y el
+                // segundo porque si no, estando en "Publicar" se encendería
+                // también "Propiedades" (`/dashboardAdmin/propiedades` es su
+                // prefijo). Por eso "Propiedades" además excluye `/nueva`.
+                item.href === '/dashboardAdmin' || item.href.endsWith('/nueva')
+                  ? pathname === item.href
+                  : item.href === '/dashboardAdmin/propiedades'
+                    ? pathname.startsWith(item.href) && pathname !== '/dashboardAdmin/propiedades/nueva'
+                    : pathname.startsWith(item.href)
               }
             />
           ))}

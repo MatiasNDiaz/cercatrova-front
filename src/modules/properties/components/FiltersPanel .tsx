@@ -30,14 +30,14 @@ export const FiltersPanel = () => {
 
   const [localNumbers, setLocalNumbers] = useState<{
     rooms: string; bathrooms: string; minPrice: string;
-    maxPrice: string; minM2: string; maxM2: string; maxAntiquity: string;
+    maxPrice: string; minSupTotal: string; maxSupTotal: string; maxAntiquity: string;
   }>({
     rooms: filters.rooms?.toString() || '',
     bathrooms: filters.bathrooms?.toString() || '',
     minPrice: filters.minPrice?.toString() || '',
     maxPrice: filters.maxPrice?.toString() || '',
-    minM2: filters.minM2?.toString() || '',
-    maxM2: filters.maxM2?.toString() || '',
+    minSupTotal: filters.minSupTotal?.toString() || '',
+    maxSupTotal: filters.maxSupTotal?.toString() || '',
     maxAntiquity: filters.maxAntiquity?.toString() || '',
   });
 
@@ -114,8 +114,8 @@ export const FiltersPanel = () => {
         bathrooms: localNumbers.bathrooms ? Number(localNumbers.bathrooms) : undefined,
         minPrice: localNumbers.minPrice ? Number(localNumbers.minPrice) : undefined,
         maxPrice: localNumbers.maxPrice ? Number(localNumbers.maxPrice) : undefined,
-        minM2: localNumbers.minM2 ? Number(localNumbers.minM2) : undefined,
-        maxM2: localNumbers.maxM2 ? Number(localNumbers.maxM2) : undefined,
+        minSupTotal: localNumbers.minSupTotal ? Number(localNumbers.minSupTotal) : undefined,
+        maxSupTotal: localNumbers.maxSupTotal ? Number(localNumbers.maxSupTotal) : undefined,
         maxAntiquity: localNumbers.maxAntiquity ? Number(localNumbers.maxAntiquity) : undefined,
       });
     }, 700);
@@ -180,8 +180,8 @@ export const FiltersPanel = () => {
       if (localNumbers.bathrooms) params.set('bathrooms', localNumbers.bathrooms);
       if (localNumbers.minPrice) params.set('minPrice', localNumbers.minPrice);
       if (localNumbers.maxPrice) params.set('maxPrice', localNumbers.maxPrice);
-      if (localNumbers.minM2) params.set('minM2', localNumbers.minM2);
-      if (localNumbers.maxM2) params.set('maxM2', localNumbers.maxM2);
+      if (localNumbers.minSupTotal) params.set('minSupTotal', localNumbers.minSupTotal);
+      if (localNumbers.maxSupTotal) params.set('maxSupTotal', localNumbers.maxSupTotal);
       if (localNumbers.maxAntiquity) params.set('maxAntiquity', localNumbers.maxAntiquity);
       router.push(`/properties?${params.toString()}`);
     } else {
@@ -421,20 +421,20 @@ export const FiltersPanel = () => {
               <Maximize className={styles.iconStyle} size={16} />
               <input
                 type="number"
-                value={localNumbers.minM2}
-                onChange={(e) => setLocalNumbers((prev) => ({ ...prev, minM2: e.target.value }))}
+                value={localNumbers.minSupTotal}
+                onChange={(e) => setLocalNumbers((prev) => ({ ...prev, minSupTotal: e.target.value }))}
                 className={styles.input}
-                placeholder="M² mínimos"
+                placeholder="Sup. Total mínima"
               />
             </div>
             <div className="relative group">
               <Maximize className={styles.iconStyle} size={16} />
               <input
                 type="number"
-                value={localNumbers.maxM2}
-                onChange={(e) => setLocalNumbers((prev) => ({ ...prev, maxM2: e.target.value }))}
+                value={localNumbers.maxSupTotal}
+                onChange={(e) => setLocalNumbers((prev) => ({ ...prev, maxSupTotal: e.target.value }))}
                 className={styles.input}
-                placeholder="M² máximos"
+                placeholder="Sup. Total máxima"
               />
             </div>
             <div className="relative group">
@@ -502,7 +502,7 @@ export const FiltersPanel = () => {
                   } else {
                     clearFilters();
                   }
-                  setLocalNumbers({ rooms: '', bathrooms: '', minPrice: '', maxPrice: '', minM2: '', maxM2: '', maxAntiquity: '' });
+                  setLocalNumbers({ rooms: '', bathrooms: '', minPrice: '', maxPrice: '', minSupTotal: '', maxSupTotal: '', maxAntiquity: '' });
                   setTimeout(() => setIsClearingFilters(false), 0);
                 }}
                 className={`
