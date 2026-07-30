@@ -208,6 +208,62 @@ export interface SearchPreference {
   user: User;
 }
 
+// ============================================================
+// PUBLICACIONES (feed estilo red social)
+// ============================================================
+
+/** Autor de una publicación o comentario — subconjunto público de `User`. */
+export interface PostAuthor {
+  id: number;
+  name: string;
+  surname: string | null;
+  photo: string | null;
+  role: 'user' | 'admin';
+}
+
+export interface Post {
+  id: number;
+  description: string;
+  imageUrl: string;
+  imagePublicId: string;
+  likesCount: number;
+  createdAt: string;
+  agent: PostAuthor;
+  /** Calculado por el backend según quién mira (false si no hay sesión). */
+  likedByMe: boolean;
+  /** Solo en GET /posts — cuenta únicamente los comentarios visibles. */
+  commentsCount?: number;
+}
+
+export interface PostComment {
+  id: number;
+  content: string;
+  isHidden: boolean;
+  createdAt: string;
+  postId: number;
+  userId: number;
+  parentCommentId: number | null;
+  user: PostAuthor;
+  /** Respuestas anidadas (un solo nivel). Solo en el listado de comentarios. */
+  replies?: PostComment[];
+}
+
+/** Orden del feed — coincide con `PostSortBy` del backend. */
+export type PostSortBy = 'recent' | 'oldest' | 'mostLiked';
+
+export interface CreatePostDto {
+  description: string;
+}
+
+export interface CreatePostCommentDto {
+  content: string;
+}
+
+export interface ToggleLikeResponse {
+  liked: boolean;
+  likesCount: number;
+}
+
 export interface PropertyRequest {
   id: number;
   localidad: string;

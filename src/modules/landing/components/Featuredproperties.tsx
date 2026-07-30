@@ -51,7 +51,7 @@ export default async function FeaturedProperties() {
       <div className="mx-auto max-w-350 px-6">
         <SectionHeading
           eyebrow="Propiedades destacadas"
-          title={<>Las mejor valoradas por <span className="text-brand-700">nuestros clientes</span></>}
+          title={<>Las mejores valoradas por <span className="text-brand-700">nuestros clientes</span></>}
           subtitle="Una selección de propiedades elegidas por su ubicación, calidad y potencial de inversión."
         />
 

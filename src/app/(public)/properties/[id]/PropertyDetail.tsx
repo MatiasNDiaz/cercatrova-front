@@ -8,7 +8,7 @@ import {
   FileCheck, Hourglass, MapPin, Home, ChevronLeft,
   ChevronRight, User, Calendar, CheckCircle2, XCircle,
   Building2, Navigation, MessageCircle, Send, Pencil,
-  Trash2, LogIn, MessageCircleMore, ShieldCheck, Landmark,
+  Trash2, LogIn, MessageCircleMore, ShieldCheck, Landmark, Eye, EyeOff,
 } from 'lucide-react';
 import { BsWhatsapp } from 'react-icons/bs';
 import { toast } from 'sonner';
@@ -34,6 +34,8 @@ interface Comment {
   id: number;
   message: string;
   created_at: string;
+  /** Moderación del admin: los usuarios comunes no lo reciben del backend. */
+  isHidden?: boolean;
   user?: { id?: number; name: string; surname: string; photo?: string };
 }
 
@@ -346,6 +348,20 @@ function CommentsAndRatings({
     });
   };
 
+  // ── OCULTAR / MOSTRAR COMENTARIO (solo admin) ──
+  // Moderación blanda: el comentario no se borra, deja de mostrarse al resto.
+  const handleToggleHidden = async (commentId: number) => {
+    try {
+      const { data } = await api.patch(`/properties/${propertyId}/comments/${commentId}/hide`);
+      setComments((prev) =>
+        prev.map((c) => (c.id === commentId ? { ...c, isHidden: data.isHidden } : c)),
+      );
+      toast.success(data.message);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  };
+
   // ── SUBMIT RATING ──
   const handleRatingSubmit = async () => {
     if (!selectedScore) return;
@@ -500,6 +516,7 @@ function CommentsAndRatings({
           <div className="flex flex-col gap-5">
             {comments.map((comment) => {
               const isOwner = comment.user?.id === user?.id;
+              const isAdmin = user?.role === 'admin';
               return (
                 <div key={comment.id} className="group/comment flex gap-4">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-700/10">
@@ -509,7 +526,9 @@ function CommentsAndRatings({
                       <User size={18} className="text-brand-700" />
                     )}
                   </div>
-                  <div className="flex-1 rounded-2xl bg-surface px-5 py-4">
+                  {/* Un comentario oculto solo lo recibe el admin (el backend lo
+                      filtra para el resto); se marca en ámbar para que se note. */}
+                  <div className={`flex-1 rounded-2xl px-5 py-4 ${comment.isHidden ? 'border border-amber-200 bg-amber-50' : 'bg-surface'}`}>
                     <div className="mb-1 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-ink-800">
@@ -520,22 +539,35 @@ function CommentsAndRatings({
                             Tú
                           </span>
                         )}
+                        {comment.isHidden && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase">
+                            <EyeOff size={9} />Oculto
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <span className="mr-2 text-xs text-ink-500">{formatDate(comment.created_at)}</span>
+                        {isAdmin && (
+                          <button onClick={() => handleToggleHidden(comment.id)}
+                            className="cursor-pointer rounded-lg p-1.5 text-ink-500 opacity-0 transition-all hover:bg-amber-50 hover:text-amber-600 group-hover/comment:opacity-100"
+                            aria-label={comment.isHidden ? 'Mostrar comentario' : 'Ocultar comentario'}
+                            title={comment.isHidden ? 'Mostrar' : 'Ocultar'}>
+                            {comment.isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
+                          </button>
+                        )}
                         {isOwner && editingId !== comment.id && (
-                          <>
-                            <button onClick={() => { setEditingId(comment.id); setEditMessage(comment.message); }}
-                              className="cursor-pointer rounded-lg p-1.5 text-ink-500 opacity-0 transition-all hover:bg-brand-700/10 hover:text-brand-700 group-hover/comment:opacity-100"
-                              aria-label="Editar">
-                              <Pencil size={13} />
-                            </button>
-                            <button onClick={() => handleDelete(comment.id)}
-                              className="cursor-pointer rounded-lg p-1.5 text-ink-500 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover/comment:opacity-100"
-                              aria-label="Eliminar">
-                              <Trash2 size={13} />
-                            </button>
-                          </>
+                          <button onClick={() => { setEditingId(comment.id); setEditMessage(comment.message); }}
+                            className="cursor-pointer rounded-lg p-1.5 text-ink-500 opacity-0 transition-all hover:bg-brand-700/10 hover:text-brand-700 group-hover/comment:opacity-100"
+                            aria-label="Editar">
+                            <Pencil size={13} />
+                          </button>
+                        )}
+                        {(isOwner || isAdmin) && editingId !== comment.id && (
+                          <button onClick={() => handleDelete(comment.id)}
+                            className="cursor-pointer rounded-lg p-1.5 text-ink-500 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover/comment:opacity-100"
+                            aria-label="Eliminar">
+                            <Trash2 size={13} />
+                          </button>
                         )}
                       </div>
                     </div>

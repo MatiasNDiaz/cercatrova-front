@@ -7,8 +7,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import {
-  User, Home, FileText, LogOut, ChevronRight,
-  ArrowLeft, Users, Building2, BarChart2, Shield, Bell, Eye, PlusSquare,
+  User, Home, FileText, LogOut, ChevronDown,
+  ArrowLeft, Users, Building2, BarChart2, Bell, Eye, Megaphone,
 } from 'lucide-react';
 import api from '@/modules/shared/lib/axios';
 
@@ -44,24 +44,93 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative
+      className={`group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200
         ${isActive
-          ? 'bg-linear-to-r from-[#0b7a4b] to-[#0f8c58] text-white shadow-md shadow-[#0b7a4b]/20'
-          : 'text-gray-500 hover:bg-[#0b7a4b]/10 hover:text-[#0b7a4b]'
+          ? 'bg-[#0b7a4b] text-white shadow-sm'
+          : 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
         }`}
     >
-      {isActive && <div className="absolute left-0 w-1 h-6 bg-white rounded-r-full" />}
-      <Icon size={19} className={isActive ? 'text-white' : 'text-gray-500 group-hover:text-[#0b7a4b] transition-colors'} />
+      <Icon size={18} className={isActive ? 'text-white' : 'text-gray-400 transition-colors group-hover:text-[#0b7a4b]'} />
       <span className="flex-1">{label}</span>
-      {badge > 0
-        ? <span className={`min-w-4.5 h-4.5 px-1 rounded-full text-[10px] font-black flex items-center justify-center leading-none shadow-sm ${
-            isActive ? 'bg-white text-[#0b7a4b]' : 'bg-red-500 text-white'
-          }`}>
+      {badge > 0 && (
+        <span className={`flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] leading-none font-black ${
+          isActive ? 'bg-white text-[#0b7a4b]' : 'bg-red-500 text-white'
+        }`}>
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+/**
+ * Grupo desplegable del menú lateral.
+ *
+ * Arranca abierto si alguna de sus rutas hijas es la activa, para que al
+ * recargar en una subpágina el menú no aparezca colapsado ocultando dónde
+ * estás parado.
+ */
+function NavGroup({
+  label, icon: Icon, items, badge = 0,
+}: {
+  label: string;
+  icon: React.ElementType;
+  items: { href: string; label: string; badge?: number; exact?: boolean }[];
+  badge?: number;
+}) {
+  const pathname = usePathname();
+  const isChildActive = items.some((i) =>
+    i.exact ? pathname === i.href : pathname.startsWith(i.href.split('?')[0]),
+  );
+  const [open, setOpen] = useState(isChildActive);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className={`group flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
+          isChildActive ? 'bg-[#0b7a4b]/8 text-[#0b7a4b]' : 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
+        }`}
+      >
+        <Icon size={18} className={isChildActive ? 'text-[#0b7a4b]' : 'text-gray-400 transition-colors group-hover:text-[#0b7a4b]'} />
+        <span className="flex-1 text-left">{label}</span>
+        {badge > 0 && (
+          <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-black text-white">
             {badge > 99 ? '99+' : badge}
           </span>
-        : isActive && <ChevronRight size={14} className="text-white/80" />
-      }
-    </Link>
+        )}
+        <ChevronDown size={15} className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <ul className="mt-1 ml-5 space-y-0.5 border-l border-gray-200 pl-3">
+          {items.map((item) => {
+            const active = item.exact
+              ? pathname === item.href
+              : pathname.startsWith(item.href.split('?')[0]);
+            return (
+              <li key={item.href + item.label}>
+                <Link
+                  href={item.href}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-200 ${
+                    active ? 'bg-[#0b7a4b]/10 text-[#0b7a4b]' : 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
+                  }`}
+                >
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge ? (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] leading-none font-black text-white">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -102,18 +171,8 @@ function Sidebar() {
     notificaciones: unread.length,
   };
 
-  // Orden pedido: Inicio · Publicar · Usuarios · Solicitudes (+ campanita).
-  // "Propiedades" se mantiene porque es el único acceso al listado/CRUD de
-  // publicaciones existentes; "Publicar" es el atajo directo al alta.
-  const mainNavItems = [
-    { href: '/dashboardAdmin',                    label: 'Inicio',          icon: Home,      badge: 0 },
-    { href: '/dashboardAdmin/propiedades/nueva',  label: 'Publicar',        icon: PlusSquare, badge: 0 },
-    { href: '/dashboardAdmin/usuarios',           label: 'Usuarios',        icon: Users,     badge: counts.usuarios },
-    { href: '/dashboardAdmin/solicitudes',        label: 'Solicitudes',     icon: FileText,  badge: counts.solicitudes },
-    { href: '/dashboardAdmin/propiedades',        label: 'Propiedades',     icon: Building2, badge: 0 },
-    { href: '/dashboardAdmin/notificaciones',     label: 'Notificaciones',  icon: Bell,      badge: counts.notificaciones },
-  ];
-
+  // La navegación principal ahora se arma con `NavGroup` directamente en el
+  // JSX (ver abajo); solo la sección "Cuenta" sigue siendo una lista plana.
   const accountNavItems = [
     { href: '/dashboardAdmin/perfil',       label: 'Mi Perfil',    icon: User,     badge: 0 },
     { href: '/dashboardAdmin/estadisticas', label: 'Estadísticas', icon: BarChart2, badge: 0 },
@@ -138,64 +197,94 @@ function Sidebar() {
   };
 
   return (
-    <aside className="w-72 bg-white border-r rounded-tr-3xl mt-4 border-gray-100 flex flex-col h-screen sticky top-0 shadow-sm">
-      <div className="p-5 flex items-center justify-start">
-        <Link href="/" className="p-2 rounded-lg bg-gray-100 text-[#0b7a4b] hover:bg-[#0b7a4b]/10 transition-all group">
-          <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
-        </Link>
-        <Link href="/" className="transition-opacity hover:opacity-80 ml-7">
-          <Image src="/LogoInmobiliaria.png" alt="Logo" width={140} height={40} className="w-32 h-auto" />
+    // Sin logo ni tarjeta de perfil: esos datos ya están en la barra superior.
+    // El sidebar queda solo con navegación, así entra sin scroll inicial.
+    <aside className="sticky top-0 flex h-screen w-72 flex-col border-r border-gray-100 bg-white shadow-sm">
+      <div className="px-4 pt-5 pb-3">
+        <Link
+          href="/"
+          className="group flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-500 transition-colors hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]"
+        >
+          <ArrowLeft size={17} className="transition-transform group-hover:-translate-x-0.5" />
+          Volver al inicio
         </Link>
       </div>
 
-      <div className="px-6 mb-6 ">
-        <div className="p-2 rounded-2xl bg-[#0b7a4b]/10 border border-gray-100 flex flex-col items-center text-center">
-          <div className="relative mb-3">
-            <div className="w-16 h-16 rounded-full bg-white overflow-hidden ring-2 ring-[#0b7a4b]/20 shadow-sm">
-              {user?.photo ? (
-                <Image src={user.photo} alt={user.name} width={64} height={64} className="object-cover w-full h-full" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                  <User size={24} className="text-gray-400" />
-                </div>
-              )}
-            </div>
-            <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full" />
-          </div>
-          <h3 className="font-bold text-gray-900 leading-tight truncate w-full">
-            {user?.name} {user?.surname}
-          </h3>
-          <div className="flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-[#0b7a4b] text-white">
-            <Shield size={11} />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Administrador</span>
-          </div>
-        </div>
-      </div>
+      <nav className="flex-1 space-y-1 overflow-y-auto px-4 pb-4">
+        <p className="mb-2 px-4 text-[10px] font-bold tracking-[0.14em] text-[#0b7a4b] uppercase">
+          Panel Admin
+        </p>
 
-      <nav className="flex-1 px-4  overflow-y-auto">
-        <div className="space-y-2 mb-6">
-          <p className="px-4 text-[11px] font-bold text-[#0b7a4b] uppercase tracking-widest mb-2">Panel Admin</p>
-          {mainNavItems.map((item) => (
-            <NavLink
-              key={item.href}
-              {...item}
-              isActive={
-                // `/dashboardAdmin` y `/dashboardAdmin/propiedades/nueva` matchean
-                // exacto: el primero porque es prefijo de todo lo demás, y el
-                // segundo porque si no, estando en "Publicar" se encendería
-                // también "Propiedades" (`/dashboardAdmin/propiedades` es su
-                // prefijo). Por eso "Propiedades" además excluye `/nueva`.
-                item.href === '/dashboardAdmin' || item.href.endsWith('/nueva')
-                  ? pathname === item.href
-                  : item.href === '/dashboardAdmin/propiedades'
-                    ? pathname.startsWith(item.href) && pathname !== '/dashboardAdmin/propiedades/nueva'
-                    : pathname.startsWith(item.href)
-              }
-            />
-          ))}
-        </div>
-        <div className="space-y-1">
-          <p className="px-4 text-[11px] font-bold text-[#0b7a4b] uppercase tracking-widest mb-2">Cuenta</p>
+        <NavLink
+          href="/dashboardAdmin"
+          label="Inicio"
+          icon={Home}
+          isActive={pathname === '/dashboardAdmin'}
+        />
+
+        <NavGroup
+          label="Propiedades"
+          icon={Building2}
+          items={[
+            { href: '/dashboardAdmin/propiedades/nueva', label: 'Publicar propiedad', exact: true },
+            { href: '/dashboardAdmin/propiedades?accion=editar', label: 'Editar propiedades' },
+            { href: '/dashboardAdmin/propiedades?accion=eliminar', label: 'Eliminar propiedades' },
+            { href: '/properties', label: 'Ver catálogo público' },
+          ]}
+        />
+
+        <NavGroup
+          label="Publicaciones"
+          icon={Megaphone}
+          items={[
+            { href: '/dashboardAdmin/publicaciones/nueva', label: 'Crear publicación', exact: true },
+            { href: '/dashboardAdmin/publicaciones?accion=moderar', label: 'Editar y moderar' },
+            { href: '/dashboardAdmin/publicaciones?accion=eliminar', label: 'Eliminar publicaciones' },
+          ]}
+        />
+
+        <NavGroup
+          label="Notificaciones"
+          icon={Bell}
+          badge={counts.notificaciones}
+          // Cada categoría es su propia página, no un filtro de la vista general.
+          items={[
+            { href: '/dashboardAdmin/notificaciones', label: 'Todas', badge: counts.notificaciones, exact: true },
+            { href: '/dashboardAdmin/notificaciones/usuarios', label: 'Usuarios registrados', badge: counts.usuarios },
+            { href: '/dashboardAdmin/notificaciones/solicitudes', label: 'Solicitudes de publicación', badge: counts.solicitudes },
+            { href: '/dashboardAdmin/notificaciones/comentarios', label: 'Comentarios', badge: counts.comentarios },
+            { href: '/dashboardAdmin/notificaciones/valoraciones', label: 'Valoraciones', badge: counts.valoraciones },
+            { href: '/dashboardAdmin/notificaciones/favoritos', label: 'Favoritos', badge: counts.favoritos },
+          ]}
+        />
+
+        <NavGroup
+          label="Solicitudes"
+          icon={FileText}
+          badge={counts.solicitudes}
+          items={[
+            { href: '/dashboardAdmin/solicitudes', label: 'Todas', exact: true },
+            { href: '/dashboardAdmin/solicitudes?estado=aceptado', label: 'Aceptadas' },
+            { href: '/dashboardAdmin/solicitudes?estado=rechazado', label: 'Rechazadas' },
+            { href: '/dashboardAdmin/solicitudes?estado=en_revision', label: 'En revisión' },
+          ]}
+        />
+
+        <NavGroup
+          label="Usuarios"
+          icon={Users}
+          badge={counts.usuarios}
+          items={[
+            { href: '/dashboardAdmin/usuarios', label: 'Todos los usuarios' },
+            { href: '/dashboardAdmin/usuarios?rol=user', label: 'Solo usuarios' },
+            { href: '/dashboardAdmin/usuarios?rol=admin', label: 'Solo administradores' },
+          ]}
+        />
+
+        <div className="pt-4">
+          <p className="mb-2 px-4 text-[10px] font-bold tracking-[0.14em] text-[#0b7a4b] uppercase">
+            Cuenta
+          </p>
           {accountNavItems.map((item) => (
             <NavLink key={item.href} {...item} isActive={pathname.startsWith(item.href)} />
           ))}

@@ -138,14 +138,23 @@ export const NavbarPublic = () => {
   return (
     <nav className={`${NAV_SHELL} ${isVisible ? "translate-y-0" : "-translate-y-[130%]"}`}>
       {/* ── LOGO ── */}
-      <div className="flex items-center">
-        <button aria-label="Ir al inicio" onClick={() => scrollTo("inicio")} className="cursor-pointer">
-          <Image src="/LogoInmobiliaria.png" alt="Logo Cerca Trova" width={115} height={130} className="bg-white w-30 object-contain border md:w-30 ml-4 md:ml-8 rounded-full" />
-        </button>
-      </div>
+      <button
+        aria-label="Ir al inicio"
+        onClick={() => scrollTo("inicio")}
+        className="shrink-0 cursor-pointer transition-opacity duration-200 hover:opacity-80"
+      >
+        <Image
+          src="/LogoInmobiliaria.png"
+          alt="Cerca Trova"
+          width={140}
+          height={140}
+          priority
+          className="h-13 w-auto object-contain"
+        />
+      </button>
 
       {/* ── HAMBURGUESA MOBILE ── */}
-      <button onClick={toggleMenu} aria-label="Abrir navegación" className="mr-2 rounded-2xl p-2 text-brand-700 transition-all duration-200 hover:bg-brand-50 active:scale-95 md:hidden">
+      <button onClick={toggleMenu} aria-label="Abrir navegación" className="mr-2 rounded-2xl p-2 text-brand-700 transition-all duration-200 hover:bg-brand-50 active:scale-95 lg:hidden">
         <Menu size={30} />
       </button>
 
@@ -153,23 +162,23 @@ export const NavbarPublic = () => {
           Orden: inicio · publicaciones · propiedades · servicios · nosotros ·
           consultas. "Publicaciones" es nuevo y entra a la izquierda de
           propiedades; "contacto" se quitó (sigue en el footer). */}
-      <ul className="ml-auto mr-4 hidden flex-row items-center gap-1 md:flex">
+      <ul className="ml-auto mr-4 hidden flex-row items-center gap-1 lg:flex">
         <li>
-          <NavLinkScroll sectionId="inicio" icon={<Home size={17} />} label="Inicio" />
+          <NavLinkScroll sectionId="inicio" icon={<Home size={16} />} label="Inicio" />
         </li>
 
         <li>
           <Link href="/publicaciones" className={navItemClass(pathname === "/publicaciones")}>
-            <Newspaper size={17} />
+            <Newspaper size={16} />
             Publicaciones
           </Link>
         </li>
 
         <li className="group relative">
-          <span className={`${NAV_ITEM} ${pathname.startsWith("/properties") ? "text-brand-800" : ""}`}>
-            <Building2 size={17} />
+          <span className={`${navItemClass(pathname.startsWith("/properties"))}`}>
+            <Building2 size={16} />
             Propiedades
-            <ChevronDown size={15} className="transition-transform duration-300 group-hover:rotate-180" />
+            <ChevronDown size={14} className="transition-transform duration-200 group-hover:rotate-180" />
           </span>
           <ul className={`${NAV_DROPDOWN} w-52`}>
             {propiedadesLinks.map((link) => (
@@ -181,10 +190,10 @@ export const NavbarPublic = () => {
         </li>
 
         <li className="group relative">
-          <span className={`${NAV_ITEM} ${pathname.startsWith("/servicios") ? "text-brand-800" : ""}`}>
-            <Briefcase size={17} />
+          <span className={`${navItemClass(pathname.startsWith("/servicios"))}`}>
+            <Briefcase size={16} />
             Servicios
-            <ChevronDown size={15} className="transition-transform duration-300 group-hover:rotate-180" />
+            <ChevronDown size={14} className="transition-transform duration-200 group-hover:rotate-180" />
           </span>
           <ul className={`${NAV_DROPDOWN} w-64`}>
             {serviciosLinks.map((link) => (
@@ -196,27 +205,26 @@ export const NavbarPublic = () => {
         </li>
 
         <li>
-          <NavLinkScroll sectionId="nosotros" icon={<Users size={17} />} label="Nosotros" />
+          <NavLinkScroll sectionId="nosotros" icon={<Users size={16} />} label="Nosotros" />
         </li>
 
         <li>
-          <NavLinkScroll sectionId="faq" icon={<MessageCircle size={17} />} label="Consultas" />
+          <NavLinkScroll sectionId="faq" icon={<MessageCircle size={16} />} label="Consultas" />
         </li>
 
         <li className="ml-2">
           <Link href="/login" className={NAV_CTA}>
-            <span aria-hidden className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
-            <LogIn size={18} className="relative transition-transform duration-300 group-hover:-translate-y-0.5" />
-            <span className="relative">Iniciar sesión</span>
+            <LogIn size={16} />
+            Iniciar sesión
           </Link>
         </li>
       </ul>
 
       {/* ── MOBILE: Overlay ── */}
-      <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 md:hidden z-60 ${isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`} onClick={toggleMenu} />
+      <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden z-60 ${isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`} onClick={toggleMenu} />
 
       {/* ── MOBILE: Drawer ── */}
-      <div className={`fixed top-0 right-0 h-full w-75 rounded-2xl rounded-tr-none bg-white shadow-2xl transform transition-transform duration-300 ease-out md:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
+      <div className={`fixed top-0 right-0 h-full w-75 rounded-2xl rounded-tr-none bg-white shadow-2xl transform transition-transform duration-300 ease-out lg:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-6 border-b-2 border-gray-200 shadow-md">
             <span className="font-bold text-[#0b7a4b] text-xl">Menú</span>

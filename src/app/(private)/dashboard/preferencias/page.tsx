@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import api from '@/modules/shared/lib/axios';
 import { Field } from '@/modules/shared/ui/Field';
@@ -234,7 +235,10 @@ export default function PreferenciasPage() {
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [hasPrefs, setHasPrefs] = useState(false);
-  const [showForm, setShowForm] = useState(false);
+  // `?nueva=1` (ítem "Cargar preferencias" del sidebar) abre el formulario
+  // ya desplegado en vez de mostrar el resumen colapsado.
+  const searchParams = useSearchParams();
+  const [showForm, setShowForm] = useState(searchParams.get('nueva') === '1');
   const [propertyTypes, setPropertyTypes] = useState<PropertyType[]>([]);
 
   const [form, setForm] = useState<FormState>({

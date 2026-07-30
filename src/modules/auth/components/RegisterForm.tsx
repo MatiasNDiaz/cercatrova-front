@@ -57,11 +57,13 @@ export function RegisterForm() {
 
   return (
     <AuthShell
-      image="https://images.unsplash.com/photo-1580894732444-8ecded7900cd?q=80&w=1600&auto=format&fit=crop"
-      imageAlt="Persona joven sonriendo en un ambiente luminoso"
-      // La protagonista está sobre la derecha de la foto original; centrada, el
-      // recorte alto dejaba media pared vacía y a ella cortada contra el borde.
-      imagePosition="72% center"
+      image="/imagenRegister.jpg"
+      imageAlt="Una pareja sentada en el piso entre cajas de mudanza, mirando su nuevo hogar"
+      // La pareja está en el cuarto INFERIOR de una foto muy alta (4500x8000):
+      // con el recorte centrado quedaban cortados a la altura de las piernas.
+      // Empujando el foco hacia abajo se los ve enteros y arriba queda la pared
+      // libre, que es justo donde cae el texto centrado.
+      imagePosition="center 85%"
       panelTitle={<>Tu próximo hogar <span className="whitespace-nowrap text-brand-400">empieza acá</span></>}
       panelText="Creá tu cuenta para guardar propiedades favoritas, enviar solicitudes de publicación y recibir avisos cuando entre lo que buscás."
       title="Crear cuenta"

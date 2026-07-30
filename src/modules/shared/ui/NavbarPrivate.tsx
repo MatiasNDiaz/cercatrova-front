@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ChevronDown, Menu, X, ArrowLeft, Home, Building2,
   LogOut, Bell, PlusSquare, User, LayoutDashboard, Shield,
-  Newspaper, Users, ClipboardList,
+  Newspaper, Briefcase, UsersRound, MessageCircle,
 } from "lucide-react";
 import {
   NAV_SHELL, NAV_ITEM, NAV_DROPDOWN, NAV_DROPDOWN_ITEM,
@@ -54,6 +54,16 @@ const propiedadesLinks = [
   { label: "Ver todas", href: "/properties" },
 ];
 
+// Mismos servicios que la navbar pública: el usuario logueado tiene que ver
+// las mismas secciones del sitio que un visitante.
+const serviciosLinks = [
+  { label: "Venta de Propiedades",      href: "/servicios/venta" },
+  { label: "Alquiler de Propiedades",   href: "/servicios/alquiler" },
+  { label: "Tasaciones de Propiedades", href: "/servicios/tasaciones" },
+  { label: "Asesoramiento Profesional", href: "/servicios/asesoramiento" },
+  { label: "Publicamos tu propiedad",   href: "/servicios/comercializacion" },
+];
+
 export const NavbarPrivate = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
@@ -66,14 +76,10 @@ export const NavbarPrivate = () => {
 
   const isAdmin = user?.role === 'admin';
 
-  // Enlaces del admin en la barra superior: los mismos cuatro que el sidebar
-  // del panel, para que la navegación sea la misma esté donde esté.
-  const adminLinks = [
-    { label: 'Inicio',      href: '/dashboardAdmin',                  icon: LayoutDashboard },
-    { label: 'Publicar',    href: '/dashboardAdmin/propiedades/nueva', icon: PlusSquare },
-    { label: 'Usuarios',    href: '/dashboardAdmin/usuarios',          icon: Users },
-    { label: 'Solicitudes', href: '/dashboardAdmin/solicitudes',       icon: ClipboardList },
-  ];
+  // La barra superior muestra siempre las SECCIONES DEL SITIO (las mismas que
+  // ve un visitante), tanto para el usuario común como para el admin: es la
+  // navegación pública. Las secciones del panel viven en el sidebar del
+  // dashboard, no acá.
 
   const dashboardHref = isAdmin ? '/dashboardAdmin' : '/dashboard';
   const perfilHref    = isAdmin ? '/dashboardAdmin/perfil' : '/dashboard/perfil';
@@ -81,17 +87,26 @@ export const NavbarPrivate = () => {
   // 👇 fetch según rol
  useEffect(() => {
   if (!user) return;
+  // `/notifications/unread-count` devuelve solo el número y resuelve el rol
+  // desde el token. Antes se pedía la LISTA COMPLETA cada 60s para contar en
+  // JS los no leídos: eran decenas de filas viajando por la red, cada minuto y
+  // por cada pestaña abierta, para pintar un badge.
   const fetchUnread = async () => {
     try {
-      const endpoint = user.role === 'admin' ? '/notifications/admin' : '/notifications'; // 👈 directo, sin isAdmin
-      const { data } = await api.get(endpoint);
-      setUnreadCount(data.filter((n: { read: boolean }) => !n.read).length);
+      const { data } = await api.get<{ count: number }>('/notifications/unread-count');
+      setUnreadCount(data.count);
     } catch { /* silencioso */ }
   };
   fetchUnread();
   const interval = setInterval(fetchUnread, 60000);
-  return () => clearInterval(interval);
-}, [user]); // 👈 solo user, sin isAdmin
+  // Las acciones que marcan como leído emiten `notif-updated`; sin esto el
+  // badge se quedaba desactualizado hasta el siguiente tick de 60s.
+  window.addEventListener('notif-updated', fetchUnread);
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener('notif-updated', fetchUnread);
+  };
+}, [user]);
 
   const toggleMenu = () => { setIsMenuOpen(p => !p); setActiveSubmenu(null); };
   const closeMenu  = () => { setIsMenuOpen(false);   setActiveSubmenu(null); };
@@ -129,72 +144,100 @@ export const NavbarPrivate = () => {
       <nav className={`${NAV_SHELL} ${isVisible ? "translate-y-0" : "-translate-y-[130%]"}`}>
 
         {/* LOGO */}
-        <div className="flex items-center">
-          <button aria-label="Ir al inicio" onClick={() => scrollTo("inicio")} className="cursor-pointer">
-            <Image src="/LogoInmobiliaria.png" alt="Logo Cerca Trova" width={115} height={130}
-              className="bg-white w-30 object-contain border md:w-30 ml-4 md:ml-8 rounded-full" />
-          </button>
-        </div>
+        <button
+          aria-label="Ir al inicio"
+          onClick={() => scrollTo("inicio")}
+          className="shrink-0 cursor-pointer transition-opacity duration-200 hover:opacity-80"
+        >
+          <Image
+            src="/LogoInmobiliaria.png"
+            alt="Cerca Trova"
+            width={140}
+            height={140}
+            priority
+            className="h-13 w-auto object-contain"
+          />
+        </button>
 
         {/* HAMBURGUESA MOBILE */}
         <button onClick={toggleMenu} aria-label="Abrir navegación"
-          className="mr-2 rounded-2xl p-2 text-brand-700 transition-all duration-200 hover:bg-brand-50 active:scale-95 md:hidden">
+          className="mr-2 rounded-2xl p-2 text-brand-700 transition-all duration-200 hover:bg-brand-50 active:scale-95 lg:hidden">
           <Menu size={30} />
         </button>
 
-        {/* DESKTOP NAV
-            · Admin  → Inicio · Publicar · Usuarios · Solicitudes (+ campanita)
-            · Usuario → Inicio · Publicaciones · Propiedades · Publicar (+ campanita)
-            "Contacto" se quitó de ambas; sigue en el footer. */}
-        <ul className="ml-auto mr-4 hidden flex-row items-center gap-1 md:flex">
+        {/* DESKTOP NAV — MISMAS secciones para usuario y admin:
+            Inicio · Publicaciones · Propiedades · Servicios · Nosotros ·
+            Consultas, más la campanita y el panel del avatar.
+            Las secciones del panel de admin viven en su sidebar, no acá.
+            "Contacto" sigue solo en el footer. */}
+        <ul className="ml-auto mr-3 hidden flex-row items-center gap-0.5 lg:flex">
+          <li>
+            <button onClick={() => scrollTo("inicio")} className={NAV_ITEM}>
+              <Home size={16} />
+              Inicio
+            </button>
+          </li>
 
-          {isAdmin ? (
-            adminLinks.map(({ label, href, icon: Icon }) => (
-              <li key={href}>
-                <Link href={href} className={navItemClass(pathname === href)}>
-                  <Icon size={17} />
-                  {label}
-                </Link>
-              </li>
-            ))
-          ) : (
-            <>
-              <li>
-                <button onClick={() => scrollTo("inicio")} className={NAV_ITEM}>
-                  <Home size={17} />
-                  Inicio
-                </button>
-              </li>
+          <li>
+            <Link href="/publicaciones" className={navItemClass(pathname === "/publicaciones")}>
+              <Newspaper size={16} />
+              Publicaciones
+            </Link>
+          </li>
 
-              <li>
-                <Link href="/publicaciones" className={navItemClass(pathname === "/publicaciones")}>
-                  <Newspaper size={17} />
-                  Publicaciones
-                </Link>
-              </li>
+          <li className="group relative">
+            <span className={navItemClass(pathname.startsWith("/properties"))}>
+              <Building2 size={16} />
+              Propiedades
+              <ChevronDown size={14} className="transition-transform duration-200 group-hover:rotate-180" />
+            </span>
+            <ul className={`${NAV_DROPDOWN} w-52`}>
+              {propiedadesLinks.map((link) => (
+                <li key={link.label}>
+                  <Link href={link.href} className={NAV_DROPDOWN_ITEM}>{link.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </li>
 
-              <li className="group relative">
-                <span className={`${NAV_ITEM} ${pathname.startsWith("/properties") ? "text-brand-800" : ""}`}>
-                  <Building2 size={17} />
-                  Propiedades
-                  <ChevronDown size={15} className="transition-transform duration-300 group-hover:rotate-180" />
-                </span>
-                <ul className={`${NAV_DROPDOWN} w-52`}>
-                  {propiedadesLinks.map((link) => (
-                    <li key={link.label}>
-                      <Link href={link.href} className={NAV_DROPDOWN_ITEM}>{link.label}</Link>
-                    </li>
-                  ))}
-                </ul>
-              </li>
+          <li className="group relative">
+            <span className={navItemClass(pathname.startsWith("/servicios"))}>
+              <Briefcase size={16} />
+              Servicios
+              <ChevronDown size={14} className="transition-transform duration-200 group-hover:rotate-180" />
+            </span>
+            <ul className={`${NAV_DROPDOWN} w-64`}>
+              {serviciosLinks.map((link) => (
+                <li key={link.label}>
+                  <Link href={link.href} className={NAV_DROPDOWN_ITEM}>{link.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </li>
 
-              <li>
-                <Link href="/publicar" className={navItemClass(pathname === "/publicar")}>
-                  <PlusSquare size={17} />
-                  Publicar
-                </Link>
-              </li>
-            </>
+          <li>
+            <button onClick={() => scrollTo("nosotros")} className={NAV_ITEM}>
+              <UsersRound size={16} />
+              Nosotros
+            </button>
+          </li>
+
+          <li>
+            <button onClick={() => scrollTo("faq")} className={NAV_ITEM}>
+              <MessageCircle size={16} />
+              Consultas
+            </button>
+          </li>
+
+          {/* Publicar tu propiedad: solo para usuarios comunes — el admin
+              publica desde su panel, no manda solicitudes. */}
+          {!isAdmin && (
+            <li>
+              <Link href="/publicar" className={navItemClass(pathname === "/publicar")}>
+                <PlusSquare size={16} />
+                Publicar
+              </Link>
+            </li>
           )}
 
           {/* Campanita — la ruta cambia según el rol */}
@@ -280,11 +323,11 @@ export const NavbarPrivate = () => {
         </ul>
 
         {/* MOBILE: Overlay */}
-        <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 md:hidden z-60 ${isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`}
+        <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden z-60 ${isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`}
           onClick={toggleMenu} />
 
         {/* MOBILE: Drawer */}
-        <div className={`fixed top-0 right-0 h-full w-75 rounded-2xl rounded-tr-none bg-white shadow-2xl transform transition-transform duration-300 ease-out md:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
+        <div className={`fixed top-0 right-0 h-full w-75 rounded-2xl rounded-tr-none bg-white shadow-2xl transform transition-transform duration-300 ease-out lg:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
           <div className="flex flex-col h-full">
 
             <div className="flex items-center justify-between p-6 border-b-2 border-gray-200 shadow-md">
@@ -317,46 +360,56 @@ export const NavbarPrivate = () => {
 
             <div className="flex-1 overflow-y-auto p-4">
               <ul className="space-y-1.5">
-                {isAdmin ? (
-                  // Admin: los mismos 4 accesos que la barra de escritorio
-                  adminLinks.map(({ label, href, icon: Icon }) => (
-                    <li key={href}>
-                      <Link href={href} onClick={closeMenu} className={NAV_MOBILE_ITEM}>
-                        <Icon size={22} className="shrink-0 text-brand-700" />
-                        {label}
-                      </Link>
-                    </li>
-                  ))
-                ) : (
-                  <>
-                    <li>
-                      <button onClick={() => scrollTo("inicio", closeMenu)} className={NAV_MOBILE_ITEM}>
-                        <Home size={22} className="shrink-0 text-brand-700" />
-                        Inicio
-                      </button>
-                    </li>
-                    <li>
-                      <Link href="/publicaciones" onClick={closeMenu} className={NAV_MOBILE_ITEM}>
-                        <Newspaper size={22} className="shrink-0 text-brand-700" />
-                        Publicaciones
-                      </Link>
-                    </li>
-                    <li>
-                      <button onClick={() => setActiveSubmenu("propiedades")} className={`${NAV_MOBILE_ITEM} justify-between`}>
-                        <span className="flex items-center gap-4">
-                          <Building2 size={22} className="shrink-0 text-brand-700" />
-                          Propiedades
-                        </span>
-                        <ArrowLeft size={16} className="rotate-180" />
-                      </button>
-                    </li>
-                    <li>
-                      <Link href="/publicar" onClick={closeMenu} className={NAV_MOBILE_ITEM}>
-                        <PlusSquare size={22} className="shrink-0 text-brand-700" />
-                        Publicar
-                      </Link>
-                    </li>
-                  </>
+                {/* Mismas secciones que en escritorio, para usuario y admin */}
+                <li>
+                  <button onClick={() => scrollTo("inicio", closeMenu)} className={NAV_MOBILE_ITEM}>
+                    <Home size={22} className="shrink-0 text-brand-700" />
+                    Inicio
+                  </button>
+                </li>
+                <li>
+                  <Link href="/publicaciones" onClick={closeMenu} className={NAV_MOBILE_ITEM}>
+                    <Newspaper size={22} className="shrink-0 text-brand-700" />
+                    Publicaciones
+                  </Link>
+                </li>
+                <li>
+                  <button onClick={() => setActiveSubmenu("propiedades")} className={`${NAV_MOBILE_ITEM} justify-between`}>
+                    <span className="flex items-center gap-4">
+                      <Building2 size={22} className="shrink-0 text-brand-700" />
+                      Propiedades
+                    </span>
+                    <ArrowLeft size={16} className="rotate-180" />
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => setActiveSubmenu("servicios")} className={`${NAV_MOBILE_ITEM} justify-between`}>
+                    <span className="flex items-center gap-4">
+                      <Briefcase size={22} className="shrink-0 text-brand-700" />
+                      Servicios
+                    </span>
+                    <ArrowLeft size={16} className="rotate-180" />
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => scrollTo("nosotros", closeMenu)} className={NAV_MOBILE_ITEM}>
+                    <UsersRound size={22} className="shrink-0 text-brand-700" />
+                    Nosotros
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => scrollTo("faq", closeMenu)} className={NAV_MOBILE_ITEM}>
+                    <MessageCircle size={22} className="shrink-0 text-brand-700" />
+                    Consultas
+                  </button>
+                </li>
+                {!isAdmin && (
+                  <li>
+                    <Link href="/publicar" onClick={closeMenu} className={NAV_MOBILE_ITEM}>
+                      <PlusSquare size={22} className="shrink-0 text-brand-700" />
+                      Publicar
+                    </Link>
+                  </li>
                 )}
 
                 {/* Campanita mobile — una sola, la ruta cambia según el rol
@@ -414,25 +467,32 @@ export const NavbarPrivate = () => {
             </div>
           </div>
 
-          <div className={`absolute inset-0 rounded-2xl bg-white z-80 transition-transform duration-300 ${activeSubmenu === "propiedades" ? "translate-x-0" : "translate-x-full"}`}>
-            <div className="flex items-center p-5 border-b border-gray-100 shadow-md">
-              <button onClick={() => setActiveSubmenu(null)} aria-label="Volver"
-                className="p-2 mr-2 text-[#0b7a4b] hover:bg-[#0f8b57]/10 rounded-full">
-                <ArrowLeft size={24} />
-              </button>
-              <span className="font-bold text-[#0b7a4b] text-xl">propiedades</span>
+          {/* Submenús deslizables: propiedades y servicios */}
+          {["propiedades", "servicios"].map((menu) => (
+            <div
+              key={menu}
+              className={`absolute inset-0 z-80 rounded-2xl bg-white transition-transform duration-300 ${
+                activeSubmenu === menu ? "translate-x-0" : "translate-x-full"
+              }`}
+            >
+              <div className="flex items-center border-b border-ink-100 p-5 shadow-sm">
+                <button onClick={() => setActiveSubmenu(null)} aria-label="Volver"
+                  className="mr-2 rounded-full p-2 text-brand-700 transition-colors hover:bg-brand-50">
+                  <ArrowLeft size={24} />
+                </button>
+                <span className="text-xl font-bold text-ink-900 capitalize">{menu}</span>
+              </div>
+              <ul className="space-y-1.5 p-4">
+                {(menu === "propiedades" ? propiedadesLinks : serviciosLinks).map((link) => (
+                  <li key={link.label}>
+                    <Link href={link.href} onClick={closeMenu} className={NAV_MOBILE_ITEM}>
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <ul className="p-4 space-y-3">
-              {propiedadesLinks.map((link) => (
-                <li key={link.label}>
-                  <Link href={link.href} onClick={closeMenu}
-                    className="block p-4 text-lg text-[#0b7a4b] hover:bg-[#0f8b57]/10 rounded-xl border-l-4 border-[#0b7a4b]">
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          ))}
         </div>
       </nav>
     </>

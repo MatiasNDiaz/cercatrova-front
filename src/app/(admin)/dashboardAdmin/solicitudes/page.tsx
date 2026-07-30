@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { useUrlFilter } from '@/modules/shared/hooks/useUrlFilter';
 import { RequestStatus, VALID_REQUEST_TRANSITIONS } from '@/modules/shared/types/api';
 import { toast } from 'sonner';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
@@ -83,7 +84,10 @@ export default function SolicitudesAdminPage() {
   const [requests, setRequests] = useState<PropertyRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  // El filtro vive en la URL (`?estado=`) para que los ítems del sidebar
+  // lleven directo a la vista ya filtrada y el estado sobreviva al refresh.
+  // '' = todas.
+  const [filterStatus, setFilterStatus] = useUrlFilter<string>('estado', '');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -139,7 +143,9 @@ export default function SolicitudesAdminPage() {
   const filtered = requests.filter(r => {
     const matchSearch = `${r.user?.name} ${r.user?.surname} ${r.localidad} ${r.barrio} ${r.tipoPropiedad}`
       .toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus ? r.status === filterStatus : true;
+    // 'todas' es el link "Todas" del sidebar: equivale a no filtrar.
+    const matchStatus =
+      filterStatus && filterStatus !== 'todas' ? r.status === filterStatus : true;
     return matchSearch && matchStatus;
   });
 

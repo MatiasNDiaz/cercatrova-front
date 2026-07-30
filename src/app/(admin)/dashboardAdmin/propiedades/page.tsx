@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { useUrlFilter } from '@/modules/shared/hooks/useUrlFilter';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
@@ -61,6 +62,10 @@ export default function PropiedadesAdminPage() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>('recent');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  // `?accion=editar|eliminar` viene del sidebar. No filtra el listado (las dos
+  // acciones aplican a las mismas propiedades) — pone la página en ese modo:
+  // resalta el botón correspondiente y avisa arriba en qué modo está.
+  const [accion, setAccion] = useUrlFilter<'' | 'editar' | 'eliminar'>('accion', '');
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -150,6 +155,27 @@ export default function PropiedadesAdminPage() {
           Nueva propiedad
         </Link>
       </div>
+
+      {/* Modo activo — deja claro por qué un botón está resaltado */}
+      {accion && (
+        <div className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${
+          accion === 'eliminar'
+            ? 'border-red-100 bg-red-50 text-red-700'
+            : 'border-[#0b7a4b]/15 bg-[#0b7a4b]/8 text-[#0b7a4b]'
+        }`}>
+          <span className="font-semibold">
+            {accion === 'eliminar'
+              ? 'Modo eliminar: usá el botón Eliminar de la propiedad que quieras dar de baja.'
+              : 'Modo editar: usá el botón Editar de la propiedad que quieras modificar.'}
+          </span>
+          <button
+            onClick={() => setAccion('')}
+            className="shrink-0 cursor-pointer rounded-lg bg-white/70 px-3 py-1 text-xs font-bold transition-all hover:bg-white"
+          >
+            Salir del modo
+          </button>
+        </div>
+      )}
 
       {/* Toolbar: búsqueda + orden + estado */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -271,15 +297,23 @@ export default function PropiedadesAdminPage() {
                   </div>
                 </div>
 
-                {/* Acciones */}
+                {/* Acciones — el modo (`?accion=`) resalta la que trajo al admin acá */}
                 <div className="flex shrink-0 items-center gap-2">
                   <Link href={`/dashboardAdmin/propiedades/${p.id}`}
-                    className="flex items-center gap-1.5 rounded-xl bg-[#0b7a4b]/10 px-4 py-2 text-xs font-bold text-[#0b7a4b] transition-all hover:bg-[#0b7a4b]/20">
+                    className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+                      accion === 'editar'
+                        ? 'bg-[#0b7a4b] text-white shadow-sm hover:bg-[#0f8c58]'
+                        : 'bg-[#0b7a4b]/10 text-[#0b7a4b] hover:bg-[#0b7a4b]/20'
+                    }`}>
                     <Pencil size={13} /> Editar
                   </Link>
                   <button
                     onClick={() => handleDelete(p.id, p.title)}
-                    className="flex items-center gap-1.5 rounded-xl bg-red-50 px-4 py-2 text-xs font-bold text-red-600 transition-all hover:bg-red-100"
+                    className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+                      accion === 'eliminar'
+                        ? 'bg-red-600 text-white shadow-sm hover:bg-red-700'
+                        : 'bg-red-50 text-red-600 hover:bg-red-100'
+                    }`}
                   >
                     <Trash2 size={13} /> Eliminar
                   </button>

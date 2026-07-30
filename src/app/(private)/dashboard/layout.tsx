@@ -2,23 +2,17 @@
 
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import {
-  User, Heart, Home, Settings, Bell, FileText,
-  LogOut, ChevronRight, Pencil, ArrowLeft, Shield,
+  Home, Settings, Bell, FileText, Building2,
+  LogOut, ChevronDown, Pencil, ArrowLeft, Shield,
 } from 'lucide-react';
 
 // ── NAVEGACIÓN DEL SIDEBAR ────────────────────────────────────────────────────
-const mainNavItems = [
-  { href: '/dashboard/', label: 'Inicio', icon: Home },
-  { href: '/dashboard/favoritos', label: 'Favoritos', icon: Heart },
-  { href: '/dashboard/mis-solicitudes', label: 'Mis Solicitudes', icon: FileText },
-  { href: '/dashboard/notificaciones', label: 'Notificaciones', icon: Bell },
-];
-
+// El menú principal se arma con `NavGroup` en el JSX; acá solo queda la
+// sección "Cuenta", que es una lista plana.
 const accountNavItems = [
   { href: '/dashboard/perfil', label: 'Editar Perfil', icon: Pencil },
   { href: '/dashboard/preferencias', label: 'Preferencias', icon: Settings },
@@ -27,19 +21,71 @@ const accountNavItems = [
 // ── COMPONENTE NAVLINK ────────────────────────────────────────────────────────
 function NavLink({ href, label, icon: Icon, isActive }: { href: string, label: string, icon: React.ElementType, isActive: boolean }) {
   return (
-    <Link 
+    <Link
       href={href}
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative
+      className={`group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200
         ${isActive
-          ? 'bg-linear-to-r from-[#0b7a4b] to-[#0f8c58] text-white shadow-md shadow-[#0b7a4b]/20'
-          : 'text-gray-500 hover:bg-[#0b7a4b]/10 hover:text-[#0b7a4b]'
+          ? 'bg-[#0b7a4b] text-white shadow-sm'
+          : 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
         }`}
     >
-      {isActive && <div className="absolute left-0 w-1 h-6 bg-white rounded-r-full" />}
-      <Icon size={19} className={isActive ? 'text-white' : 'text-gray-500 group-hover:text-[#0b7a4b] transition-colors'} />
+      <Icon size={18} className={isActive ? 'text-white' : 'text-gray-400 transition-colors group-hover:text-[#0b7a4b]'} />
       <span className="flex-1">{label}</span>
-      {isActive && <ChevronRight size={14} className="text-white/80" />}
     </Link>
+  );
+}
+
+/**
+ * Grupo desplegable del menú lateral.
+ * Arranca abierto si alguna ruta hija es la activa, para no ocultar dónde
+ * estás parado al recargar en una subpágina.
+ */
+function NavGroup({
+  label, icon: Icon, items,
+}: {
+  label: string;
+  icon: React.ElementType;
+  items: { href: string; label: string }[];
+}) {
+  const pathname = usePathname();
+  const isChildActive = items.some((i) => pathname === i.href.split('?')[0]);
+  const [open, setOpen] = useState(isChildActive);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className={`group flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
+          isChildActive ? 'bg-[#0b7a4b]/8 text-[#0b7a4b]' : 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
+        }`}
+      >
+        <Icon size={18} className={isChildActive ? 'text-[#0b7a4b]' : 'text-gray-400 transition-colors group-hover:text-[#0b7a4b]'} />
+        <span className="flex-1 text-left">{label}</span>
+        <ChevronDown size={15} className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <ul className="mt-1 ml-5 space-y-0.5 border-l border-gray-200 pl-3">
+          {items.map((item) => {
+            const active = pathname === item.href.split('?')[0];
+            return (
+              <li key={item.href + item.label}>
+                <Link
+                  href={item.href}
+                  className={`block rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-200 ${
+                    active ? 'bg-[#0b7a4b]/10 text-[#0b7a4b]' : 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -70,54 +116,68 @@ function Sidebar() {
 
   return (
     <aside className="w-72 bg-white border-r rounded-tr-3xl mt-3.75 border-gray-100 flex flex-col h-screen sticky top-0 shadow-sm">
-      {/* Header — Logo + Back */}
-      <div className="p-6 flex items-center justify-start">
-        <Link 
-          href="/" 
-          className="p-2 rounded-lg bg-gray-100 text-[#0b7a4b] hover:bg-[#0b7a4b]/10 transition-all group"
+      {/* Sin logo ni tarjeta de perfil: ya están en la barra superior. */}
+      <div className="px-4 pt-5 pb-3">
+        <Link
+          href="/"
+          className="group flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-500 transition-colors hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]"
         >
-          <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
+          <ArrowLeft size={17} className="transition-transform group-hover:-translate-x-0.5" />
+          Volver al inicio
         </Link>
-        <Link href="/" className="transition-opacity hover:opacity-80 ml-7">
-          <Image src="/LogoInmobiliaria.png" alt="Logo" width={140} height={40} className="w-32 h-auto" />
-        </Link>
-      </div>
-
-      {/* Profile Card */}
-      <div className="px-6 py-4 mb-2">
-        <div className="p-4 rounded-2xl bg-[#0b7a4b]/10 border border-gray-100 flex flex-col items-center text-center">
-          <div className="relative mb-3">
-            <div className="w-16 h-16 rounded-full bg-white overflow-hidden ring-2 ring-[#0b7a4b]/20 shadow-sm">
-              {user?.photo ? (
-                <Image src={user.photo} alt={user.name} width={64} height={64} className="object-cover w-full h-full" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                  <User size={24} className="text-gray-400" />
-                </div>
-              )}
-            </div>
-            <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
-          </div>
-          <h3 className="font-bold text-gray-900 leading-tight truncate w-full">
-            {user?.name} {user?.surname}
-          </h3>
-          <p className="text-[11px] text-gray-500 uppercase tracking-wider font-bold mt-1">Usuario</p>
-        </div>
       </div>
 
       {/* Navegación */}
-      <nav className="flex-1 px-4 overflow-y-auto custom-scrollbar">
-        <div className="space-y-1 mb-6">
-          {/* Título de sección: Bold y Color Verde */}
-          <p className="px-4 text-[11px] font-bold text-[#0b7a4b] uppercase tracking-widest mb-2">Menú Principal</p>
-          {mainNavItems.map((item) => (
-            <NavLink key={item.href} {...item} isActive={pathname === item.href} />
-          ))}
-        </div>
+      <nav className="custom-scrollbar flex-1 space-y-1 overflow-y-auto px-4 pb-4">
+        <p className="mb-2 px-4 text-[10px] font-bold tracking-[0.14em] text-[#0b7a4b] uppercase">
+          Mi cuenta
+        </p>
 
-        <div className="space-y-1">
-          {/* Título de sección: Bold y Color Verde */}
-          <p className="px-4 text-[11px] font-bold text-[#0b7a4b] uppercase tracking-widest mb-2">Cuenta</p>
+        <NavLink href="/dashboard" label="Inicio" icon={Home} isActive={pathname === '/dashboard'} />
+
+        <NavGroup
+          label="Mis propiedades"
+          icon={Building2}
+          items={[
+            { href: '/dashboard/favoritos', label: 'Guardadas en favoritos' },
+            { href: '/dashboard/valoradas', label: 'Que valoré' },
+            { href: '/dashboard/comentadas', label: 'Que comenté' },
+          ]}
+        />
+
+        <NavGroup
+          label="Preferencias"
+          icon={Settings}
+          items={[
+            { href: '/dashboard/preferencias', label: 'Ver y editar' },
+            { href: '/dashboard/preferencias?nueva=1', label: 'Cargar preferencias' },
+          ]}
+        />
+
+        <NavGroup
+          label="Notificaciones"
+          icon={Bell}
+          items={[
+            { href: '/dashboard/notificaciones', label: 'Todas' },
+            { href: '/dashboard/notificaciones?tipo=precios', label: 'Bajaron de precio' },
+            { href: '/dashboard/notificaciones?tipo=coincidencias', label: 'Según mis preferencias' },
+            { href: '/dashboard/notificaciones?tipo=propiedades_nuevas', label: 'Propiedades nuevas' },
+            { href: '/dashboard/notificaciones?tipo=publicaciones', label: 'Publicaciones nuevas' },
+            { href: '/dashboard/notificaciones?tipo=respuestas', label: 'Respuestas a mis comentarios' },
+          ]}
+        />
+
+        <NavLink
+          href="/dashboard/mis-solicitudes"
+          label="Mis solicitudes"
+          icon={FileText}
+          isActive={pathname === '/dashboard/mis-solicitudes'}
+        />
+
+        <div className="pt-4">
+          <p className="mb-2 px-4 text-[10px] font-bold tracking-[0.14em] text-[#0b7a4b] uppercase">
+            Cuenta
+          </p>
           {accountNavItems.map((item) => (
             <NavLink key={item.href} {...item} isActive={pathname === item.href} />
           ))}

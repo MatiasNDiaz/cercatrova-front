@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { authService } from '@/modules/auth/services/auth.service';
 import { setOnUnauthorized } from '@/modules/shared/lib/authEvents';
+import { clearPendingNotifMarks } from '@/modules/shared/lib/pendingNotifSession';
 import { getErrorStatus } from '@/modules/shared/lib/apiError';
 import type { AuthUser, LoginFormData, RegisterFormData } from '@/modules/auth/interface/auth.interfaces';
 
@@ -105,6 +106,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Error al cerrar sesión en el servidor:', error);
       }
     }
+    // Si el usuario vuelve a entrar en esta misma pestaña, el aviso de
+    // notificaciones pendientes tiene que mostrarse otra vez.
+    clearPendingNotifMarks();
+
     setUser(null);
     router.push(redirectTo);
   };

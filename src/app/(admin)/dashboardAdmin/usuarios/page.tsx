@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { useUrlFilter } from '@/modules/shared/hooks/useUrlFilter';
 import { toast } from 'sonner';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import Image from 'next/image';
@@ -224,6 +225,8 @@ export default function UsuariosAdminPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<UserSortBy>('recent');
+  // Filtro por rol en la URL (`?rol=`), para que el sidebar linkee directo.
+  const [rolFilter, setRolFilter] = useUrlFilter<'todos' | 'user' | 'admin'>('rol', 'todos');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -283,9 +286,13 @@ export default function UsuariosAdminPage() {
       });
   }, [sortBy, requestCounts]);
 
-  const filtered = users.filter(u =>
-    `${u.name} ${u.surname} ${u.email}`.toLowerCase().includes(search.toLowerCase())
-  );
+  // `?rol=user|admin` viene del sidebar; sin el parámetro se listan todos.
+  const filtered = users.filter(u => {
+    const matchSearch = `${u.name} ${u.surname} ${u.email}`
+      .toLowerCase().includes(search.toLowerCase());
+    const matchRole = rolFilter === 'todos' ? true : u.role === rolFilter;
+    return matchSearch && matchRole;
+  });
 
   const regularUsers = sortUsers(filtered.filter(u => u.role === 'user'));
   const adminUsers   = sortUsers(filtered.filter(u => u.role === 'admin'));
@@ -334,6 +341,28 @@ export default function UsuariosAdminPage() {
       </div>
 
       {/* Toolbar: búsqueda + orden */}
+      {/* Filtro por rol — refleja `?rol=` de la URL, así el ítem del sidebar
+          ("Solo usuarios" / "Solo administradores") llega ya aplicado. */}
+      <div className="flex flex-wrap items-center gap-2">
+        {([
+          { key: 'todos', label: 'Todos' },
+          { key: 'user',  label: 'Solo usuarios' },
+          { key: 'admin', label: 'Solo administradores' },
+        ] as const).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setRolFilter(key)}
+            className={`cursor-pointer rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+              rolFilter === key
+                ? 'bg-[#0b7a4b] text-white shadow-sm'
+                : 'bg-white text-gray-600 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -355,6 +384,7 @@ export default function UsuariosAdminPage() {
           >
             <option value="recent">Registro: más recientes</option>
             <option value="requests">Más solicitudes primero</option>
+            {/* Cierre del select de orden — el filtro de rol va abajo */}
           </select>
         </div>
       </div>

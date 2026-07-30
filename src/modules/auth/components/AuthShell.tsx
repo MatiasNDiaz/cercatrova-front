@@ -15,10 +15,9 @@ import { ArrowLeft } from 'lucide-react';
  *    FooterSelector), así que la pantalla es realmente de alto completo.
  *  - Como no hay navbar, se agrega un link propio "Volver al inicio".
  *  - **Panel de imagen sin tinte de color** (ver comentario en el JSX): la foto
- *    se muestra nítida, con un degradado neutro solo abajo para legibilidad, y
- *    el texto en un bloque amplio alineado a la izquierda. Antes había un
- *    overlay verde a pantalla completa + logo superpuesto + copy apretado en la
- *    esquina inferior.
+ *    se muestra nítida, con un scrim neutro que sostiene la legibilidad, y el
+ *    texto centrado en el panel. Antes había un overlay verde a pantalla
+ *    completa + logo superpuesto + copy apretado en la esquina inferior.
  */
 
 interface AuthShellProps {
@@ -53,16 +52,17 @@ export function AuthShell({
     <div className="flex min-h-screen w-full bg-surface">
 
       {/* ── PANEL IZQUIERDO — imagen + mensaje ──
-          Rediseño: la foto se ve NÍTIDA y real. Antes llevaba encima un
-          `bg-brand-950/75` (tinte verde a pantalla completa) más un segundo
-          degradado verde: la imagen quedaba teñida y apagada, y el logo
-          superpuesto no aportaba nada. Ahora:
-           - Sin tinte de color. Solo un degradado NEUTRO abajo
-             (`from-black/85`), y únicamente en la mitad inferior, que es donde
-             va el texto — el resto de la foto queda limpia.
-           - Sin logo superpuesto (ya está el link "Volver al inicio" arriba).
-           - El texto es un bloque alineado a la izquierda con aire real
-             (`p-14`, `max-w-xl`), no un párrafo apretado en la esquina. */}
+          La foto se ve NÍTIDA y real: no hay tinte de color encima (antes había
+          un `bg-brand-950/75` verde que la apagaba por completo).
+
+          ⚠️ El velo NO es decorativo, es lo único que sostiene la legibilidad:
+          las dos fotos de estas pantallas son muy claras (cielo blanco en login,
+          pared blanca en registro), así que el texto blanco necesita un scrim
+          parejo. El degradado que había antes oscurecía SOLO la mitad inferior,
+          que servía cuando el texto iba abajo — con el texto centrado dejaba el
+          centro sin contraste, y encima tapaba justo a las personas de la foto
+          de registro, que están en el cuarto inferior. Ahora el scrim es parejo
+          y se refuerza arriba/abajo, que es donde no hay texto. */}
       <div className="relative hidden w-1/2 overflow-hidden lg:block">
         <Image
           src={image}
@@ -74,37 +74,39 @@ export function AuthShell({
           style={{ objectPosition: imagePosition }}
         />
 
-        {/* Degradado de legibilidad — neutro, solo abajo. */}
-        <div className="absolute inset-x-0 bottom-0 h-3/5 bg-linear-to-t from-black/85 via-black/45 to-transparent" />
-        {/* Velo mínimo y parejo: sostiene el contraste del botón de arriba sin
-            llegar a leerse como un tinte. */}
-        <div className="absolute inset-0 bg-black/10" />
+        {/* Velo parejo y neutro: baja los blancos sin teñir la foto. */}
+        <div className="absolute inset-0 bg-ink-950/50" />
+        {/* Refuerzo en los extremos: sostiene el botón "Volver al inicio" arriba
+            y cierra la composición abajo, dejando el centro más limpio. */}
+        <div className="absolute inset-0 bg-linear-to-b from-ink-950/45 via-ink-950/15 to-ink-950/45" />
 
-        <div className="absolute inset-0 flex flex-col justify-between p-14">
-          <Link
-            href="/"
-            className="group inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white hover:text-brand-800"
-          >
-            <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-0.5" />
-            Volver al inicio
-          </Link>
+        {/* El link vive aparte del bloque de texto para que el texto pueda
+            centrarse en TODO el panel y no contra un hermano de flex. */}
+        <Link
+          href="/"
+          className="group absolute top-10 left-10 z-10 inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white hover:text-brand-800"
+        >
+          <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-0.5" />
+          Volver al inicio
+        </Link>
 
+        <div className="absolute inset-0 flex items-start mt-31 justify-center px-14">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}
-            className="max-w-2xl"
+            className="max-w-xl text-center"
           >
             {/* Filete de marca: aporta el verde sin teñir la foto. */}
             <span
               aria-hidden
-              className="mb-7 block h-1.5 w-16 rounded-full"
+              className="mx-auto mb-7 block h-1.5 w-16 rounded-full"
               style={{ background: 'var(--gradient-brand)' }}
             />
-            <h2 className="text-[2.75rem] leading-[1.1] font-bold tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
+            <h2 className="text-[2.75rem] leading-[1.1] font-bold t text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.65)]">
               {panelTitle}
             </h2>
-            <p className="mt-5 max-w-lg text-[17px] leading-relaxed text-white/85 drop-shadow-[0_1px_8px_rgba(0,0,0,0.5)]">
+            <p className="mx-auto mt-5 max-w-lg text-[17px] leading-relaxed text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.65)]">
               {panelText}
             </p>
           </motion.div>

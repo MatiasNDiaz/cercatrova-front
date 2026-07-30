@@ -7,9 +7,10 @@ import { toast } from 'sonner';
 import {
   BellOff, Check, CheckCheck, Home, TrendingDown,
   ClipboardList, Clock, ChevronDown, ChevronUp,
-  ArrowLeft, Eye, Sparkles, Bell,
+  ArrowLeft, Eye, Sparkles, Bell, Megaphone, MessageCircle,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useUrlFilter } from '@/modules/shared/hooks/useUrlFilter';
 
 interface Notification {
   id: number;
@@ -31,10 +32,31 @@ type NotifType =
   | 'solicitud_revision'
   | 'solicitud_recibida'
   | 'propiedad_nueva'
+  | 'publicacion_nueva'
+  | 'respuesta_comentario'
   | 'generica';
 
+/**
+ * Clasifica una notificación por su texto.
+ *
+ * ⚠️ El backend no manda un campo `type`, así que hay que inferirlo del título
+ * y el mensaje. El orden IMPORTA: los casos más específicos van primero, y los
+ * que pueden contener texto libre del usuario (respuestas a comentarios) van
+ * arriba de todo — si no, una respuesta que mencione "precio" o "publicación"
+ * se clasificaría mal.
+ *
+ * Se matchea contra el TÍTULO cuando el título es fijo (lo arma el backend), y
+ * recién después contra el cuerpo.
+ */
 function getNotifType(title: string, message: string): NotifType {
+  const titulo = title.toLowerCase();
   const t = (title + ' ' + message).toLowerCase();
+
+  // 1. Títulos exactos que arma el backend — inmunes al texto libre del cuerpo
+  if (titulo.includes('respondieron tu comentario'))                            return 'respuesta_comentario';
+  if (titulo.includes('nueva publicación') || titulo.includes('nueva publicacion')) return 'publicacion_nueva';
+
+  // 2. Resto, por contenido
   if (t.includes('precio') || t.includes('bajó'))                              return 'precio';
   if (t.includes('interesa') || t.includes('coincid') || t.includes('cumple')) return 'coincidencia';
   if (t.includes('aceptad'))                                                    return 'solicitud_aceptada';
@@ -62,6 +84,10 @@ function getConfig(title: string, message: string) {
       return { icon: <ClipboardList size={16} className="text-blue-600" />, bg: 'bg-blue-50',         border: 'border-blue-100',         dot: 'bg-blue-500',     label: 'Solicitud recibida' };
     case 'propiedad_nueva':
       return { icon: <Home size={16} className="text-[#0b7a4b]" />,         bg: 'bg-[#0b7a4b]/8',    border: 'border-[#0b7a4b]/15',     dot: 'bg-[#0b7a4b]',   label: 'Nueva propiedad' };
+    case 'publicacion_nueva':
+      return { icon: <Megaphone size={16} className="text-sky-600" />,      bg: 'bg-sky-50',          border: 'border-sky-100',          dot: 'bg-sky-500',      label: 'Nueva publicación' };
+    case 'respuesta_comentario':
+      return { icon: <MessageCircle size={16} className="text-violet-600" />, bg: 'bg-violet-50',     border: 'border-violet-100',       dot: 'bg-violet-500',   label: 'Respondieron tu comentario' };
     default:
       return { icon: <Bell size={16} className="text-gray-500" />,           bg: 'bg-gray-50',         border: 'border-gray-100',         dot: 'bg-gray-400',     label: 'Notificación' };
   }
@@ -133,6 +159,7 @@ function NotifItem({ n, onRead }: { n: Notification; onRead: (id: number) => voi
 type FilterTab =
   | 'todas' | 'sin_leer' | 'leidas'
   | 'propiedades_nuevas' | 'coincidencias' | 'precios'
+  | 'publicaciones' | 'respuestas'
   | 'solicitudes_aceptadas' | 'solicitudes_rechazadas' | 'solicitudes_revision';
 
 const FILTER_TABS: { key: FilterTab; label: string; color: string }[] = [
@@ -142,6 +169,8 @@ const FILTER_TABS: { key: FilterTab; label: string; color: string }[] = [
   { key: 'propiedades_nuevas',     label: 'Propiedades nuevas', color: 'bg-[#0b7a4b] text-white' },
   { key: 'coincidencias',          label: 'Mis preferencias',   color: 'bg-purple-500 text-white' },
   { key: 'precios',                label: 'Bajaron de precio',  color: 'bg-amber-500 text-white' },
+  { key: 'publicaciones',          label: 'Publicaciones',      color: 'bg-sky-500 text-white' },
+  { key: 'respuestas',             label: 'Respuestas',         color: 'bg-violet-500 text-white' },
   { key: 'solicitudes_aceptadas',  label: 'Aceptadas',          color: 'bg-[#0b7a4b] text-white' },
   { key: 'solicitudes_rechazadas', label: 'Rechazadas',         color: 'bg-red-500 text-white' },
   { key: 'solicitudes_revision',   label: 'En revisión',        color: 'bg-amber-500 text-white' },
@@ -154,6 +183,8 @@ const EMPTY_MESSAGES: Record<FilterTab, string> = {
   propiedades_nuevas:     'No hay notificaciones de nuevas propiedades',
   coincidencias:          'No hay propiedades que coincidan con tus preferencias',
   precios:                'No hay notificaciones de bajadas de precio',
+  publicaciones:          'No hay publicaciones nuevas',
+  respuestas:             'Todavía no respondieron ningún comentario tuyo',
   solicitudes_aceptadas:  'No tenés solicitudes aceptadas',
   solicitudes_rechazadas: 'No tenés solicitudes rechazadas',
   solicitudes_revision:   'No tenés solicitudes en revisión',
@@ -176,7 +207,9 @@ export default function NotificacionesPage() {
   const [loading, setLoading]       = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
-  const [filter, setFilter] = useState<FilterTab>('todas');
+  // El filtro vive en la URL (`?tipo=`) para que el sidebar linkee directo
+  // a la categoría y el estado sobreviva al refresh.
+  const [filter, setFilter] = useUrlFilter<FilterTab>('tipo', 'todas');
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -188,6 +221,8 @@ export default function NotificacionesPage() {
       case 'propiedades_nuevas':     return type === 'propiedad_nueva';
       case 'coincidencias':          return type === 'coincidencia';
       case 'precios':                return type === 'precio';
+      case 'publicaciones':          return type === 'publicacion_nueva';
+      case 'respuestas':             return type === 'respuesta_comentario';
       case 'solicitudes_aceptadas':  return type === 'solicitud_aceptada';
       case 'solicitudes_rechazadas': return type === 'solicitud_rechazada';
       case 'solicitudes_revision':   return type === 'solicitud_revision' || type === 'solicitud_recibida';
@@ -223,6 +258,8 @@ export default function NotificacionesPage() {
     try {
       await api.patch(`/notifications/${id}/read`);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      // Refresca el badge de la campanita sin esperar su tick de 60s.
+      window.dispatchEvent(new Event('notif-updated'));
     } catch {
       toast.error('No se pudo marcar como leída');
     }
@@ -234,6 +271,7 @@ export default function NotificacionesPage() {
     try {
       await api.patch('/notifications/read-all');
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      window.dispatchEvent(new Event('notif-updated'));
       toast.success('Todas marcadas como leídas');
     } catch {
       toast.error('No se pudo actualizar');

@@ -51,8 +51,8 @@ export function LoginForm() {
 
   return (
     <AuthShell
-      image="https://images.unsplash.com/photo-1560184897-ae75f418493e?q=80&w=1600&auto=format&fit=crop"
-      imageAlt="Galería de una casa con la puerta de entrada y luz natural de la mañana"
+      image="/imagenLogin.jpg"
+      imageAlt="Una mano sosteniendo la llave de una casa con un llavero con forma de hogar"
       panelTitle={<>Bienvenido de nuevo a <span className="whitespace-nowrap text-brand-400">Cerca Trova</span></>}
       panelText="¿Te gusta estar actualizado sobre las nuevas propiedades y el mercado inmobiliario?"
       title="Iniciar sesión"

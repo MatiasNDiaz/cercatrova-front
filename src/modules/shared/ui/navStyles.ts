@@ -13,33 +13,44 @@
  *  · La ruta activa queda marcada en verde sólido, que antes no existía.
  */
 
-/** Cáscara de la barra: pastilla flotante, blanca translúcida con blur. */
+/**
+ * Cáscara de la barra: rectangular (`rounded-xl`), BLANCA SÓLIDA y con un
+ * borde/sombra discretos. Antes era una pastilla (`rounded-full`) blanca
+ * translúcida con blur; se cambió a este formato para un tono más sobrio.
+ */
 export const NAV_SHELL =
-  'fixed top-2 right-0 left-0 z-50 mx-auto flex w-[95%] flex-row items-center justify-between rounded-full border border-white/60 bg-white/75 p-2.5 shadow-[0_2px_6px_-2px_rgba(10,12,11,0.08),0_16px_40px_-16px_rgba(10,12,11,0.25)] backdrop-blur-xl backdrop-saturate-150 transition-transform duration-300 ease-in-out md:justify-start';
+  'fixed top-3 right-0 left-0 z-50 mx-auto flex w-[96%] max-w-350 flex-row items-center justify-between rounded-xl border border-ink-100 bg-white px-4 py-2.5 shadow-[0_1px_2px_rgba(10,12,11,0.04),0_10px_30px_-12px_rgba(10,12,11,0.22)] transition-transform duration-300 ease-in-out lg:justify-start';
 
-/** Ítem de navegación en reposo. */
+/**
+ * Ítem de navegación — hover SOBRIO.
+ *
+ * Se descartaron las dos versiones anteriores: el subrayado animado y, después,
+ * el relleno con gradiente + barrido de luz + glow (demasiado estridente para
+ * una inmobiliaria). Queda un hover discreto y profesional: fondo verde muy
+ * suave, el texto y el ícono toman el verde de marca, y nada se mueve de lugar.
+ */
 export const NAV_ITEM =
-  'group relative inline-flex cursor-pointer items-center gap-2 rounded-full px-3.5 py-2 text-[15px] font-semibold text-ink-700 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-brand-50 hover:text-brand-800';
+  'group relative inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[14px] font-semibold whitespace-nowrap text-ink-600 transition-colors duration-200 ease-out hover:bg-brand-50 hover:text-brand-700';
 
-/** Ítem de navegación cuando la ruta actual le corresponde. */
+/** Ruta activa: fondo verde suave permanente + texto de marca. */
 export const NAV_ITEM_ACTIVE =
-  'group relative inline-flex cursor-pointer items-center gap-2 rounded-full bg-brand-700 px-3.5 py-2 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(6,57,35,0.8)] transition-all duration-300 ease-out';
+  'group relative inline-flex cursor-pointer items-center gap-2 rounded-lg bg-brand-50 px-3 py-2 text-[14px] font-semibold whitespace-nowrap text-brand-700 transition-colors duration-200 ease-out';
 
 /** Devuelve las clases del ítem según si su ruta está activa. */
 export const navItemClass = (active: boolean) => (active ? NAV_ITEM_ACTIVE : NAV_ITEM);
 
 /** Panel de los desplegables (propiedades / servicios / avatar). */
 export const NAV_DROPDOWN =
-  'invisible absolute left-0 z-20 mt-2 overflow-hidden rounded-2xl border border-ink-100 bg-white/95 opacity-0 shadow-[0_12px_40px_-12px_rgba(10,12,11,0.3)] backdrop-blur-xl transition-all duration-200 group-hover:visible group-hover:opacity-100';
+  'invisible absolute left-0 z-20 mt-2 translate-y-1 overflow-hidden rounded-xl border border-ink-100 bg-white opacity-0 shadow-[0_16px_44px_-14px_rgba(10,12,11,0.32)] transition-all duration-200 ease-out group-hover:visible group-hover:translate-y-0 group-hover:opacity-100';
 
-/** Ítem dentro de un desplegable. */
+/** Ítem dentro de un desplegable — mismo criterio sobrio que `NAV_ITEM`. */
 export const NAV_DROPDOWN_ITEM =
-  'block px-4 py-3 text-sm font-medium text-ink-700 transition-colors duration-200 hover:bg-brand-50 hover:text-brand-800';
+  'block px-4 py-2.5 text-sm font-medium text-ink-600 transition-colors duration-200 hover:bg-brand-50 hover:text-brand-700';
 
-/** Botón principal (iniciar sesión / CTA). */
+/** Botón principal (iniciar sesión / CTA) — verde sólido, sin gradiente. */
 export const NAV_CTA =
-  'group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-brand-700 px-6 py-2.5 text-[15px] font-bold text-white shadow-[0_8px_20px_-8px_rgba(6,57,35,0.8)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-800 active:scale-95';
+  'group inline-flex items-center justify-center gap-2 rounded-lg bg-brand-700 px-5 py-2.5 text-[14px] font-bold whitespace-nowrap text-white transition-colors duration-200 hover:bg-brand-800 active:scale-95';
 
 /** Ítem del menú mobile (drawer). */
 export const NAV_MOBILE_ITEM =
-  'flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-lg font-semibold text-ink-700 transition-colors duration-200 hover:bg-brand-50 hover:text-brand-800';
+  'flex w-full items-center gap-4 rounded-xl px-4 py-3.5 text-base font-semibold text-ink-700 transition-colors duration-200 hover:bg-brand-50 hover:text-brand-700';
