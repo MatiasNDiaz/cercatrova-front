@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
+import { DashboardShell } from '@/modules/shared/ui/DashboardShell';
 import {
   Home, Settings, Bell, FileText, Building2,
   LogOut, ChevronDown, Pencil, ArrowLeft, Shield,
@@ -18,19 +19,34 @@ const accountNavItems = [
   { href: '/dashboard/preferencias', label: 'Preferencias', icon: Settings },
 ];
 
+/* Mismos estados que el sidebar del panel admin — se replican acá (y no se
+   importan de allá) para no crear una dependencia del dashboard de usuario
+   hacia el módulo de admin. Si cambia uno, cambiar los dos. */
+const NAV_ITEM_BASE =
+  'group relative flex w-full items-center gap-3 rounded-lg py-2.5 pr-3 pl-4 text-sm font-semibold transition-all duration-200 ease-out';
+
+const NAV_ITEM_IDLE = 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b] hover:pl-5';
+
+const NAV_ITEM_ACTIVE = 'bg-[#0b7a4b] text-white shadow-[0_6px_16px_-8px_rgba(11,122,75,0.8)]';
+
+function NavAccent({ active }: { active: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={`absolute top-1/2 left-0 w-1 -translate-y-1/2 rounded-r-full transition-all duration-200 ease-out ${
+        active ? 'h-7 bg-white' : 'h-0 bg-[#0b7a4b] group-hover:h-5'
+      }`}
+    />
+  );
+}
+
 // ── COMPONENTE NAVLINK ────────────────────────────────────────────────────────
 function NavLink({ href, label, icon: Icon, isActive }: { href: string, label: string, icon: React.ElementType, isActive: boolean }) {
   return (
-    <Link
-      href={href}
-      className={`group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200
-        ${isActive
-          ? 'bg-[#0b7a4b] text-white shadow-sm'
-          : 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
-        }`}
-    >
-      <Icon size={18} className={isActive ? 'text-white' : 'text-gray-400 transition-colors group-hover:text-[#0b7a4b]'} />
-      <span className="flex-1">{label}</span>
+    <Link href={href} className={`${NAV_ITEM_BASE} ${isActive ? NAV_ITEM_ACTIVE : NAV_ITEM_IDLE}`}>
+      <NavAccent active={isActive} />
+      <Icon size={18} className={`shrink-0 transition-colors duration-200 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-[#0b7a4b]'}`} />
+      <span className="flex-1 truncate">{label}</span>
     </Link>
   );
 }
@@ -57,25 +73,31 @@ function NavGroup({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className={`group flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
-          isChildActive ? 'bg-[#0b7a4b]/8 text-[#0b7a4b]' : 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
+        className={`${NAV_ITEM_BASE} cursor-pointer ${
+          isChildActive ? 'bg-[#0b7a4b]/10 text-[#0b7a4b]' : NAV_ITEM_IDLE
         }`}
       >
-        <Icon size={18} className={isChildActive ? 'text-[#0b7a4b]' : 'text-gray-400 transition-colors group-hover:text-[#0b7a4b]'} />
-        <span className="flex-1 text-left">{label}</span>
-        <ChevronDown size={15} className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        <NavAccent active={isChildActive} />
+        <Icon size={18} className={`shrink-0 transition-colors duration-200 ${isChildActive ? 'text-[#0b7a4b]' : 'text-gray-400 group-hover:text-[#0b7a4b]'}`} />
+        <span className="flex-1 truncate text-left">{label}</span>
+        <ChevronDown size={15} className={`shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {open && (
-        <ul className="mt-1 ml-5 space-y-0.5 border-l border-gray-200 pl-3">
+      {/* Apertura con transición de alto real (grid 0fr→1fr) en vez de
+          montar/desmontar de golpe. */}
+      <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <ul className="mt-1 ml-5 space-y-0.5 overflow-hidden border-l border-gray-200 pl-3">
           {items.map((item) => {
             const active = pathname === item.href.split('?')[0];
             return (
               <li key={item.href + item.label}>
                 <Link
                   href={item.href}
-                  className={`block rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-200 ${
-                    active ? 'bg-[#0b7a4b]/10 text-[#0b7a4b]' : 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
+                  tabIndex={open ? undefined : -1}
+                  className={`block rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200 ${
+                    active
+                      ? 'bg-[#0b7a4b]/12 font-semibold text-[#0b7a4b]'
+                      : 'text-gray-500 hover:translate-x-0.5 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
                   }`}
                 >
                   {item.label}
@@ -84,7 +106,7 @@ function NavGroup({
             );
           })}
         </ul>
-      )}
+      </div>
     </div>
   );
 }
@@ -115,7 +137,9 @@ function Sidebar() {
   };
 
   return (
-    <aside className="w-72 bg-white border-r rounded-tr-3xl mt-3.75 border-gray-100 flex flex-col h-screen sticky top-0 shadow-sm">
+    // Devuelve el CONTENIDO, no el `<aside>`: el contenedor (sidebar fijo en
+    // desktop / cajón deslizante en mobile) lo pone `DashboardShell`.
+    <div className="flex h-full min-h-0 flex-col">
       {/* Sin logo ni tarjeta de perfil: ya están en la barra superior. */}
       <div className="px-4 pt-5 pb-3">
         <Link
@@ -204,7 +228,7 @@ function Sidebar() {
           Cerrar sesión
         </button>
       </div>
-    </aside>
+    </div>
   );
 }
 
@@ -232,14 +256,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) return null;
 
+  // Igual que el panel admin: `DashboardShell` pone el chrome y el padding;
+  // el ancho del contenido lo decide `DashboardPage`.
   return (
-    <div className="h-screen overflow-hidden bg-surface-deep flex">
-      <Sidebar />
-      <main className="flex-1 h-full overflow-y-auto custom-scrollbar pb-8">
-        <div className="max-w-7xl mx-auto px-8 py-4">
-          {children}
-        </div>
-      </main>
-    </div>
+    <DashboardShell sidebar={<Sidebar />} label="Mi cuenta">
+      {children}
+    </DashboardShell>
   );
 }

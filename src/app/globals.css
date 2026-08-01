@@ -59,6 +59,24 @@
   /* Blanco puro NO tiene token: se sigue usando `bg-white` de Tailwind. */
   --color-surface: #f5f7f5;      /* fondo de página — unifica #f8fafc/#f2f1f1/#fcfffd/#f0f2f0 */
   --color-surface-alt: #e5e7e5;  /* sección secundaria */
+
+  /* Verde claro de SECCIÓN — el fondo que alterna con `bg-white` a lo largo de
+     la landing y del catálogo.
+
+     ⚠️ Antes esas secciones usaban `brand-50` (#eff9f4). Contra blanco puro esa
+     diferencia es de ~3 puntos de luminancia: en pantallas con poco contraste
+     literalmente no se veía dónde terminaba una sección y empezaba la siguiente.
+     `surface-mint` baja a ~92% de luminancia — la separación se nota de entrada
+     sin que el bloque se lea como "sección verde": las tarjetas blancas que van
+     encima siguen siendo el elemento dominante.
+
+     `brand-50` NO se toca y sigue existiendo para lo que siempre fue: rellenos
+     chicos (pastillas, íconos, hovers) donde sí querés un verde casi invisible. */
+  --color-surface-mint: #dbeee4;
+
+  /* Un paso más — para bloques que van DENTRO de una sección `surface-mint` y
+     necesitan separarse de ella (encabezados de tabla, barras de resumen). */
+  --color-surface-mint-deep: #c9e5d8;
   /* Fondo de dashboard — unifica los dos que existían (#dde3dd usuario /
      #cbd8cd admin) en el más oscuro. Cambio visual intencional y aprobado:
      el panel de usuario queda un poco más oscuro que antes. */
@@ -74,6 +92,28 @@
      Uso: style={{ background: 'var(--gradient-brand)' }} */
   --gradient-brand: linear-gradient(135deg, var(--color-brand-600), var(--color-brand-500));
   --gradient-brand-hover: linear-gradient(135deg, var(--color-brand-700), var(--color-brand-600));
+
+  /* ── MOVIMIENTO ───────────────────────────────────────────────────────────
+     Escala única de duraciones y curvas para TODO el sitio. El problema que
+     resuelve: cada sección había elegido las suyas a ojo (200ms acá, 400ms
+     allá, `ease-out` en una card y `cubic-bezier(.22,1,.36,1)` en la de al
+     lado), así que al pasar de la landing al catálogo o al dashboard el sitio
+     "cambiaba de velocidad".
+
+     Criterio de uso:
+       fast (150ms)  → cambios de color: hover de link, foco de input.
+       base (250ms)  → lo más común: hover de botón/card, badges, chips.
+       slow (400ms)  → desplazamientos y sombras grandes: elevar una card,
+                       abrir un acordeón, entrada de un panel.
+
+     `--ease-out-soft` es la curva por defecto (arranca rápido, frena suave —
+     se siente natural para algo que "llega"). `--ease-spring` tiene un
+     overshoot mínimo y se reserva para microinteracciones de click. */
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 400ms;
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 body {
@@ -119,6 +159,78 @@ body {
   pointer-events: none;
   background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
   background-size: 26px 26px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOADER DE TRANSICIÓN (`Loadingpage.tsx`)
+   ───────────────────────────────────────────────────────────────────────────
+   Antes estas animaciones vivían en un `<style>` inline dentro del componente.
+   Acá se declaran una sola vez y no se reinyectan en cada montaje del loader.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Halos de fondo — flotación lenta y desfasada entre sí. */
+@keyframes loader-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-18px) scale(1.04); }
+}
+
+/* Barra INDETERMINADA. Reemplazó a la barra de progreso porcentual: ese número
+   no medía nada real (era un contador a 2s hardcodeado), así que mostraba
+   "47%" de nada. Una barra indeterminada comunica lo mismo — "esto está
+   trabajando" — sin afirmar un progreso que no existe. */
+@keyframes loader-indeterminate {
+  0%   { transform: translateX(-100%) scaleX(0.45); }
+  50%  { transform: translateX(15%)   scaleX(0.75); }
+  100% { transform: translateX(190%)  scaleX(0.45); }
+}
+
+/* Entrada del loader: aparece con un fundido corto en vez de aparecer de golpe. */
+@keyframes loader-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Entrada de cada dato rotativo. */
+@keyframes loader-fact-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOVIMIENTO REDUCIDO — accesibilidad
+   ───────────────────────────────────────────────────────────────────────────
+   Quien tenga activada la preferencia del sistema ("Reducir movimiento" en
+   Windows/macOS/iOS/Android) no ve animaciones en NINGUNA parte del sitio.
+
+   Antes esta regla existía pero cubría solo el loader; el resto del sitio
+   (entradas de listas, hovers con desplazamiento, modales, carrusel) seguía
+   animando igual.
+
+   ⚠️ Se usa `0.01ms` y no `none` a propósito: con `animation: none` los
+   eventos `animationend`/`transitionend` nunca se disparan, y cualquier
+   componente que espere ese evento para continuar queda colgado. Con una
+   duración mínima el evento sí llega, inmediato, y nada se rompe. Es el
+   patrón recomendado por la WCAG para esta regla.
+
+   `!important` es necesario: tiene que ganarle a las utilidades de Tailwind
+   y a los estilos inline que aplica Framer Motion.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* El halo del loader y la trama flotante no aportan información: se apagan
+     del todo en vez de quedar "temblando" a 0.01ms. */
+  .loader-halo,
+  .button:not(:hover) {
+    animation: none !important;
+  }
 }
 
 @source "../app/**/*.{js,ts,jsx,tsx}";

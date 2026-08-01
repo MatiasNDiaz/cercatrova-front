@@ -59,10 +59,10 @@ export function FavoriteButton({ propertyId, variant = 'default' }: FavoriteButt
         onClick={handleToggle}
         disabled={loading}
         aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-        className="p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg disabled:opacity-50">
+        className="cursor-pointer rounded-full bg-white/90 p-3 shadow-md backdrop-blur-sm transition-all duration-300 hover:scale-110 hover:shadow-lg active:scale-90 disabled:opacity-50">
         <Heart
           size={18}
-          className={`transition-all duration-300 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-[#0b7a4b] hover:text-red-500'}`}
+          className={`transition-all duration-300 ${isFavorite ? 'scale-110 fill-red-500 text-red-500' : 'text-[#0b7a4b] hover:text-red-500'}`}
         />
       </button>
     );
@@ -74,14 +74,14 @@ export function FavoriteButton({ propertyId, variant = 'default' }: FavoriteButt
       onClick={handleToggle}
       disabled={loading}
       aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-      className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold border transition-all duration-300 disabled:opacity-50
+      className={`flex cursor-pointer items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition-all duration-300 active:scale-95 disabled:opacity-50
         ${isFavorite
           ? 'bg-red-50 border-red-200 text-red-500 hover:bg-red-100'
           : 'bg-white border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-400'
         }`}>
       <Heart
         size={16}
-        className={`transition-all duration-300 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`}
+        className={`transition-all duration-300 ${isFavorite ? 'scale-110 fill-red-500 text-red-500' : ''}`}
       />
       {loading ? 'Cargando...' : isFavorite ? 'En favoritos' : 'Guardar'}
     </button>

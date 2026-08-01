@@ -9,8 +9,9 @@ import { Field } from '@/modules/shared/ui/Field';
 import { Input, inputBaseClasses } from '@/modules/shared/ui/Input';
 import { Select } from '@/modules/shared/ui/Select';
 import { toast } from 'sonner';
+import { DashboardPage, DashboardHeader } from '@/modules/shared/ui/DashboardPage';
 import {
-  Save, ArrowLeft, Upload, X, Star, ImagePlus,
+  Save, ArrowLeft, Upload, X, Star, ImagePlus, Building2,
   Home, MapPin, Ruler, DollarSign, Tag, Info,
 } from 'lucide-react';
 
@@ -310,9 +311,11 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
   if (loading) return (
     <div className="flex flex-col gap-4">
       {[1, 2, 3].map(i => (
-        <div key={i} className="bg-white rounded-3xl p-6 border border-gray-200 animate-pulse">
+        <div key={i} className="bg-white rounded-xl p-6 border border-gray-200 animate-pulse">
           <div className="h-3 bg-gray-200 rounded-full w-1/4 mb-5" />
-          <div className="grid grid-cols-2 gap-4">
+          {/* `grid-cols-1` de base: a 375px dos inputs con label lado a lado
+              quedaban en ~150px cada uno. Recién se parte en dos a partir de sm. */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="h-10 bg-gray-200 rounded-xl" />
             <div className="h-10 bg-gray-200 rounded-xl" />
           </div>
@@ -322,26 +325,23 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
   );
 
   return (
-    <div className="flex flex-col gap-6">
-
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button aria-label='Volver' onClick={() => router.back()}
-          className="p-2 rounded-full bg-white border border-gray-200 text-[#0b7a4b] hover:bg-gray-50 transition-all">
-          <ArrowLeft size={18} />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-[#0b7a4b]">
-            {isEdit ? 'Editar propiedad' : 'Nueva propiedad'}
-          </h1>
-          <p className="text-sm font-medium text-gray-600 mt-0.5">
-            {isEdit ? 'Modificá los datos y guardá los cambios' : 'Completá los datos y subí las imágenes'}
-          </p>
-        </div>
-      </div>
+    // `width="form"` — mismo ancho que "Nueva publicación" y que los perfiles.
+    // Antes heredaba el `max-w-7xl` del layout y era el formulario más ancho del
+    // panel, con filas de input de 80rem imposibles de recorrer con la vista.
+    <DashboardPage width="form">
+      <DashboardHeader
+        // Sigue siendo `router.back()`: se llega acá desde el listado y también
+        // desde el detalle de una propiedad.
+        back={{ onClick: () => router.back(), label: 'Volver' }}
+        icon={Building2}
+        title={isEdit ? 'Editar propiedad' : 'Nueva propiedad'}
+        subtitle={isEdit
+          ? 'Modificá los datos y guardá los cambios'
+          : 'Completá los datos y subí las imágenes'}
+      />
 
       {/* ── IMÁGENES ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
         <SectionTitle icon={ImagePlus} label={`Imágenes (${totalImages}/10)`} />
 
         {/* Drop zone */}
@@ -351,13 +351,13 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
           onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
+          className={`relative flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed cursor-pointer transition-all ${
             dragging
               ? 'border-[#0b7a4b] bg-[#0b7a4b]/5'
               : 'border-gray-200 hover:border-[#0b7a4b]/50 hover:bg-gray-50'
           }`}
         >
-          <div className="w-12 h-12 rounded-2xl bg-[#0b7a4b]/10 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-[#0b7a4b]/10 flex items-center justify-center">
             <Upload size={22} className="text-[#0b7a4b]" />
           </div>
           <div className="text-center">
@@ -391,7 +391,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
 
               {/* Imágenes existentes */}
               {visibleExisting.map(img => (
-                <div key={`ex-${img.id}`} className="relative group rounded-2xl overflow-hidden aspect-square bg-gray-100">
+                <div key={`ex-${img.id}`} className="relative group rounded-xl overflow-hidden aspect-square bg-gray-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={img.url} alt="" className="w-full h-full object-cover" />
 
@@ -429,7 +429,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
 
               {/* Imágenes nuevas */}
               {newImages.map((img, idx) => (
-                <div key={`new-${idx}`} className="relative group rounded-2xl overflow-hidden aspect-square bg-gray-100">
+                <div key={`new-${idx}`} className="relative group rounded-xl overflow-hidden aspect-square bg-gray-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={img.preview} alt="" className="w-full h-full object-cover" />
 
@@ -475,7 +475,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
       </div>
 
       {/* ── INFO BÁSICA ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
         <SectionTitle icon={Info} label="Información básica" />
         <div className="flex flex-col gap-4">
           <Field label="Título">
@@ -512,7 +512,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
       </div>
 
       {/* ── UBICACIÓN ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
         <SectionTitle icon={MapPin} label="Ubicación" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Provincia">
@@ -540,7 +540,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
       </div>
 
       {/* ── CARACTERÍSTICAS ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
         <SectionTitle icon={Ruler} label="Características" />
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <Field label="Habitaciones">
@@ -577,7 +577,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
           ].map(({ key, label }) => (
             <button key={key} type="button"
               onClick={() => set(key, !form[key as keyof typeof form])}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold border transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
                 form[key as keyof typeof form]
                   ? 'bg-[#0b7a4b]/10 border-[#0b7a4b]/40 text-[#0b7a4b]'
                   : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-[#0b7a4b]/30'
@@ -594,7 +594,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
       </div>
 
       {/* ── PRECIO ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
         <SectionTitle icon={DollarSign} label="Precio" />
         <Field label="Precio (USD)">
           <div className="relative">
@@ -624,6 +624,6 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
         </button>
       </div>
 
-    </div>
+    </DashboardPage>
   );
 }

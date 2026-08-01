@@ -6,9 +6,10 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import api from '@/modules/shared/lib/axios';
+import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 import {
   Users, Building2, FileText, ChevronRight,
-  TrendingUp, Clock, User, BarChart2, Bell,
+  TrendingUp, Clock, User, BarChart2, Bell, Megaphone,
 } from 'lucide-react';
 
 interface Stats {
@@ -25,6 +26,16 @@ const quickLinks = [
     label: 'Propiedades',
     description: 'Publicar, editar y gestionar propiedades',
     color: 'bg-[#0b7a4b]/12 text-[#0b7a4b]',
+  },
+  {
+    // Faltaba: la grilla es de 3 columnas y con 5 tarjetas la segunda fila
+    // quedaba coja (2 de 3). Publicaciones ya existía como sección del panel
+    // pero no tenía acceso directo desde el inicio.
+    href: '/dashboardAdmin/publicaciones',
+    icon: Megaphone,
+    label: 'Publicaciones',
+    description: 'Crear publicaciones (Feed)',
+    color: 'bg-sky-100 text-sky-600',
   },
   {
     href: '/dashboardAdmin/solicitudes',
@@ -101,14 +112,14 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 w-full">
+    <DashboardPage>
 
       {/* ── BANNER DE BIENVENIDA ── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="relative overflow-hidden rounded-2xl px-8 py-7 shadow-[0_20px_50px_-24px_rgba(6,57,35,0.6)]"
+        className="relative overflow-hidden rounded-xl px-8 py-7 shadow-[0_20px_50px_-24px_rgba(6,57,35,0.6)]"
         style={{ background: 'linear-gradient(135deg, #0b7a4b 0%, #0f8c58 55%, #14a366 100%)' }}
       >
         {/* Textura sutil de puntos */}
@@ -170,7 +181,7 @@ export default function AdminDashboardPage() {
               variants={item}
               whileHover={{ y: -4 }}
               transition={{ duration: 0.2 }}
-              className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+              className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
             >
               <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${bg}`}>
                 <Icon size={20} className={color} />
@@ -201,9 +212,9 @@ export default function AdminDashboardPage() {
             <motion.div key={href} variants={item} whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
               <Link
                 href={href}
-                className="group flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+                className="group flex items-center gap-4 rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
               >
-                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${color}`}>
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${color}`}>
                   <Icon size={22} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -217,7 +228,7 @@ export default function AdminDashboardPage() {
         </motion.div>
       </div>
 
-    </div>
+    </DashboardPage>
   );
 }
 

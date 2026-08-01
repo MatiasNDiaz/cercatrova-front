@@ -7,7 +7,6 @@ import Confianza from '@/modules/landing/components/Confianza';
 import Resenas from '@/modules/landing/components/Reseñas';
 import Nosotros from '@/modules/landing/components/Nosotros';
 import RealEstateFAQ from '@/modules/landing/components/RealEstateFAQ';
-import LoadingWrapper from '@/modules/landing/components/Loadingwrapper';
 
 /**
  * Landing (Bloque LANDING).
@@ -21,23 +20,25 @@ import LoadingWrapper from '@/modules/landing/components/Loadingwrapper';
  *  - cada sección es autocontenida: se puede reordenar, quitar o reutilizar
  *    sin arrastrar márgenes ajenos ni dejar huecos.
  *
- * Los fondos alternan blanco / surface (y el gradiente de marca en Confianza)
+ * Los fondos alternan blanco / `surface-mint` (y el verde profundo en Confianza)
  * para que cada bloque se lea como una unidad distinta sin necesidad de líneas
  * divisorias. Por eso `main` no lleva color de fondo propio.
+ *
+ * La landing ya NO va envuelta en `LoadingWrapper`: esa pantalla de carga se
+ * mostraba 2s fijos en cada visita sin que hubiera nada cargando. El loader
+ * ahora vive en `(public)/loading.tsx` y lo controla el router.
  */
 export default function LandingPage() {
   return (
-    <LoadingWrapper>
-      <main id="inicio" className="min-h-screen">
-        <PropertySlider />
-        <FeaturedProperties />
-        <PublicarPropiedad />
-        <Servicios />
-        <Confianza />
-        <Resenas />
-        <Nosotros />
-        <RealEstateFAQ />
-      </main>
-    </LoadingWrapper>
+    <main id="inicio" className="min-h-screen">
+      <PropertySlider />
+      <FeaturedProperties />
+      <PublicarPropiedad />
+      <Servicios />
+      <Confianza />
+      <Resenas />
+      <Nosotros />
+      <RealEstateFAQ />
+    </main>
   );
 }

@@ -1,19 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   Megaphone, Plus, Heart, MessageCircle, Trash2, Loader2,
-  ChevronDown, Clock, CalendarClock,
+  ChevronDown, Clock, CalendarClock, ArrowUpDown,
 } from 'lucide-react';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import { postsService } from '@/modules/posts/services/posts.service';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
-import { useUrlFilter } from '@/modules/shared/hooks/useUrlFilter';
 import type { Post } from '@/modules/shared/types/api';
+import { DashboardPage, DashboardHeader, CARD, ListReveal } from '@/modules/shared/ui/DashboardPage';
+import { ListToolbar, ListSearch, ListSelect, NoMatches } from '@/modules/shared/ui/ListToolbar';
 import { CommentModeration } from './CommentModeration';
+
+type SortBy = 'recientes' | 'antiguas' | 'vencen' | 'likes' | 'comentarios';
 
 /** Días que vive una publicación — igual que `POST_TTL_DAYS` en el backend. */
 const POST_TTL_DAYS = 7;
@@ -28,10 +31,31 @@ export default function PublicacionesAdminPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<number | null>(null);
-  // `?accion=moderar|eliminar` viene del sidebar. Las dos acciones aplican a
-  // las mismas publicaciones, así que no filtra: pone la página en ese modo y
-  // resalta el botón correspondiente.
-  const [accion, setAccion] = useUrlFilter<'' | 'moderar' | 'eliminar'>('accion', '');
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<SortBy>('recientes');
+
+  // Filtrado y orden en cliente, sobre lo que ya trajo `getAll('recent')`.
+  // No cambia el fetch ni agrega llamadas.
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = q
+      ? posts.filter((p) => p.description?.toLowerCase().includes(q))
+      : posts;
+
+    const time = (s: string) => new Date(s).getTime();
+    return [...list].sort((a, b) => {
+      switch (sortBy) {
+        case 'antiguas':    return time(a.createdAt) - time(b.createdAt);
+        // "Vencen primero" = las más viejas primero, porque el TTL se cuenta
+        // desde `createdAt`. Es el mismo orden que `antiguas`, pero el nombre
+        // dice lo que al admin le importa: cuál se le va a borrar antes.
+        case 'vencen':      return time(a.createdAt) - time(b.createdAt);
+        case 'likes':       return (b.likesCount ?? 0) - (a.likesCount ?? 0);
+        case 'comentarios': return (b.commentsCount ?? 0) - (a.commentsCount ?? 0);
+        default:            return time(b.createdAt) - time(a.createdAt);
+      }
+    });
+  }, [posts, search, sortBy]);
 
   const load = async () => {
     try {
@@ -66,48 +90,46 @@ export default function PublicacionesAdminPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl">
-      {/* ── HEADER ── */}
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0b7a4b]/10 text-[#0b7a4b]">
-            <Megaphone size={20} />
-          </span>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Publicaciones</h1>
-            <p className="text-sm text-gray-500">
-              Se eliminan automáticamente a los {POST_TTL_DAYS} días de publicadas.
-            </p>
-          </div>
-        </div>
-
-        <Link
-          href="/dashboardAdmin/publicaciones/nueva"
-          className="inline-flex items-center gap-2 rounded-2xl bg-[#0b7a4b] px-5 py-3 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0f8b57] active:scale-[0.98]"
-        >
-          <Plus size={17} />Nueva publicación
-        </Link>
-      </div>
-
-      {/* Modo activo — deja claro por qué un botón está resaltado */}
-      {accion && (
-        <div className={`mb-6 flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${
-          accion === 'eliminar'
-            ? 'border-red-100 bg-red-50 text-red-700'
-            : 'border-[#0b7a4b]/15 bg-[#0b7a4b]/8 text-[#0b7a4b]'
-        }`}>
-          <span className="font-semibold">
-            {accion === 'eliminar'
-              ? 'Modo eliminar: usá el botón Eliminar de la publicación que quieras dar de baja.'
-              : 'Modo moderar: abrí "Moderar" en la publicación cuyos comentarios quieras revisar.'}
-          </span>
-          <button
-            onClick={() => setAccion('')}
-            className="shrink-0 cursor-pointer rounded-lg bg-white/70 px-3 py-1 text-xs font-bold transition-all hover:bg-white"
+    // Antes esta página se pisaba el ancho con `max-w-5xl`, mientras el listado
+    // de Propiedades usaba el `max-w-7xl` del layout: dos listados del mismo
+    // panel con anchos distintos. Ahora las dos son `DashboardPage` width=list.
+    <DashboardPage>
+      <DashboardHeader
+        back={{ href: '/dashboardAdmin' }}
+        icon={Megaphone}
+        title="Publicaciones"
+        subtitle={
+          loading
+            ? 'Cargando…'
+            : `${visible.length} de ${posts.length} · se eliminan solas a los ${POST_TTL_DAYS} días`
+        }
+        actions={
+          <Link
+            href="/dashboardAdmin/publicaciones/nueva"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#0b7a4b] px-5 py-3 text-sm font-bold text-white shadow-[0_8px_20px_-8px_rgba(11,122,75,0.7)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0f8b57] active:scale-[0.98]"
           >
-            Salir del modo
-          </button>
-        </div>
+            <Plus size={17} />Nueva publicación
+          </Link>
+        }
+      />
+
+      {/* Filtros: esta pantalla no tenía ninguno. Con publicaciones que vencen
+          a los 7 días, poder ordenar por "vencen primero" es lo más útil. */}
+      {!loading && posts.length > 0 && (
+        <ListToolbar>
+          <ListSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Buscar en el texto de la publicación..."
+          />
+          <ListSelect value={sortBy} onChange={(v) => setSortBy(v as SortBy)} label="Ordenar publicaciones" icon={ArrowUpDown}>
+            <option value="recientes">Más recientes</option>
+            <option value="antiguas">Más antiguas</option>
+            <option value="vencen">Vencen primero</option>
+            <option value="likes">Más likes</option>
+            <option value="comentarios">Más comentadas</option>
+          </ListSelect>
+        </ListToolbar>
       )}
 
       {loading ? (
@@ -115,24 +137,26 @@ export default function PublicacionesAdminPage() {
           <Loader2 size={20} className="animate-spin" />Cargando publicaciones…
         </div>
       ) : posts.length === 0 ? (
-        <div className="rounded-3xl border border-gray-200 bg-white px-6 py-20 text-center shadow-sm">
-          <Megaphone size={38} className="mx-auto mb-4 text-gray-300" />
+        <div className={`${CARD} px-6 py-20 text-center`}>
+          <Megaphone size={38} className="mx-auto mb-4 text-gray-400" />
           <p className="text-lg font-bold text-gray-900">Todavía no hay publicaciones</p>
           <p className="mt-2 text-sm text-gray-500">
             Creá la primera con el botón &quot;Nueva publicación&quot;.
           </p>
         </div>
+      ) : visible.length === 0 ? (
+        <NoMatches onClear={() => setSearch('')} message="Ninguna publicación contiene ese texto." />
       ) : (
-        <ul className="space-y-4">
-          {posts.map((post) => {
+        <ListReveal as="ul" className="space-y-4">
+          {visible.map((post) => {
             const left = daysLeft(post.createdAt);
             const isOpen = expanded === post.id;
 
             return (
-              <li key={post.id} className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+              <ListReveal.Item as="li" key={post.id} className={`${CARD} overflow-hidden`}>
                 <div className="flex flex-col gap-4 p-5 sm:flex-row">
                   {/* Miniatura */}
-                  <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-2xl bg-gray-100 sm:h-32 sm:w-44">
+                  <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl bg-gray-100 sm:h-32 sm:w-44">
                     <Image src={post.imageUrl} alt="" fill className="object-cover" sizes="176px" />
                   </div>
 
@@ -169,11 +193,7 @@ export default function PublicacionesAdminPage() {
                     <button
                       type="button"
                       onClick={() => setExpanded(isOpen ? null : post.id)}
-                      className={`inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-all sm:flex-none ${
-                        accion === 'moderar'
-                          ? 'border-[#0b7a4b] bg-[#0b7a4b] text-white hover:bg-[#0f8c58]'
-                          : 'border-gray-200 text-gray-600 hover:border-[#0b7a4b]/40 hover:text-[#0b7a4b]'
-                      }`}
+                      className="inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 transition-all hover:border-[#0b7a4b]/40 hover:text-[#0b7a4b] sm:flex-none"
                     >
                       <MessageCircle size={14} />Moderar
                       <ChevronDown size={13} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
@@ -181,11 +201,7 @@ export default function PublicacionesAdminPage() {
                     <button
                       type="button"
                       onClick={() => handleDelete(post)}
-                      className={`inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-all sm:flex-none ${
-                        accion === 'eliminar'
-                          ? 'border-red-600 bg-red-600 text-white hover:bg-red-700'
-                          : 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
-                      }`}
+                      className="inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 transition-all hover:bg-red-100 sm:flex-none"
                     >
                       <Trash2 size={14} />Eliminar
                     </button>
@@ -202,11 +218,11 @@ export default function PublicacionesAdminPage() {
                     <CommentModeration postId={post.id} />
                   </div>
                 )}
-              </li>
+              </ListReveal.Item>
             );
           })}
-        </ul>
+        </ListReveal>
       )}
-    </div>
+    </DashboardPage>
   );
 }

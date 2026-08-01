@@ -11,11 +11,13 @@ import Image from 'next/image';
 import {
   FileText, Search, Trash2, ChevronDown, ChevronUp,
   User, MapPin, Home, Ruler, DollarSign, CheckCircle,
-  XCircle, Clock, RefreshCw, Mail, MessageSquare,
-  ArrowLeft,
+  XCircle, Clock, RefreshCw, Mail, MessageSquare, ArrowUpDown,
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
+import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
+import { ListToolbar, ListSearch, ListSelect } from '@/modules/shared/ui/ListToolbar';
 interface RequestUser {
   id: number;
   name: string;
@@ -88,6 +90,9 @@ export default function SolicitudesAdminPage() {
   // lleven directo a la vista ya filtrada y el estado sobreviva al refresh.
   // '' = todas.
   const [filterStatus, setFilterStatus] = useUrlFilter<string>('estado', '');
+  // Faltaba el orden: la lista salía siempre en el orden del backend, sin forma
+  // de ver primero las más viejas (las que llevan más tiempo esperando).
+  const [sortBy, setSortBy] = useState<'recientes' | 'antiguas'>('recientes');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -147,7 +152,16 @@ export default function SolicitudesAdminPage() {
     const matchStatus =
       filterStatus && filterStatus !== 'todas' ? r.status === filterStatus : true;
     return matchSearch && matchStatus;
-  });
+  }).sort((a, b) =>
+    // Se ordena por `id` y no por fecha a propósito: el tipo `PropertyRequest`
+    // de esta pantalla no declara ningún campo de fecha, y no está verificado
+    // que `GET /property-requests` devuelva `createdAt` (sí lo hace el endpoint
+    // `/my-requests` del usuario, que es otro). El id es autoincremental, así
+    // que ordena por antigüedad igual de bien y sin depender de un campo que
+    // podría no venir — con una fecha ausente el sort no haría nada y el bug
+    // sería invisible.
+    sortBy === 'recientes' ? b.id - a.id : a.id - b.id,
+  );
 
   // Contadores por estado
   const counts = {
@@ -158,15 +172,8 @@ export default function SolicitudesAdminPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
- <Link
-        href="/dashboardAdmin"
-        className="inline-flex items-center gap-2 text-sm font-medium text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors w-fit"
-      >
-        <span className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
-          <ArrowLeft size={14} />
-        </span>
-      </Link>
+    <DashboardPage>
+ <DashboardBackLink href="/dashboardAdmin" label="Volver al panel" />
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-[#0b7a4b]">Solicitudes</h1>
@@ -183,7 +190,7 @@ export default function SolicitudesAdminPage() {
             return (
               <button key={key}
                 onClick={() => setFilterStatus(filterStatus === key ? '' : key)}
-                className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-left ${
+                className={`flex items-center gap-3 p-4 rounded-xl border transition-all text-left ${
                   filterStatus === key
                     ? `${cfg.bg} border-current ${cfg.color} shadow-sm`
                     : 'bg-white border-gray-200 hover:border-gray-300'
@@ -203,20 +210,23 @@ export default function SolicitudesAdminPage() {
         </div>
       )}
 
-      {/* Buscador */}
-      <div className="relative">
-        <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar por usuario, localidad, barrio o tipo..."
-          className="w-full pl-11 pr-4 py-3 text-sm rounded-2xl border border-gray-200 bg-white focus:outline-none focus:border-[#0b7a4b] transition-all" />
-      </div>
+      {/* Buscador + orden */}
+      <ListToolbar>
+        <ListSearch value={search} onChange={setSearch}
+          placeholder="Buscar por usuario, localidad, barrio o tipo..." />
+        <ListSelect value={sortBy} onChange={(v) => setSortBy(v as 'recientes' | 'antiguas')}
+          label="Ordenar solicitudes" icon={ArrowUpDown}>
+          <option value="recientes">Más recientes</option>
+          <option value="antiguas">Más antiguas (esperan hace más)</option>
+        </ListSelect>
+      </ListToolbar>
 
       {/* Loading */}
       {loading && (
         <div className="flex flex-col gap-3">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white rounded-3xl p-4 border border-gray-200 animate-pulse flex gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gray-200 shrink-0" />
+            <div key={i} className="bg-white rounded-xl p-4 border border-gray-200 animate-pulse flex gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gray-200 shrink-0" />
               <div className="flex-1 flex flex-col gap-2 justify-center">
                 <div className="h-4 bg-gray-200 rounded-full w-1/3" />
                 <div className="h-3 bg-gray-200 rounded-full w-2/3" />
@@ -228,7 +238,7 @@ export default function SolicitudesAdminPage() {
 
       {/* Empty */}
       {!loading && filtered.length === 0 && (
-        <div className="bg-white rounded-3xl p-12 border border-gray-200 flex flex-col items-center gap-4 text-center">
+        <div className="bg-white rounded-xl p-12 border border-gray-200 flex flex-col items-center gap-4 text-center">
           <div className="w-16 h-16 rounded-full bg-[#0b7a4b]/10 flex items-center justify-center">
             <FileText size={28} className="text-[#0b7a4b]" />
           </div>
@@ -256,16 +266,18 @@ export default function SolicitudesAdminPage() {
 
             return (
               <div key={r.id}
-                className={`bg-white rounded-3xl border border-gray-200 overflow-hidden transition-all hover:shadow-md ${
+                className={`bg-white rounded-xl border border-gray-200 overflow-hidden transition-all hover:shadow-md ${
                   isDeleting ? 'opacity-50 pointer-events-none' : ''
                 }`}>
 
                 {/* ── Fila principal ── */}
-                <div className="flex items-center gap-4 p-4">
+                {/* Mobile: identidad arriba, acciones abajo. Antes iban en
+                    una sola fila y los 5 botones quedaban pegados al header. */}
+                <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:gap-4">
 
                   {/* Avatar usuario */}
                   <div className="relative shrink-0">
-                    <div className="w-12 h-12 rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center ring-2 ring-gray-100">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center ring-2 ring-gray-100">
                       {r.user?.photo ? (
                         <Image src={r.user.photo} alt={r.user.name} width={48} height={48} className="object-cover w-full h-full" />
                       ) : (
@@ -295,7 +307,7 @@ export default function SolicitudesAdminPage() {
                   </div>
 
                   {/* Acciones rápidas de estado — solo transiciones válidas según el backend */}
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-gray-100 pt-3 lg:border-0 lg:pt-0">
                     {canTransition(r.status, RequestStatus.ACEPTADO) && (
                       <button
                         onClick={() => handleStatusChange(r.id, 'aceptado')}
@@ -339,17 +351,21 @@ export default function SolicitudesAdminPage() {
                   </div>
                 </div>
 
-                {/* ── Detalle expandido ── */}
+                {/* ── Detalle expandido ──
+                    Cada bloque va en su propia tarjeta blanca sobre el fondo
+                    gris: así "datos del usuario", "detalles de la propiedad" y
+                    los extras se leen como secciones separadas y no como una
+                    única columna corrida sin aire. */}
                 {isExpanded && (
-                  <div className="border-t border-gray-100 bg-gray-50/50 px-6 py-5 flex flex-col gap-5">
+                  <div className="flex flex-col gap-4 border-t border-gray-100 bg-gray-50/50 px-4 py-5 sm:px-6">
 
                     {/* Usuario */}
-                    <div>
+                    <div className="rounded-xl border border-gray-100 bg-white p-4">
                       <p className="text-[10px] font-black text-[#0b7a4b] uppercase tracking-widest mb-3">
                         Datos del usuario
                       </p>
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center shrink-0">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center shrink-0">
                           {r.user?.photo ? (
                             <Image src={r.user.photo} alt={r.user.name} width={48} height={48} className="object-cover w-full h-full" />
                           ) : (
@@ -361,7 +377,7 @@ export default function SolicitudesAdminPage() {
                           <p className="text-xs text-gray-500">{r.user?.email}</p>
                           <p className="text-xs text-gray-500">{r.user?.phone}</p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <a href={`https://wa.me/${r.user?.phone?.replace(/\D/g, '')}`}
                             target="_blank" rel="noopener noreferrer"
                             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:brightness-110 active:scale-95"
@@ -378,7 +394,7 @@ export default function SolicitudesAdminPage() {
                     </div>
 
                     {/* Propiedad */}
-                    <div>
+                    <div className="rounded-xl border border-gray-100 bg-white p-4">
                       <p className="text-[10px] font-black text-[#0b7a4b] uppercase tracking-widest mb-3">
                         Detalles de la propiedad
                       </p>
@@ -426,7 +442,7 @@ export default function SolicitudesAdminPage() {
                         <p className="text-[10px] font-black text-[#0b7a4b] uppercase tracking-widest mb-2">
                           Mensaje del usuario
                         </p>
-                        <div className="flex gap-3 p-4 rounded-2xl bg-white border border-gray-200">
+                        <div className="flex gap-3 p-4 rounded-xl bg-white border border-gray-200">
                           <MessageSquare size={16} className="text-[#0b7a4b] shrink-0 mt-0.5" />
                           <p className="text-sm text-gray-700 leading-relaxed">{r.mensajeAgente}</p>
                         </div>
@@ -481,6 +497,6 @@ export default function SolicitudesAdminPage() {
           })}
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

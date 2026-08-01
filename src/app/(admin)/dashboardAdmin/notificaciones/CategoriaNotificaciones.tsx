@@ -1,14 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { ArrowLeft, CheckCheck, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCheck, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { DashboardPage, DashboardHeader } from '@/modules/shared/ui/DashboardPage';
+import { ListChips } from '@/modules/shared/ui/ListToolbar';
 import {
   NotifItem, getNotifType, type AdminNotification, type NotifType,
 } from './notifShared';
+
+type ReadFilter = 'todas' | 'sin_leer' | 'leidas';
 
 const INITIAL_VISIBLE = 10;
 
@@ -36,6 +40,10 @@ export function CategoriaNotificaciones({
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  // Filtro por estado de lectura. Es el único que aporta acá: la categoría ya
+  // acota el tipo, y un buscador de texto sobre notificaciones de una línea
+  // (todas con la misma plantilla de título) no agregaría nada.
+  const [readFilter, setReadFilter] = useState<ReadFilter>('todas');
 
   useEffect(() => {
     let alive = true;
@@ -58,8 +66,15 @@ export function CategoriaNotificaciones({
   }, [tipo]);
 
   const unread = notifications.filter((n) => !n.read).length;
-  const visible = notifications.slice(0, visibleCount);
-  const hasMore = visibleCount < notifications.length;
+
+  const filtered = useMemo(() => {
+    if (readFilter === 'sin_leer') return notifications.filter((n) => !n.read);
+    if (readFilter === 'leidas')   return notifications.filter((n) => n.read);
+    return notifications;
+  }, [notifications, readFilter]);
+
+  const visible = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
   const isExpanded = visibleCount > INITIAL_VISIBLE;
 
   const handleMarkAsRead = async (id: number) => {
@@ -94,54 +109,71 @@ export function CategoriaNotificaciones({
   };
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-5">
-      <Link
-        href="/dashboardAdmin/notificaciones"
-        className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-[#0b7a4b] transition-colors hover:text-[#0f8b57]"
-      >
-        <ArrowLeft size={16} />Todas las notificaciones
-      </Link>
-
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${colorFondo}`}>
-            {icono}
-          </span>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{titulo}</h1>
-            <p className="text-sm text-gray-500">
-              {loading
-                ? 'Cargando…'
-                : `${notifications.length} en total${unread > 0 ? ` · ${unread} sin leer` : ''}`}
-            </p>
-          </div>
-        </div>
-
-        {unread > 0 && (
+    // Antes: `max-w-4xl` propio (un cuarto ancho distinto en el panel) y el link
+    // de volver reimplementado inline con su propio estilo.
+    <DashboardPage>
+      <DashboardHeader
+        back={{ href: '/dashboardAdmin/notificaciones', label: 'Todas las notificaciones' }}
+        iconNode={icono}
+        iconClassName={colorFondo}
+        title={titulo}
+        subtitle={
+          loading
+            ? 'Cargando…'
+            : `${notifications.length} en total${unread > 0 ? ` · ${unread} sin leer` : ''}`
+        }
+        actions={unread > 0 ? (
           <button
             onClick={handleMarkCategory}
             disabled={markingAll}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-600 transition-all hover:border-[#0b7a4b]/40 hover:text-[#0b7a4b] disabled:opacity-60"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-600 transition-all duration-200 hover:border-[#0b7a4b]/40 hover:text-[#0b7a4b] disabled:opacity-60"
           >
             {markingAll ? <Loader2 size={15} className="animate-spin" /> : <CheckCheck size={15} />}
             Marcar todas como leídas
           </button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
-      <p className="rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-600">{descripcion}</p>
+      {!loading && notifications.length > 0 && (
+        <ListChips<ReadFilter>
+          value={readFilter}
+          onChange={(v) => { setReadFilter(v); setVisibleCount(INITIAL_VISIBLE); }}
+          options={[
+            { value: 'todas',    label: 'Todas',    count: notifications.length },
+            { value: 'sin_leer', label: 'Sin leer', count: unread },
+            { value: 'leidas',   label: 'Leídas',   count: notifications.length - unread },
+          ]}
+        />
+      )}
+
+      <p className="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">{descripcion}</p>
 
       {loading ? (
         <div className="flex items-center justify-center gap-2 py-20 text-gray-500">
           <Loader2 size={20} className="animate-spin" />Cargando…
         </div>
       ) : notifications.length === 0 ? (
-        <div className="rounded-3xl border border-gray-200 bg-white px-6 py-20 text-center shadow-sm">
-          <span className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${colorFondo}`}>
+        <div className="rounded-xl border border-gray-200 bg-white px-6 py-20 text-center shadow-sm">
+          <span className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl ${colorFondo}`}>
             {icono}
           </span>
           <p className="text-lg font-bold text-gray-900">No hay notificaciones de este tipo</p>
           <p className="mt-2 text-sm text-gray-500">Cuando ocurra algo nuevo va a aparecer acá.</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        /* Hay notificaciones, pero ninguna en el estado de lectura elegido
+           (ej. "Leídas" cuando están todas sin leer). */
+        <div className="rounded-xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
+          <p className="font-bold text-gray-700">
+            {readFilter === 'sin_leer' ? 'No te queda ninguna sin leer' : 'Todavía no leíste ninguna'}
+          </p>
+          <button
+            type="button"
+            onClick={() => setReadFilter('todas')}
+            className="mt-4 cursor-pointer rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold text-[#0b7a4b] transition-all duration-200 hover:border-[#0b7a4b]/40 hover:bg-[#0b7a4b]/8"
+          >
+            Ver todas
+          </button>
         </div>
       ) : (
         <>
@@ -153,16 +185,16 @@ export function CategoriaNotificaciones({
 
           {(hasMore || isExpanded) && (
             <button
-              onClick={() => setVisibleCount(hasMore ? notifications.length : INITIAL_VISIBLE)}
-              className="mx-auto inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-gray-200 px-5 py-2.5 text-sm font-bold text-gray-600 transition-all hover:border-[#0b7a4b]/40 hover:text-[#0b7a4b]"
+              onClick={() => setVisibleCount(hasMore ? filtered.length : INITIAL_VISIBLE)}
+              className="mx-auto inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold text-gray-600 transition-all hover:border-[#0b7a4b]/40 hover:text-[#0b7a4b]"
             >
               {hasMore
-                ? <>Ver todas ({notifications.length - visibleCount} más)<ChevronDown size={15} /></>
+                ? <>Ver todas ({filtered.length - visibleCount} más)<ChevronDown size={15} /></>
                 : <>Ver menos<ChevronUp size={15} /></>}
             </button>
           )}
         </>
       )}
-    </div>
+    </DashboardPage>
   );
 }

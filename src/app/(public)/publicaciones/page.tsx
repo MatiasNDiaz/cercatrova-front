@@ -1,4 +1,3 @@
-import { Sparkles } from 'lucide-react';
 import { postsService } from '@/modules/posts/services/posts.service';
 import type { Post } from '@/modules/shared/types/api';
 import { PostsFeed } from './PostsFeed';
@@ -35,30 +34,16 @@ export default async function PublicacionesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-100">
-      {/* ── ENCABEZADO ──
-          Compacto y alineado a la izquierda: antes era un hero centrado con un
-          título gigante que empujaba el feed más abajo del pliegue. */}
-      <section className="border-b border-ink-100 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-3 px-4 pt-26 pb-6">
-          <div>
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[0.2em] text-brand-700 uppercase">
-              <Sparkles size={12} />Novedades
-            </span>
-            <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-ink-900">
-              Publicaciones
-            </h1>
-          </div>
-          <p className="max-w-md text-sm leading-relaxed text-ink-600">
-            Oportunidades y propiedades destacadas. Dejanos tu comentario o
-            consultanos por la que te interese.
-          </p>
-        </div>
-      </section>
+    /* Fondo verde de sección (`surface-mint-deep`, el mismo de los resultados
+       del catálogo) en vez del gris. Se sacó la franja blanca que separaba el
+       encabezado del feed: ahora el título vive sobre el mismo fondo y la
+       página se lee como una sola pieza. */
+    <main className="min-h-screen bg-surface-mint-deep">
+      {/* Sin encabezado: el feed arranca directo, debajo de la navbar.
+          `pt-26` deja el aire que antes ocupaba la franja blanca. */}
+      <div className="pt-26" />
 
-      <section className="pt-6">
-        <PostsFeed initialPosts={initialPosts} />
-      </section>
+      <PostsFeed initialPosts={initialPosts} />
     </main>
   );
 }

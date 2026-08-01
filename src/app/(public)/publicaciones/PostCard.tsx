@@ -2,16 +2,18 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Heart, MessageCircle, Send, Loader2, Shield, LogIn, ChevronDown,
-  CornerDownRight, X,
+  CornerDownRight, X, Share2, Check,
 } from 'lucide-react';
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import { postsService } from '@/modules/posts/services/posts.service';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import type { Post, PostComment } from '@/modules/shared/types/api';
+import { fechaConHora, fechaCortaConHora } from '@/modules/shared/lib/fecha';
 
 /**
  * Tarjeta de una publicación en el feed público.
@@ -38,6 +40,41 @@ export function PostCard({ post }: { post: Post }) {
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
+
+  const [copiado, setCopiado] = useState(false);
+
+  /**
+   * Compartir la publicación.
+   *
+   * Usa el diálogo nativo del sistema cuando existe (mobile: manda a WhatsApp,
+   * Instagram, etc.). En escritorio casi nunca está, así que cae a copiar el
+   * link al portapapeles y avisa con un check de 2s.
+   *
+   * La URL se arma con `window.location.origin` y no con una constante: así
+   * funciona igual en local, en preview y en producción sin configurar nada.
+   */
+  const handleShare = async () => {
+    const url = `${window.location.origin}/publicaciones/${post.id}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Publicación de Cerca Trova', text: post.description.slice(0, 100), url });
+        return;
+      } catch {
+        // El usuario canceló el diálogo: no es un error que haya que mostrar.
+        return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiado(true);
+      toast.success('Link copiado');
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      toast.error('No se pudo copiar el link');
+    }
+  };
 
   const requireLogin = (accion: string) => {
     toast.info(`Iniciá sesión para ${accion}.`);
@@ -131,7 +168,7 @@ export function PostCard({ post }: { post: Post }) {
   const commentCount = comments?.length ?? post.commentsCount ?? 0;
 
   return (
-    <article className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-[0_2px_4px_-2px_rgba(10,12,11,0.06),0_14px_34px_-14px_rgba(10,12,11,0.20)]">
+    <article className="overflow-hidden rounded-xl border border-ink-100 bg-white shadow-[0_2px_4px_-2px_rgba(10,12,11,0.06),0_14px_34px_-14px_rgba(10,12,11,0.20)]">
       {/* ── AUTOR ── */}
       <div className="flex items-center gap-3 px-5 py-4">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-700/10">
@@ -146,11 +183,13 @@ export function PostCard({ post }: { post: Post }) {
               <Shield size={8} />Admin
             </span>
           </p>
-          <p className="text-xs text-ink-500">
-            {new Date(post.createdAt).toLocaleDateString('es-AR', {
-              day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
-            })}
-          </p>
+          {/* La fecha es el permalink, como en cualquier red social. */}
+          <Link
+            href={`/publicaciones/${post.id}`}
+            className="text-xs text-ink-500 transition-colors hover:text-brand-700 hover:underline"
+          >
+            {fechaConHora(post.createdAt)}
+          </Link>
         </div>
       </div>
 
@@ -175,7 +214,7 @@ export function PostCard({ post }: { post: Post }) {
           onClick={handleLike}
           aria-label={liked ? 'Quitar me gusta' : 'Me gusta'}
           aria-pressed={liked}
-          className={`inline-flex cursor-pointer items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 ${
+          className={`inline-flex cursor-pointer items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 active:scale-90 ${
             liked ? 'bg-rose-50 text-rose-600' : 'text-ink-600 hover:bg-rose-50 hover:text-rose-600'
           }`}
         >
@@ -186,11 +225,23 @@ export function PostCard({ post }: { post: Post }) {
         <button
           type="button"
           onClick={toggleComments}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold text-ink-600 transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-50 hover:text-brand-800"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold text-ink-600 transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-50 hover:text-brand-800 active:scale-90"
         >
           <MessageCircle size={18} />
           {commentCount}
           <ChevronDown size={14} className={`transition-transform duration-300 ${showComments ? 'rotate-180' : ''}`} />
+        </button>
+
+        {/* Compartir — `ml-auto` lo manda al extremo derecho, separado de las
+            acciones de interacción. */}
+        <button
+          type="button"
+          onClick={handleShare}
+          aria-label="Compartir publicación"
+          className="ml-auto inline-flex cursor-pointer items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold text-ink-600 transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-50 hover:text-brand-800 active:scale-90"
+        >
+          {copiado ? <Check size={18} className="text-brand-700" /> : <Share2 size={18} />}
+          <span className="hidden sm:inline">{copiado ? 'Copiado' : 'Compartir'}</span>
         </button>
       </div>
 
@@ -215,7 +266,7 @@ export function PostCard({ post }: { post: Post }) {
                 onClick={handleComment}
                 disabled={sending || !newComment.trim()}
                 aria-label="Enviar comentario"
-                className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-brand-700 text-white transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-brand-700 text-white transition-transform duration-200 hover:scale-105 active:scale-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
               </button>
@@ -328,9 +379,7 @@ function CommentBubble({
           </span>
         )}
         <span className="text-xs text-ink-500">
-          {new Date(comment.createdAt).toLocaleDateString('es-AR', {
-            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-          })}
+          {fechaCortaConHora(comment.createdAt)}
         </span>
       </div>
       <p className="mt-1.5 text-sm leading-relaxed text-ink-700">{comment.content}</p>

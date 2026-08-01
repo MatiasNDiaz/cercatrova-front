@@ -10,11 +10,12 @@ import { Select } from '@/modules/shared/ui/Select';
 import { toast } from 'sonner';
 import {
   MapPin, Home, Ruler, DollarSign, Bell, Save,
-  Bed, Bath, Hourglass, FileCheck, Car, Trees,
-  ArrowLeft, SlidersHorizontal, ChevronDown, ChevronUp,
+  Bed, Bath, Hourglass, FileCheck, Car, Trees, SlidersHorizontal, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
+import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 interface PropertyType {
   id: number;
   name: string;
@@ -156,8 +157,8 @@ if (fullLoc) {
   // ── Empty state ──────────────────────────────────────────
   if (!hasAnyData) {
     return (
-      <div className="bg-white rounded-2xl border border-[#0b7a4b]/15 p-6 flex flex-col items-center gap-3 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-[#0b7a4b]/10 flex items-center justify-center">
+      <div className="bg-white rounded-xl border border-[#0b7a4b]/15 p-6 flex flex-col items-center gap-3 text-center">
+        <div className="w-12 h-12 rounded-xl bg-[#0b7a4b]/10 flex items-center justify-center">
           <SlidersHorizontal size={22} className="text-[#0b7a4b]" />
         </div>
         <div>
@@ -171,7 +172,7 @@ if (fullLoc) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-[#0b7a4b]/20 overflow-hidden shadow-sm">
+    <div className="bg-white rounded-xl border border-[#0b7a4b]/20 overflow-hidden shadow-sm">
 
       {/* Header */}
       <div className="flex  items-center justify-between px-5 py-3.5 border-b border-[#0b7a4b]/10">
@@ -348,9 +349,10 @@ export default function PreferenciasPage() {
   if (loading) return (
     <div className="flex flex-col gap-4">
       {[1, 2, 3, 4].map(i => (
-        <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse">
+        <div key={i} className="bg-white rounded-xl p-6 border border-gray-100 animate-pulse">
           <div className="h-3 bg-gray-100 rounded-full w-1/4 mb-5" />
-          <div className="grid grid-cols-2 gap-4">
+          {/* Una sola columna en mobile — ver la misma nota en `PropertyForm`. */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="h-10 bg-gray-100 rounded-xl" />
             <div className="h-10 bg-gray-100 rounded-xl" />
           </div>
@@ -360,17 +362,10 @@ export default function PreferenciasPage() {
   );
 
   return (
-    <div className="flex flex-col gap-5">
+    <DashboardPage width="form">
 
       {/* Back */}
-      <Link
-        href="/dashboard"
-        className="inline-flex items-center gap-2 text-sm font-medium text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors w-fit"
-      >
-        <span className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
-          <ArrowLeft size={14} />
-        </span>
-      </Link>
+      <DashboardBackLink />
 
       {/* Header */}
       <div>
@@ -391,7 +386,7 @@ export default function PreferenciasPage() {
       {hasPrefs && (
         <button
           onClick={() => setShowForm(v => !v)}
-          className="flex items-center justify-between w-full px-5 py-3.5 bg-white border border-gray-100 rounded-2xl hover:border-gray-200 transition-all group"
+          className="flex items-center justify-between w-full px-5 py-3.5 bg-white border border-gray-100 rounded-xl hover:border-gray-200 transition-all group"
         >
           <div className="flex items-center gap-2.5">
             <SlidersHorizontal size={15} className="text-[#0b7a4b]" />
@@ -410,7 +405,7 @@ export default function PreferenciasPage() {
       <div className={`flex flex-col gap-5 ${showForm || !hasPrefs ? 'block' : 'hidden'}`}>
 
         {/* UBICACIÓN */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <SectionTitle icon={MapPin} label="Ubicación" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Localidad" hint="Ej: Córdoba Capital, La Calera, Villa Carlos Paz">
@@ -429,7 +424,7 @@ export default function PreferenciasPage() {
         </div>
 
         {/* TIPO DE PROPIEDAD */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <SectionTitle icon={Home} label="Tipo de propiedad" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Tipo">
@@ -454,7 +449,7 @@ export default function PreferenciasPage() {
         </div>
 
         {/* CARACTERÍSTICAS */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <SectionTitle icon={Ruler} label="Características" />
           {/* Los inputs de esta sección NO usan <Input>: llevan un ícono superpuesto y
               necesitan pl-9 en vez del px-4 que trae la clase base. Como el proyecto no
@@ -519,7 +514,7 @@ export default function PreferenciasPage() {
             ].map(({ key, label, icon: Icon }) => (
               <button key={key} type="button"
                 onClick={() => set(key, !form[key as keyof FormState])}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold border transition-all ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
                   form[key as keyof FormState]
                     ? 'bg-[#0b7a4b]/10 border-[#0b7a4b]/40 text-[#0b7a4b]'
                     : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-[#0b7a4b]/30 hover:text-[#0b7a4b]'
@@ -539,7 +534,7 @@ export default function PreferenciasPage() {
         </div>
 
         {/* PRECIO */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <SectionTitle icon={DollarSign} label="Precio estimado" />
           <Field label="Precio objetivo (USD)" hint="Se notifica con ±5-7% de tolerancia según el rango de precio">
             <div className="relative">
@@ -553,7 +548,7 @@ export default function PreferenciasPage() {
         </div>
 
         {/* NOTIFICACIONES */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <SectionTitle icon={Bell} label="Notificaciones por email" />
           <div className="flex flex-col gap-3">
             {[
@@ -570,7 +565,7 @@ export default function PreferenciasPage() {
             ].map(({ key, label, desc }) => (
               <div key={key}
                 onClick={() => set(key, !form[key as keyof FormState])}
-                className={`flex items-center justify-between gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${
+                className={`flex items-center justify-between gap-4 p-4 rounded-xl border cursor-pointer transition-all ${
                   form[key as keyof FormState]
                     ? 'bg-[#0b7a4b]/8 border-[#0b7a4b]/30'
                     : 'bg-gray-50 border-gray-200 hover:border-gray-300'
@@ -606,6 +601,6 @@ export default function PreferenciasPage() {
         </div>
 
       </div>
-    </div>
+    </DashboardPage>
   );
 }

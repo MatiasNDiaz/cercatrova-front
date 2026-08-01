@@ -1,5 +1,6 @@
 "use client";
 
+import { useScrollToSection } from '@/modules/shared/ui/useScrollToSection';
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -12,7 +13,7 @@ import {
   NAV_MOBILE_ITEM, navItemClass,
 } from "./navStyles";
 import { useState, useEffect, useRef } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { confirmDialog } from "@/modules/shared/ui/ConfirmDialog";
 import { useAuth } from "../context/AuthContext";
 import api from "@/modules/shared/lib/axios";
@@ -33,18 +34,104 @@ function useHideOnScroll() {
   return isVisible;
 }
 
-function useScrollToSection() {
-  const router = useRouter();
-  const pathname = usePathname();
-  return (sectionId: string, closeMenu?: () => void) => {
-    closeMenu?.();
-    const scrollToEl = () => {
-      const el = document.getElementById(sectionId);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    };
-    if (pathname === "/") scrollToEl();
-    else { router.push("/"); setTimeout(scrollToEl, 600); }
-  };
+
+/**
+ * Campanita con contador de no leídas.
+ *
+ * Se renderiza DOS veces: dentro del `<ul>` de escritorio y en el cluster
+ * mobile. Es el mismo componente en los dos casos a propósito — si fueran dos
+ * bloques de JSX copiados, el badge podría quedar con estilos distintos o, peor,
+ * alguien tocaría uno y no el otro.
+ *
+ * `min-h-11 min-w-11` (44px) para que sea cómodo de tocar con el pulgar: el
+ * ícono solo con `p-2.5` daba un objetivo de ~41px.
+ */
+function NotificationBell({
+  href, label, unreadCount,
+}: {
+  href: string; label: string; unreadCount: number;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={unreadCount > 0 ? `${label} (${unreadCount} sin leer)` : label}
+      className="bell-hover relative flex min-h-11 min-w-11 items-center justify-center rounded-full text-brand-700 transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-50 hover:text-brand-800"
+    >
+      <Bell size={21} />
+      {unreadCount > 0 && (
+        <span className="absolute top-1 right-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-black text-white shadow-sm">
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+/**
+ * Contenido del panel de usuario: cabecera "conectado como" + Mi perfil +
+ * Panel + Cerrar sesión.
+ *
+ * Lo usan el desplegable de escritorio y el de mobile. Es el mismo componente
+ * en los dos para que no se separen (antes el bloque de escritorio era JSX
+ * suelto y en mobile no existía: el avatar abría el cajón de navegación
+ * completo, que en un teléfono de 430px se leía como un panel tapando el hero,
+ * no como el menú de la cuenta).
+ */
+function UserPanelItems({
+  user, isAdmin, perfilHref, dashboardHref, onNavigate, onLogout,
+}: {
+  // `surname` admite `null` porque así viene en el tipo `User` del contrato.
+  user: { name?: string; surname?: string | null } | null;
+  isAdmin: boolean;
+  perfilHref: string;
+  dashboardHref: string;
+  onNavigate: () => void;
+  onLogout: () => void;
+}) {
+  return (
+    <>
+      <li className="border-b border-gray-100 bg-[#0f8b57]/5 px-4 py-3">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-widest text-gray-500 uppercase">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
+          </span>
+          conectado como
+        </p>
+        <p className="mt-1 truncate text-[15px] font-bold text-[#0b7a4b]">
+          {user?.name} {user?.surname ?? ""}
+        </p>
+        {isAdmin && (
+          <div className="mt-1.5 flex w-fit items-center gap-1 rounded-full bg-[#0b7a4b] px-2 py-0.5 text-white">
+            <Shield size={9} />
+            <span className="text-[9px] font-black tracking-wider uppercase">Administrador</span>
+          </div>
+        )}
+      </li>
+      <li>
+        <Link href={perfilHref} onClick={onNavigate}
+          className="flex min-h-11 items-center gap-2.5 border-l-2 border-transparent px-4 py-3 text-sm font-medium text-[#0b7a4b] transition-all duration-200 hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10">
+          <User size={19} className="shrink-0" />
+          Mi perfil
+        </Link>
+      </li>
+      <li>
+        <Link href={dashboardHref} onClick={onNavigate}
+          className="flex min-h-11 items-center gap-2.5 border-l-2 border-transparent px-4 py-3 text-sm font-medium text-[#0b7a4b] transition-all duration-200 hover:border-[#0b7a4b] hover:bg-[#0f8b57]/10">
+          <LayoutDashboard size={19} className="shrink-0" />
+          {isAdmin ? 'Panel admin' : 'Panel de control'}
+        </Link>
+      </li>
+      <li className="border-t border-gray-300" />
+      <li>
+        <button onClick={onLogout}
+          className="flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-b-xl border-l-2 border-transparent px-4 py-3 text-sm font-semibold text-red-600 transition-all duration-200 hover:border-red-500 hover:bg-red-100">
+          <LogOut size={19} className="shrink-0" />
+          Cerrar sesión
+        </button>
+      </li>
+    </>
+  );
 }
 
 const propiedadesLinks = [
@@ -68,6 +155,8 @@ export const NavbarPrivate = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  /** Panel de cuenta en mobile — independiente del cajón de navegación. */
+  const [userPanelOpen, setUserPanelOpen] = useState(false);
 
   const { logout, user, isLoading } = useAuth();
   const scrollTo = useScrollToSection();
@@ -83,6 +172,17 @@ export const NavbarPrivate = () => {
 
   const dashboardHref = isAdmin ? '/dashboardAdmin' : '/dashboard';
   const perfilHref    = isAdmin ? '/dashboardAdmin/perfil' : '/dashboard/perfil';
+
+  // El panel de cuenta se cierra al navegar (si no, quedaba abierto sobre la
+  // pantalla nueva) y con Escape.
+  useEffect(() => { setUserPanelOpen(false); }, [pathname]);
+
+  useEffect(() => {
+    if (!userPanelOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setUserPanelOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [userPanelOpen]);
 
   // 👇 fetch según rol
  useEffect(() => {
@@ -159,18 +259,93 @@ export const NavbarPrivate = () => {
           />
         </button>
 
-        {/* HAMBURGUESA MOBILE */}
-        <button onClick={toggleMenu} aria-label="Abrir navegación"
-          className="mr-2 rounded-2xl p-2 text-brand-700 transition-all duration-200 hover:bg-brand-50 active:scale-95 lg:hidden">
-          <Menu size={30} />
-        </button>
+        {/* ── CLUSTER MOBILE (< xl) ──
+            La campanita y el acceso al panel vivían DENTRO del `<ul>` de
+            escritorio, que es `hidden xl:flex`: por debajo del breakpoint un
+            usuario logueado se quedaba sin campanita y sin contador de no
+            leídas en la barra — el único acceso era abrir el menú.
+
+            Ahora la campanita se renderiza también acá (mismo componente
+            `NotificationBell`, así el badge no puede quedar desincronizado), y
+            el avatar es el que abre el menú: es un objetivo más grande y más
+            reconocible que un ícono de hamburguesa, y el panel del usuario
+            (perfil / panel de control / cerrar sesión) es lo primero que
+            aparece dentro del cajón.
+
+            `ml-auto` empuja el cluster al borde derecho: si no, con el `<ul>`
+            oculto quedaba pegado al logo. */}
+        <div className="ml-auto flex items-center gap-1 xl:hidden">
+          <NotificationBell
+            href={isAdmin ? "/dashboardAdmin/notificaciones" : "/dashboard/notificaciones"}
+            label={isAdmin ? "Notificaciones del panel" : "Notificaciones"}
+            unreadCount={unreadCount}
+          />
+
+          {/* ── PANEL DE CUENTA — anclado al avatar ──
+              Antes el avatar abría el cajón de navegación completo: un panel
+              de alto total sobre el borde derecho que, en un teléfono de
+              430px, se leía como un bloque flotando encima del hero y no como
+              el menú de la cuenta.
+
+              Ahora es un desplegable anclado al propio botón
+              (`relative` + `absolute top-full right-0`), igual que en
+              escritorio: nace debajo del avatar y se alinea a su borde
+              derecho, así que no puede aterrizar en cualquier lado de la
+              pantalla. */}
+          <div className="relative">
+            <button
+              onClick={() => { setUserPanelOpen(v => !v); setIsMenuOpen(false); }}
+              aria-label="Abrir panel de cuenta"
+              aria-expanded={userPanelOpen}
+              aria-haspopup="menu"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-full transition-colors duration-200 hover:bg-brand-50 active:scale-95"
+            >
+              {!isLoading && user?.photo ? (
+                <Image src={user.photo} alt="" width={34} height={34}
+                  className="h-8.5 w-8.5 shrink-0 rounded-full object-cover ring-2 ring-brand-700/20" />
+              ) : (
+                <span className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-[#0f8b57] to-[#14a366] ring-2 ring-brand-700/20">
+                  <User size={17} className="text-white" />
+                </span>
+              )}
+            </button>
+
+            {userPanelOpen && (
+              <>
+                <ul
+                  role="menu"
+                  className="absolute top-full right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-ink-100 bg-white shadow-[0_20px_50px_-12px_rgba(10,12,11,0.45)] [animation:loader-in_.16s_ease-out_both]"
+                >
+                  <UserPanelItems
+                    user={user ?? null}
+                    isAdmin={isAdmin}
+                    perfilHref={perfilHref}
+                    dashboardHref={dashboardHref}
+                    onNavigate={() => setUserPanelOpen(false)}
+                    onLogout={() => { setUserPanelOpen(false); handleLogoutConfirm(); }}
+                  />
+                </ul>
+              </>
+            )}
+          </div>
+
+          {/* Hamburguesa — SOLO navegación del sitio, separada de la cuenta. */}
+          <button
+            onClick={() => { toggleMenu(); setUserPanelOpen(false); }}
+            aria-label="Abrir navegación"
+            aria-expanded={isMenuOpen}
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-brand-700 transition-colors duration-200 hover:bg-brand-50 active:scale-95"
+          >
+            <Menu size={26} />
+          </button>
+        </div>
 
         {/* DESKTOP NAV — MISMAS secciones para usuario y admin:
             Inicio · Publicaciones · Propiedades · Servicios · Nosotros ·
             Consultas, más la campanita y el panel del avatar.
             Las secciones del panel de admin viven en su sidebar, no acá.
             "Contacto" sigue solo en el footer. */}
-        <ul className="ml-auto mr-3 hidden flex-row items-center gap-0.5 lg:flex">
+        <ul className="ml-auto mr-3 hidden flex-row items-center gap-0.5 xl:flex">
           <li>
             <button onClick={() => scrollTo("inicio")} className={NAV_ITEM}>
               <Home size={16} />
@@ -242,18 +417,11 @@ export const NavbarPrivate = () => {
 
           {/* Campanita — la ruta cambia según el rol */}
           <li>
-            <Link
+            <NotificationBell
               href={isAdmin ? "/dashboardAdmin/notificaciones" : "/dashboard/notificaciones"}
-              aria-label={isAdmin ? "Notificaciones del panel" : "Notificaciones"}
-              className="bell-hover relative ml-1 flex items-center rounded-full p-2.5 text-brand-700 transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-50 hover:text-brand-800"
-            >
-              <Bell size={21} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-black text-white shadow-sm">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-            </Link>
+              label={isAdmin ? "Notificaciones del panel" : "Notificaciones"}
+              unreadCount={unreadCount}
+            />
           </li>
 
           {/* AVATAR + DROPDOWN */}
@@ -277,57 +445,45 @@ export const NavbarPrivate = () => {
               <ChevronDown className="w-4 h-4 text-[#0b7a4b] transition-transform duration-300 group-hover:rotate-180 shrink-0" />
             </button>
 
-            <ul className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden">
-              <li className="px-4 py-3 border-b border-gray-100 bg-[#0f8b57]/5">
-                <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-gray-500 font-semibold">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
-                  </span>
-                  conectado como
-                </p>
-                <p className="text-[15px] font-bold text-[#0b7a4b] truncate mt-1">
-                  {user?.name} {user?.surname ?? ""}
-                </p>
-                {isAdmin && (
-                  <div className="flex items-center gap-1 mt-1.5 w-fit px-2 py-0.5 rounded-full bg-[#0b7a4b] text-white">
-                    <Shield size={9} />
-                    <span className="text-[9px] font-black uppercase tracking-wider">Administrador</span>
-                  </div>
-                )}
-              </li>
-              <li>
-                <Link href={perfilHref}
-                  className="flex items-center border-l-2 border-transparent hover:border-[#0b7a4b] gap-2.5 px-4 py-3 text-sm text-[#0b7a4b] font-medium hover:bg-[#0f8b57]/10 transition-all duration-200">
-                  <User size={19} className="shrink-0" />
-                  Mi perfil
-                </Link>
-              </li>
-              <li>
-                <Link href={dashboardHref}
-                  className="flex items-center gap-2.5 px-4 border-l-2 border-transparent hover:border-[#0b7a4b] py-3 text-sm text-[#0b7a4b] font-medium hover:bg-[#0f8b57]/10 transition-all duration-200">
-                  <LayoutDashboard size={19} className="shrink-0" />
-                  {isAdmin ? 'Panel admin' : 'Panel de control'}
-                </Link>
-              </li>
-              <li className="border-t border-gray-300" />
-              <li>
-                <button onClick={handleLogoutConfirm}
-                  className="w-full flex items-center gap-2.5 px-4 py-3 rounded-b-xl border-l-2 border-transparent hover:border-red-500 text-sm text-red-600 font-semibold hover:bg-red-100 transition-all duration-200 cursor-pointer">
-                  <LogOut size={19} className="shrink-0" />
-                  Cerrar sesión
-                </button>
-              </li>
+            <ul className="invisible absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-ink-100 bg-white opacity-0 shadow-xl transition-all duration-200 group-hover:visible group-hover:opacity-100">
+              <UserPanelItems
+                user={user ?? null}
+                isAdmin={isAdmin}
+                perfilHref={perfilHref}
+                dashboardHref={dashboardHref}
+                onNavigate={() => {}}
+                onLogout={handleLogoutConfirm}
+              />
             </ul>
           </li>
         </ul>
 
+      </nav>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          OVERLAY + CAJÓN MOBILE — van FUERA del <nav> a propósito.
+
+          Estaban adentro, y ahí `position: fixed` NO se medía contra la
+          ventana. El <nav> lleva `translate-y-0` (para esconderse al
+          scrollear), y cualquier valor de `transform`/`translate` distinto de
+          `none` convierte al elemento en el bloque contenedor de sus
+          descendientes fixed. Resultado: el cajón se posicionaba contra la
+          BARRITA, no contra la pantalla —
+            `top-0 right-0` → esquina de la navbar
+            `h-full`        → 100% del alto de la navbar (~90px)
+          y por eso se veía como una pastilla blanca corta arriba, con el
+          resto del contenido (avatar, nombre, "cerrar sesión") desbordando
+          sin fondo por encima del hero.
+
+          Como hermanos del <nav>, ya no hay ancestro transformado y `fixed`
+          vuelve a referirse a la ventana: el cajón ocupa el alto completo.
+          ══════════════════════════════════════════════════════════════════ */}
         {/* MOBILE: Overlay */}
-        <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden z-60 ${isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`}
+        <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 xl:hidden z-60 ${isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`}
           onClick={toggleMenu} />
 
         {/* MOBILE: Drawer */}
-        <div className={`fixed top-0 right-0 h-full w-75 rounded-2xl rounded-tr-none bg-white shadow-2xl transform transition-transform duration-300 ease-out lg:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
+        <div className={`fixed top-0 right-0 h-full w-75 rounded-2xl rounded-tr-none bg-white shadow-2xl transform transition-transform duration-300 ease-out xl:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
           <div className="flex flex-col h-full">
 
             <div className="flex items-center justify-between p-6 border-b-2 border-gray-200 shadow-md">
@@ -494,7 +650,24 @@ export const NavbarPrivate = () => {
             </div>
           ))}
         </div>
-      </nav>
+
+      {/* ── Fondo del panel de cuenta ──
+          Va FUERA del `<nav>` a propósito. `NAV_SHELL` es `fixed z-50`, o sea
+          que crea un contexto de apilamiento: un overlay puesto adentro queda
+          atrapado ahí y termina oscureciendo también el logo y la campanita de
+          la propia barra. Como hermano, con `z-40` (< 50), oscurece la página
+          pero la navbar y su panel quedan nítidos por encima.
+
+          Cumple dos funciones: separa visualmente el panel del contenido —era
+          lo que se veía "atravesando" el hero— y captura el toque de afuera
+          para cerrarlo. */}
+      {userPanelOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-ink-950/40 xl:hidden [animation:loader-in_.16s_ease-out_both]"
+          onClick={() => setUserPanelOpen(false)}
+          aria-hidden
+        />
+      )}
     </>
   );
 };

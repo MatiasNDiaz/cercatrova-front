@@ -37,6 +37,25 @@ type SortField = NonNullable<PropertyFilters['sortBy']>;
 /** Alto/radio compartido por todos los controles de la fila 2. */
 const CONTROL = 'h-12 rounded-xl';
 
+/**
+ * Etiqueta del chip de orden, por `sortBy:order`.
+ *
+ * Son los mismos textos que muestran los desplegables de la fila 2 — así el
+ * chip dice exactamente lo que el usuario eligió, no una paráfrasis. `date`
+ * no tiene control en la barra pero sí puede llegar por URL, así que se
+ * contempla igual.
+ */
+const SORT_LABELS: Record<string, string> = {
+  'price:ASC': 'Precio: menor a mayor',
+  'price:DESC': 'Precio: mayor a menor',
+  'antiquity:ASC': 'Más recientes',
+  'antiquity:DESC': 'Más antiguas',
+  'rating:DESC': 'Mejor valoradas',
+  'rating:ASC': 'Peores valoradas',
+  'date:DESC': 'Publicadas más recientemente',
+  'date:ASC': 'Publicadas hace más tiempo',
+};
+
 export function CatalogFilterBar({ onOpenFilters, activeFiltersCount }: CatalogFilterBarProps) {
   const { filters, setFilters, clearFilters } = usePropertyFilters();
 
@@ -55,9 +74,14 @@ export function CatalogFilterBar({ onOpenFilters, activeFiltersCount }: CatalogF
   // qué faltaban propiedades. Cada chip se puede quitar de a uno, y "Limpiar
   // todo" resetea la URL entera a `?page=1&limit=12` (= todas las propiedades).
   const chips = useMemo(() => {
-    const out: { key: keyof PropertyFilters; label: string }[] = [];
+    // Cada chip lleva el PARCHE que lo desactiva, no una sola clave. El orden
+    // ocupa dos campos (`sortBy` + `order`) que solo tienen sentido juntos:
+    // borrar uno y dejar el otro deja la URL en un estado a medias. Con el
+    // parche, quitar el chip de orden limpia los dos de una.
+    const out: { id: string; label: string; clear: Partial<PropertyFilters> }[] = [];
     const money = (n: number) => `$${n.toLocaleString('es-AR')}`;
-    const push = (key: keyof PropertyFilters, label: string) => out.push({ key, label });
+    const push = (key: keyof PropertyFilters, label: string) =>
+      out.push({ id: key, label, clear: { [key]: undefined } as Partial<PropertyFilters> });
 
     if (filters.operationType) push('operationType', filters.operationType === 'venta' ? 'Venta' : 'Alquiler');
     if (filters.search) push('search', `“${filters.search}”`);
@@ -84,6 +108,23 @@ export function CatalogFilterBar({ onOpenFilters, activeFiltersCount }: CatalogF
     if (filters.property_deed) push('property_deed', 'Escritura');
     if (filters.tractoAbreviado) push('tractoAbreviado', 'Tracto abreviado');
     if (filters.boleto) push('boleto', 'Boleto');
+
+    // ── Orden ──
+    // Los tres desplegables de la fila 2 SÍ filtran lo que ve el usuario, pero
+    // no generaban ningún chip: elegías "Precio: menor a mayor" y la fila de
+    // filtros activos seguía igual, sin señal de que había un orden aplicado ni
+    // forma de sacarlo desde ahí. `sortBy`/`order` son los únicos campos con
+    // control propio en la barra que faltaban en este resumen.
+    if (filters.sortBy && filters.order) {
+      const label = SORT_LABELS[`${filters.sortBy}:${filters.order}`];
+      if (label) {
+        out.push({
+          id: 'sort',
+          label,
+          clear: { sortBy: undefined, order: undefined },
+        });
+      }
+    }
 
     return out;
   }, [filters, propertyTypes]);
@@ -203,15 +244,15 @@ export function CatalogFilterBar({ onOpenFilters, activeFiltersCount }: CatalogF
                 Filtros activos
               </span>
 
-              {chips.map(({ key, label }) => (
+              {chips.map(({ id, label, clear }) => (
                 <button
-                  key={key}
+                  key={id}
                   type="button"
                   /* `page: 1` explícito: `setFilters` solo resetea la página
                      cuando el filtro que cambia tiene un valor real, así que al
                      QUITAR uno (valor `undefined`) no lo hacía y podías quedar
                      parado en una página que ya no existe → grilla vacía. */
-                  onClick={() => setFilters({ [key]: undefined, page: 1 } as Partial<PropertyFilters>)}
+                  onClick={() => setFilters({ ...clear, page: 1 })}
                   aria-label={`Quitar filtro ${label}`}
                   className="group flex cursor-pointer items-center gap-1.5 rounded-full border border-brand-700/25 bg-brand-50 py-1.5 pr-2 pl-3.5 text-xs font-bold text-brand-700 transition-all duration-200 hover:border-brand-700/50 hover:bg-brand-100"
                 >

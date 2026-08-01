@@ -3,13 +3,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
-import { useUrlFilter } from '@/modules/shared/hooks/useUrlFilter';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
+import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
+import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 import {
   Plus, Pencil, Trash2, Building2, Search,
-  Home, DollarSign, Tag, ImageOff, ArrowLeft,
+  Home, DollarSign, Tag, ImageOff,
   ArrowUpDown, SlidersHorizontal, ChevronDown,
 } from 'lucide-react';
 
@@ -62,10 +63,6 @@ export default function PropiedadesAdminPage() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>('recent');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  // `?accion=editar|eliminar` viene del sidebar. No filtra el listado (las dos
-  // acciones aplican a las mismas propiedades) — pone la página en ese modo:
-  // resalta el botón correspondiente y avisa arriba en qué modo está.
-  const [accion, setAccion] = useUrlFilter<'' | 'editar' | 'eliminar'>('accion', '');
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -137,8 +134,8 @@ export default function PropiedadesAdminPage() {
   const coverOf = (p: Property) => p.images?.find(i => i.isCover)?.url || p.images?.[0]?.url;
 
   return (
-    <div className="flex flex-col gap-6">
-      <BackLink />
+    <DashboardPage>
+      <DashboardBackLink href="/dashboardAdmin" />
 
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
@@ -155,27 +152,6 @@ export default function PropiedadesAdminPage() {
           Nueva propiedad
         </Link>
       </div>
-
-      {/* Modo activo — deja claro por qué un botón está resaltado */}
-      {accion && (
-        <div className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${
-          accion === 'eliminar'
-            ? 'border-red-100 bg-red-50 text-red-700'
-            : 'border-[#0b7a4b]/15 bg-[#0b7a4b]/8 text-[#0b7a4b]'
-        }`}>
-          <span className="font-semibold">
-            {accion === 'eliminar'
-              ? 'Modo eliminar: usá el botón Eliminar de la propiedad que quieras dar de baja.'
-              : 'Modo editar: usá el botón Editar de la propiedad que quieras modificar.'}
-          </span>
-          <button
-            onClick={() => setAccion('')}
-            className="shrink-0 cursor-pointer rounded-lg bg-white/70 px-3 py-1 text-xs font-bold transition-all hover:bg-white"
-          >
-            Salir del modo
-          </button>
-        </div>
-      )}
 
       {/* Toolbar: búsqueda + orden + estado */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -208,7 +184,7 @@ export default function PropiedadesAdminPage() {
       {loading && (
         <div className="flex flex-col gap-3">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="flex animate-pulse gap-4 rounded-2xl border border-gray-100 bg-white p-4">
+            <div key={i} className="flex animate-pulse gap-4 rounded-xl border border-gray-100 bg-white p-4">
               <div className="h-20 w-24 shrink-0 rounded-xl bg-gray-200" />
               <div className="flex flex-1 flex-col justify-center gap-2">
                 <div className="h-4 w-1/2 rounded-full bg-gray-200" />
@@ -222,7 +198,7 @@ export default function PropiedadesAdminPage() {
 
       {/* Empty */}
       {!loading && visible.length === 0 && (
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-gray-100 bg-white p-12 text-center">
+        <div className="flex flex-col items-center gap-4 rounded-xl border border-gray-100 bg-white p-12 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#0b7a4b]/10">
             <Building2 size={28} className="text-[#0b7a4b]" />
           </div>
@@ -253,23 +229,33 @@ export default function PropiedadesAdminPage() {
             const op = OP_LABELS[p.operationType] ?? { label: p.operationType, color: 'bg-gray-100 text-gray-600' };
 
             return (
-              <div key={p.id}
-                className={`flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#0b7a4b]/30 hover:shadow-md ${deletingId === p.id ? 'pointer-events-none opacity-50' : ''}`}>
+              /* Mobile: columna (imagen → texto → acciones). A partir de `sm`
+                 vuelve a la fila de siempre.
 
-                {/* Imagen */}
-                <div className="flex h-22 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-100">
+                 En una sola fila a 390px no entraba nada: la imagen se lleva
+                 112px, los dos botones ~170px, y a la info le quedaban ~60px
+                 — por eso "Córdoba Capital, Nueva Córdoba" terminaba pisando
+                 el botón Editar. */
+              <div key={p.id}
+                className={`flex flex-col gap-4 rounded-xl border border-gray-100 bg-white p-4 transition-all duration-200 hover:border-[#0b7a4b]/30 hover:shadow-md sm:flex-row sm:items-center sm:hover:-translate-y-0.5 ${deletingId === p.id ? 'pointer-events-none opacity-50' : ''}`}>
+
+                {/* Imagen — ancho completo en mobile, miniatura desde `sm`. */}
+                <div className="flex h-40 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-100 sm:h-22 sm:w-28">
                   {cover ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={cover} alt={p.title} className="h-full w-full object-cover" />
                   ) : (
-                    <ImageOff size={22} className="text-gray-300" />
+                    <ImageOff size={22} className="text-gray-400" />
                   )}
                 </div>
 
                 {/* Info */}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-start gap-2">
-                    <h3 className="truncate font-bold text-gray-900 transition-colors hover:text-[#0b7a4b]">{p.title}</h3>
+                    {/* `w-full sm:w-auto`: en mobile el título ocupa su propia
+                        línea y los badges caen abajo, en vez de empujarse
+                        entre sí y quedar todos cortados. */}
+                    <h3 className="w-full truncate font-bold text-gray-900 transition-colors hover:text-[#0b7a4b] sm:w-auto">{p.title}</h3>
                     <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${status.color}`}>
                       {status.label}
                     </span>
@@ -278,7 +264,11 @@ export default function PropiedadesAdminPage() {
                     </span>
                   </div>
 
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                  {/* Bloque de info propio: en mobile va sobre fondo gris y en
+                      2 columnas, así se lee como una ficha y no como texto
+                      suelto compitiendo con los botones. Desde `sm` vuelve a
+                      ser una fila corrida, sin fondo. */}
+                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-lg bg-gray-50 p-3 sm:flex sm:flex-wrap sm:gap-y-1 sm:bg-transparent sm:p-0">
                     <span className="flex items-center gap-1 text-xs text-gray-600">
                       <Home size={12} className="text-[#0b7a4b]" />
                       {p.typeOfProperty?.name ?? '—'}
@@ -297,23 +287,20 @@ export default function PropiedadesAdminPage() {
                   </div>
                 </div>
 
-                {/* Acciones — el modo (`?accion=`) resalta la que trajo al admin acá */}
-                <div className="flex shrink-0 items-center gap-2">
+                {/* Acciones. Estilo fijo: ya no hay un "modo" del sidebar que
+                    resalte una u otra — las dos están siempre disponibles.
+
+                    En mobile ocupan su propia fila, cada botón a mitad de
+                    ancho y con 44px de alto; antes flotaban al costado del
+                    texto y quedaban encimadas con la ubicación. */}
+                <div className="flex shrink-0 items-center gap-2 border-t border-gray-100 pt-3 sm:border-0 sm:pt-0">
                   <Link href={`/dashboardAdmin/propiedades/${p.id}`}
-                    className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
-                      accion === 'editar'
-                        ? 'bg-[#0b7a4b] text-white shadow-sm hover:bg-[#0f8c58]'
-                        : 'bg-[#0b7a4b]/10 text-[#0b7a4b] hover:bg-[#0b7a4b]/20'
-                    }`}>
+                    className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#0b7a4b]/10 px-4 text-xs font-bold text-[#0b7a4b] transition-all hover:bg-[#0b7a4b]/20 sm:min-h-0 sm:flex-none sm:py-2">
                     <Pencil size={13} /> Editar
                   </Link>
                   <button
                     onClick={() => handleDelete(p.id, p.title)}
-                    className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
-                      accion === 'eliminar'
-                        ? 'bg-red-600 text-white shadow-sm hover:bg-red-700'
-                        : 'bg-red-50 text-red-600 hover:bg-red-100'
-                    }`}
+                    className="flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-red-50 px-4 text-xs font-bold text-red-600 transition-all hover:bg-red-100 sm:min-h-0 sm:flex-none sm:py-2"
                   >
                     <Trash2 size={13} /> Eliminar
                   </button>
@@ -325,23 +312,11 @@ export default function PropiedadesAdminPage() {
         </div>
       )}
 
-    </div>
+    </DashboardPage>
   );
 }
 
 // ── Sub-componentes ─────────────────────────────────────────────────────────────
-function BackLink() {
-  return (
-    <Link
-      href="/dashboardAdmin"
-      className="group inline-flex w-fit items-center gap-2 text-sm font-medium text-[#0b7a4b] transition-colors hover:text-[#0f8c58]"
-    >
-      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white transition-transform group-hover:-translate-x-0.5">
-        <ArrowLeft size={14} />
-      </span>
-    </Link>
-  );
-}
 
 function FilterSelect({
   icon: Icon, value, onChange, ariaLabel, children,

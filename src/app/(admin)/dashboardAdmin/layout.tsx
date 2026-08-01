@@ -11,6 +11,7 @@ import {
   ArrowLeft, Users, Building2, BarChart2, Bell, Eye, Megaphone,
 } from 'lucide-react';
 import api from '@/modules/shared/lib/axios';
+import { DashboardShell } from '@/modules/shared/ui/DashboardShell';
 
 // ── Tipos ─────────────────────────────────────────────
 interface AdminNotif {
@@ -35,6 +36,35 @@ function getNotifType(title: string, message: string): NotifType {
 
 
 
+/**
+ * Estados del menú lateral, compartidos por `NavLink` y por la cabecera de
+ * `NavGroup` para que un ítem suelto y un grupo se vean exactamente igual.
+ *
+ * El hover antes era solo un cambio de color de texto, instantáneo y muy
+ * flojo: no se percibía sobre qué ítem estabas parado. Ahora suma un fondo
+ * verde tenue, una barra de acento a la izquierda que crece desde 0, y un
+ * desplazamiento mínimo del contenido — con transición, no de golpe.
+ */
+export const NAV_ITEM_BASE =
+  'group relative flex w-full items-center gap-3 rounded-lg py-2.5 pr-3 pl-4 text-sm font-semibold transition-all duration-200 ease-out';
+
+export const NAV_ITEM_IDLE =
+  'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b] hover:pl-5';
+
+export const NAV_ITEM_ACTIVE = 'bg-[#0b7a4b] text-white shadow-[0_6px_16px_-8px_rgba(11,122,75,0.8)]';
+
+/** Barra de acento a la izquierda. Va dentro del ítem, como `<span>`. */
+export function NavAccent({ active }: { active: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={`absolute top-1/2 left-0 w-1 -translate-y-1/2 rounded-r-full transition-all duration-200 ease-out ${
+        active ? 'h-7 bg-white' : 'h-0 bg-[#0b7a4b] group-hover:h-5'
+      }`}
+    />
+  );
+}
+
 // ── NavLink con badge ─────────────────────────────────
 function NavLink({
   href, label, icon: Icon, isActive, badge = 0,
@@ -44,14 +74,11 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200
-        ${isActive
-          ? 'bg-[#0b7a4b] text-white shadow-sm'
-          : 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
-        }`}
+      className={`${NAV_ITEM_BASE} ${isActive ? NAV_ITEM_ACTIVE : NAV_ITEM_IDLE}`}
     >
-      <Icon size={18} className={isActive ? 'text-white' : 'text-gray-400 transition-colors group-hover:text-[#0b7a4b]'} />
-      <span className="flex-1">{label}</span>
+      <NavAccent active={isActive} />
+      <Icon size={18} className={`shrink-0 transition-colors duration-200 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-[#0b7a4b]'}`} />
+      <span className="flex-1 truncate">{label}</span>
       {badge > 0 && (
         <span className={`flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] leading-none font-black ${
           isActive ? 'bg-white text-[#0b7a4b]' : 'bg-red-500 text-white'
@@ -90,22 +117,25 @@ function NavGroup({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className={`group flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
-          isChildActive ? 'bg-[#0b7a4b]/8 text-[#0b7a4b]' : 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
+        className={`${NAV_ITEM_BASE} cursor-pointer ${
+          isChildActive ? 'bg-[#0b7a4b]/10 text-[#0b7a4b]' : NAV_ITEM_IDLE
         }`}
       >
-        <Icon size={18} className={isChildActive ? 'text-[#0b7a4b]' : 'text-gray-400 transition-colors group-hover:text-[#0b7a4b]'} />
-        <span className="flex-1 text-left">{label}</span>
+        <NavAccent active={isChildActive} />
+        <Icon size={18} className={`shrink-0 transition-colors duration-200 ${isChildActive ? 'text-[#0b7a4b]' : 'text-gray-400 group-hover:text-[#0b7a4b]'}`} />
+        <span className="flex-1 truncate text-left">{label}</span>
         {badge > 0 && (
           <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-black text-white">
             {badge > 99 ? '99+' : badge}
           </span>
         )}
-        <ChevronDown size={15} className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={15} className={`shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {open && (
-        <ul className="mt-1 ml-5 space-y-0.5 border-l border-gray-200 pl-3">
+      {/* `grid-rows-[0fr→1fr]` en vez de montar/desmontar: el submenú se abre y
+          se cierra con transición real de alto, sin saltos. */}
+      <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <ul className="mt-1 ml-5 space-y-0.5 overflow-hidden border-l border-gray-200 pl-3">
           {items.map((item) => {
             const active = item.exact
               ? pathname === item.href
@@ -114,8 +144,11 @@ function NavGroup({
               <li key={item.href + item.label}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-200 ${
-                    active ? 'bg-[#0b7a4b]/10 text-[#0b7a4b]' : 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
+                  tabIndex={open ? undefined : -1}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200 ${
+                    active
+                      ? 'bg-[#0b7a4b]/12 font-semibold text-[#0b7a4b]'
+                      : 'text-gray-500 hover:translate-x-0.5 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
                   }`}
                 >
                   <span className="flex-1">{item.label}</span>
@@ -129,7 +162,7 @@ function NavGroup({
             );
           })}
         </ul>
-      )}
+      </div>
     </div>
   );
 }
@@ -199,7 +232,11 @@ function Sidebar() {
   return (
     // Sin logo ni tarjeta de perfil: esos datos ya están en la barra superior.
     // El sidebar queda solo con navegación, así entra sin scroll inicial.
-    <aside className="sticky top-0 flex h-screen w-72 flex-col border-r border-gray-100 bg-white shadow-sm">
+    //
+    // Devuelve el CONTENIDO, no el `<aside>`: el contenedor (sidebar fijo en
+    // desktop / cajón deslizante en mobile) lo pone `DashboardShell`, así el
+    // mismo menú sirve para los dos casos sin duplicarlo.
+    <div className="flex h-full min-h-0 flex-col">
       <div className="px-4 pt-5 pb-3">
         <Link
           href="/"
@@ -222,13 +259,18 @@ function Sidebar() {
           isActive={pathname === '/dashboardAdmin'}
         />
 
+        {/* "Editar propiedades" y "Eliminar propiedades" eran dos accesos a la
+            MISMA pantalla (el listado, que ya trae los botones Editar y
+            Eliminar en cada fila); solo cambiaban un `?accion=` que resaltaba
+            un botón. Duplicar el acceso para eso no aportaba nada, así que
+            quedó un único "Gestionar propiedades". Mismo caso en Publicaciones
+            con "Editar y moderar" / "Eliminar publicaciones". */}
         <NavGroup
           label="Propiedades"
           icon={Building2}
           items={[
             { href: '/dashboardAdmin/propiedades/nueva', label: 'Publicar propiedad', exact: true },
-            { href: '/dashboardAdmin/propiedades?accion=editar', label: 'Editar propiedades' },
-            { href: '/dashboardAdmin/propiedades?accion=eliminar', label: 'Eliminar propiedades' },
+            { href: '/dashboardAdmin/propiedades', label: 'Gestionar propiedades', exact: true },
             { href: '/properties', label: 'Ver catálogo público' },
           ]}
         />
@@ -238,8 +280,7 @@ function Sidebar() {
           icon={Megaphone}
           items={[
             { href: '/dashboardAdmin/publicaciones/nueva', label: 'Crear publicación', exact: true },
-            { href: '/dashboardAdmin/publicaciones?accion=moderar', label: 'Editar y moderar' },
-            { href: '/dashboardAdmin/publicaciones?accion=eliminar', label: 'Eliminar publicaciones' },
+            { href: '/dashboardAdmin/publicaciones', label: 'Gestionar publicaciones', exact: true },
           ]}
         />
 
@@ -308,7 +349,7 @@ function Sidebar() {
           Cerrar sesión
         </button>
       </div>
-    </aside>
+    </div>
   );
 }
 
@@ -335,14 +376,12 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
 
   if (!user || user.role !== 'admin') return null;
 
+  // `DashboardShell` aporta el chrome (sidebar fijo ≥lg, cajón + barra
+  // superior por debajo) y el padding lateral. El ancho del contenido lo sigue
+  // decidiendo `DashboardPage` según sea listado o formulario.
   return (
-    <div className="h-screen overflow-hidden bg-surface-deep flex">
-      <Sidebar />
-      <main className="flex-1 h-screen overflow-y-auto pb-8">
-        <div className="max-w-7xl mx-auto px-8 py-4">
-          {children}
-        </div>
-      </main>
-    </div>
+    <DashboardShell sidebar={<Sidebar />} label="Panel Admin">
+      {children}
+    </DashboardShell>
   );
 }

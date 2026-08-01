@@ -104,7 +104,7 @@ export function CommentModeration({ postId }: { postId: number }) {
   if (comments.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 py-8 text-center text-gray-500">
-        <MessageCircle size={28} className="text-gray-300" />
+        <MessageCircle size={28} className="text-gray-400" />
         <p className="text-sm">Todavía no hay comentarios en esta publicación.</p>
       </div>
     );
@@ -115,7 +115,7 @@ export function CommentModeration({ postId }: { postId: number }) {
       {comments.map((comment) => (
         <li
           key={comment.id}
-          className={`rounded-2xl border p-4 transition-colors ${
+          className={`rounded-xl border p-4 transition-colors ${
             comment.isHidden ? 'border-amber-200 bg-amber-50/60' : 'border-gray-200 bg-white'
           }`}
         >
@@ -145,7 +145,7 @@ export function CommentModeration({ postId }: { postId: number }) {
 
           {/* Input de respuesta inline */}
           {replyingTo === comment.id && (
-            <div className="mt-3 flex items-start gap-2 rounded-2xl border border-[#0b7a4b]/25 bg-[#0b7a4b]/5 p-3">
+            <div className="mt-3 flex items-start gap-2 rounded-xl border border-[#0b7a4b]/25 bg-[#0b7a4b]/5 p-3">
               <textarea
                 autoFocus
                 rows={2}

@@ -157,7 +157,7 @@ export function NotifItem({
   const avatarInitial = personName ? personName.charAt(0).toUpperCase() : '';
 
   return (
-    <div className={`group flex items-start gap-4 rounded-2xl border px-5 py-4 transition-all duration-200 ${
+    <div className={`group flex items-start gap-4 rounded-xl border px-5 py-4 transition-all duration-200 ${
       n.read ? 'border-gray-100 bg-white' : 'border-[#0b7a4b]/20 bg-white shadow-sm'
     }`}>
       {personName ? (

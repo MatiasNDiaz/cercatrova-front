@@ -285,7 +285,10 @@ const ContactRow = ({
         <span className="block truncate text-sm font-semibold text-white/80 transition-colors group-hover:text-white">
           {label}
         </span>
-        <span className="block text-[11px] tracking-wide text-white/40 uppercase">{sub}</span>
+        {/* /60 y no /40: al 40% sobre el verde profundo del footer este texto
+            quedaba por debajo del contraste mínimo legible — es el mismo
+            problema que `text-gray-200`, en blanco. */}
+        <span className="block text-[11px] tracking-wide text-white/60 uppercase">{sub}</span>
       </span>
     </a>
   </li>

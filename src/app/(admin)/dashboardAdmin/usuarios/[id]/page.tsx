@@ -7,9 +7,11 @@ import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { RequestStatus, VALID_REQUEST_TRANSITIONS } from '@/modules/shared/types/api';
 import { toast } from 'sonner';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
+import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
 import Image from 'next/image';
+import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 import {
-  ArrowLeft, User, Mail, Phone, Calendar,
+  User, Mail, Phone, Calendar,
   FileText, CheckCircle, XCircle, Clock,
   RefreshCw, ChevronDown, ChevronUp, Trash2,
   MessageSquare, MapPin, Home, SlidersHorizontal,
@@ -108,10 +110,10 @@ function BoolBadge({ value, label }: { value: boolean; label: string }) {
 
 function DataField({ label, value, truncate }: { label: string; value: string; truncate?: boolean }) {
   return (
-    <div className="flex flex-col gap-1">
+    <DashboardPage>
       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
       <p className={`text-sm font-medium text-gray-700 ${truncate ? 'truncate' : ''}`}>{value}</p>
-    </div>
+    </DashboardPage>
   );
 }
 
@@ -377,9 +379,9 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
 
   if (loading) return (
     <div className="flex flex-col gap-4">
-      <div className="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse">
+      <div className="bg-white rounded-xl p-6 border border-gray-100 animate-pulse">
         <div className="flex gap-5">
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 shrink-0" />
+          <div className="w-16 h-16 rounded-xl bg-gray-100 shrink-0" />
           <div className="flex-1 flex flex-col gap-3 justify-center">
             <div className="h-4 bg-gray-100 rounded-full w-1/3" />
             <div className="h-3 bg-gray-100 rounded-full w-1/2" />
@@ -388,7 +390,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
       {[1, 2].map(i => (
-        <div key={i} className="bg-white rounded-2xl p-4 border border-gray-100 animate-pulse flex gap-4">
+        <div key={i} className="bg-white rounded-xl p-4 border border-gray-100 animate-pulse flex gap-4">
           <div className="w-11 h-11 rounded-xl bg-gray-100 shrink-0" />
           <div className="flex-1 flex flex-col gap-2 justify-center">
             <div className="h-3.5 bg-gray-100 rounded-full w-1/3" />
@@ -400,7 +402,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   );
 
   if (!user) return (
-    <div className="bg-white rounded-2xl p-12 border border-gray-100 flex flex-col items-center gap-4 text-center">
+    <div className="bg-white rounded-xl p-12 border border-gray-100 flex flex-col items-center gap-4 text-center">
       <p className="font-medium text-gray-600 text-sm">Usuario no encontrado</p>
       <button onClick={() => router.back()} className="text-sm font-medium text-[#0b7a4b] hover:underline">Volver</button>
     </div>
@@ -417,10 +419,10 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="flex flex-col gap-6">
 
-        <button aria-label="Volver" onClick={() => router.back()}
-          className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#0b7a4b] hover:bg-gray-50 transition-all shrink-0">
-          <ArrowLeft size={14} />
-        </button>
+      {/* Sigue siendo `router.back()`: a esta pantalla se llega desde el listado
+          de usuarios y también desde Notificaciones, así que volver al historial
+          es más correcto que un destino fijo. */}
+      <DashboardBackLink onClick={() => router.back()} label="Volver" />
       {/* Header */}
       <div className="flex items-center gap-3">
         <div>
@@ -430,15 +432,15 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
       </div>
 
       {/* ── PERFIL + PREFERENCIAS en la misma card ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-6 flex flex-col gap-5">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-6 py-6 flex flex-col gap-5">
 
         {/* Fila: avatar + datos + acciones */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gray-100 ring-1 ring-gray-200 flex items-center justify-center shrink-0">
+            <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 ring-1 ring-gray-200 flex items-center justify-center shrink-0">
               {user.photo
                 ? <Image src={user.photo} alt={user.name} width={64} height={64} className="object-cover w-full h-full" />
-                : <User size={22} className="text-gray-300" />
+                : <User size={22} className="text-gray-400" />
               }
             </div>
             <div>
@@ -514,8 +516,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         </div>
 
         {requests.length === 0 && (
-          <div className="bg-white rounded-2xl p-10 border border-gray-100 flex flex-col items-center gap-3 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-[#0b7a4b]/8 flex items-center justify-center">
+          <div className="bg-white rounded-xl p-10 border border-gray-100 flex flex-col items-center gap-3 text-center">
+            <div className="w-12 h-12 rounded-xl bg-[#0b7a4b]/8 flex items-center justify-center">
               <FileText size={20} className="text-[#0b7a4b]" />
             </div>
             <p className="font-medium text-gray-600 text-sm">Este usuario no tiene solicitudes todavía</p>
@@ -531,7 +533,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
 
           return (
             <div key={r.id}
-              className={`bg-white rounded-2xl border border-gray-100 overflow-hidden transition-all hover:border-gray-200 hover:shadow-sm ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}>
+              className={`bg-white rounded-xl border border-gray-100 overflow-hidden transition-all hover:border-gray-200 hover:shadow-sm ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}>
 
               <div className="flex items-center gap-5 px-5 py-4">
                 <div className="w-11 h-11 rounded-xl bg-[#0b7a4b]/16 flex items-center justify-center shrink-0">

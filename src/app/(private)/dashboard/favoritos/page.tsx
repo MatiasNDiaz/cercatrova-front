@@ -1,16 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { toast } from 'sonner';
+import { DashboardPage, DashboardHeader, ListReveal } from '@/modules/shared/ui/DashboardPage';
+import { ListToolbar, ListSearch, ListSelect, NoMatches } from '@/modules/shared/ui/ListToolbar';
 import {
-  Heart, MapPin, Bed, Bath, Maximize, Trash2, Home, ArrowRight,
-  ArrowLeft,
+  Heart, MapPin, Bed, Bath, Maximize, Trash2, Home, ArrowRight, ArrowUpDown,
 } from 'lucide-react';
+
+type SortBy = 'recientes' | 'precio_asc' | 'precio_desc' | 'alfabetico';
 
 // Shape reducido: solo los campos de `Property` que esta pantalla renderiza.
 // Los nombres deben coincidir con el tipo canónico (`shared/types/api.ts`).
@@ -38,6 +41,31 @@ export default function FavoritosPage() {
   const [favorites, setFavorites] = useState<FavoriteProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<SortBy>('recientes');
+
+  // Filtrado de presentación sobre lo ya traído por `GET /favorites`.
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = q
+      ? favorites.filter(({ property: pr }) =>
+          pr.title?.toLowerCase().includes(q) ||
+          pr.barrio?.toLowerCase().includes(q) ||
+          pr.localidad?.toLowerCase().includes(q) ||
+          pr.typeOfProperty?.name?.toLowerCase().includes(q))
+      : favorites;
+
+    return [...list].sort((a, b) => {
+      switch (sortBy) {
+        case 'precio_asc':  return (a.property.price ?? 0) - (b.property.price ?? 0);
+        case 'precio_desc': return (b.property.price ?? 0) - (a.property.price ?? 0);
+        case 'alfabetico':  return (a.property.title ?? '').localeCompare(b.property.title ?? '', 'es');
+        // `GET /favorites` no trae fecha de guardado: se respeta el orden en que
+        // vino del backend, que es el más reciente primero.
+        default: return 0;
+      }
+    });
+  }, [favorites, search, sortBy]);
 
   useEffect(() => {
     const fetchFavorites = async () => {
@@ -72,33 +100,41 @@ export default function FavoritosPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-       <Link
-        href="/dashboard"
-        className="inline-flex items-center gap-2 text-sm font-medium text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors w-fit"
-      >
-        <span className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
-          <ArrowLeft size={14} />
-        </span>
-      </Link>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#0b7a4b]">Favoritos</h1>
-          <p className="text-sm text-gray-600 mt-0.5">Las propiedades que te gustaron</p>
-        </div>
-        {!loading && favorites.length > 0 && (
-          <span className="text-xs font-bold text-[#0b7a4b] bg-[#0b7a4b]/10 px-3 py-1.5 rounded-full">
+    <DashboardPage>
+      <DashboardHeader
+        icon={Heart}
+        title="Favoritos"
+        subtitle={
+          loading
+            ? 'Cargando…'
+            : search
+              ? `${visible.length} de ${favorites.length} propiedades guardadas`
+              : 'Las propiedades que guardaste'
+        }
+        actions={!loading && favorites.length > 0 ? (
+          <span className="rounded-full bg-[#0b7a4b]/10 px-3 py-1.5 text-xs font-bold text-[#0b7a4b]">
             {favorites.length} {favorites.length === 1 ? 'propiedad' : 'propiedades'}
           </span>
-        )}
-      </div>
+        ) : undefined}
+      />
+
+      {!loading && favorites.length > 0 && (
+        <ListToolbar>
+          <ListSearch value={search} onChange={setSearch} placeholder="Buscar por título, barrio, localidad o tipo..." />
+          <ListSelect value={sortBy} onChange={(v) => setSortBy(v as SortBy)} label="Ordenar favoritos" icon={ArrowUpDown}>
+            <option value="recientes">Guardadas primero</option>
+            <option value="precio_asc">Precio: menor a mayor</option>
+            <option value="precio_desc">Precio: mayor a menor</option>
+            <option value="alfabetico">Alfabético (A-Z)</option>
+          </ListSelect>
+        </ListToolbar>
+      )}
 
       {/* Loading skeleton */}
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-white rounded-3xl overflow-hidden border border-gray-100 animate-pulse">
+            <div key={i} className="bg-white rounded-xl overflow-hidden border border-gray-100 animate-pulse">
               <div className="h-40 bg-gray-100" />
               <div className="p-4 flex flex-col gap-2">
                 <div className="h-4 bg-gray-100 rounded-full w-3/4" />
@@ -112,7 +148,7 @@ export default function FavoritosPage() {
 
       {/* Empty */}
       {!loading && favorites.length === 0 && (
-        <div className="bg-white rounded-3xl p-12 border border-gray-100 shadow-sm flex flex-col items-center gap-4 text-center">
+        <div className="bg-white rounded-xl p-12 border border-gray-100 shadow-sm flex flex-col items-center gap-4 text-center">
           <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center">
             <Heart size={28} className="text-red-300" />
           </div>
@@ -128,23 +164,32 @@ export default function FavoritosPage() {
         </div>
       )}
 
+      {/* Sin coincidencias — distinto de "no tenés favoritos". */}
+      {!loading && favorites.length > 0 && visible.length === 0 && (
+        <NoMatches onClear={() => setSearch('')} message="Ninguno de tus favoritos coincide con esa búsqueda." />
+      )}
+
       {/* Grid de cards */}
-      {!loading && favorites.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {favorites.map(({ property, property_id }) => {
+      {!loading && visible.length > 0 && (
+        <ListReveal className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {visible.map(({ property, property_id }) => {
             const coverImage = property.images?.find(i => i.isCover)?.url ?? property.images?.[0]?.url;
             return (
-              <div key={property_id}
-                className="group bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+              <ListReveal.Item key={property_id}
+                className="group bg-white rounded-xl overflow-hidden border border-ink-100 shadow-[0_1px_2px_rgba(10,12,11,0.04),0_8px_24px_-12px_rgba(10,12,11,0.12)] transition-[transform,box-shadow,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-brand-700/25 hover:shadow-[0_2px_4px_rgba(10,12,11,0.05),0_18px_40px_-16px_rgba(6,57,35,0.28)]">
 
                 {/* ── Imagen — SIN Link, para que el botón eliminar no navegue ── */}
                 <div className="relative h-44 overflow-hidden bg-gray-100">
+                  {/* El zoom de la imagen usa 700ms + ease-out: el mismo que
+                      `PropertyCard` y `FeaturedPropertyCard`. Estaba en 500, así
+                      que la misma tarjeta de propiedad se movía distinto según
+                      si la mirabas en el catálogo o acá. */}
                   <Link href={`/properties/${property_id}`} className="block w-full h-full">
                     {coverImage ? (
-                      <Image src={coverImage} alt={property.title} fill className="object-cover text-[#0b7a4b] group-hover:scale-105 transition-transform duration-500" />
+                      <Image src={coverImage} alt={property.title} fill className="object-cover transition-transform duration-700 ease-out group-hover:scale-105" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Home size={32} className="text-gray-300" />
+                        <Home size={32} className="text-gray-400" />
                       </div>
                     )}
                     <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent" />
@@ -193,12 +238,12 @@ export default function FavoritosPage() {
                     </Link>
                   </div>
                 </div>
-              </div>
+              </ListReveal.Item>
             );
           })}
-        </div>
+        </ListReveal>
       )}
 
-    </div>
+    </DashboardPage>
   );
 }

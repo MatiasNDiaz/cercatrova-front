@@ -14,8 +14,7 @@ import { toast } from 'sonner';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { useUrlFilter } from '@/modules/shared/hooks/useUrlFilter';
-import {
-  ArrowLeft, BarChart3, Loader2, RefreshCw, Users, Eye,
+import { BarChart3, Loader2, RefreshCw, Users, Eye,
   Timer, Building2, ClipboardList, Search, AlertCircle,
 } from 'lucide-react';
 import {
@@ -23,6 +22,8 @@ import {
 } from '@/modules/statistics/components/charts';
 import { RANGE_LABELS, type StatisticsOverview, type StatsRange } from '@/modules/statistics/types';
 
+import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
+import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 const RANGES: StatsRange[] = ['day', 'week', 'month'];
 
 /**
@@ -62,13 +63,13 @@ export default function EstadisticasPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <BackLink />
+    <DashboardPage>
+      <DashboardBackLink href="/dashboardAdmin" />
 
       {/* ── Header + selector de rango ── */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0b7a4b]/10 text-[#0b7a4b]">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0b7a4b]/10 text-[#0b7a4b]">
             <BarChart3 size={20} />
           </span>
           <div>
@@ -111,7 +112,7 @@ export default function EstadisticasPage() {
           <Loader2 size={18} className="animate-spin" /> Calculando estadísticas…
         </div>
       ) : error ? (
-        <div className="flex items-start gap-3 rounded-2xl border border-red-100 bg-red-50 px-5 py-4">
+        <div className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-5 py-4">
           <AlertCircle size={18} className="mt-0.5 shrink-0 text-red-500" />
           <div>
             <p className="text-sm font-bold text-red-700">No se pudieron cargar las estadísticas</p>
@@ -121,7 +122,7 @@ export default function EstadisticasPage() {
       ) : data ? (
         <Contenido data={data} />
       ) : null}
-    </div>
+    </DashboardPage>
   );
 }
 
@@ -152,7 +153,7 @@ function Contenido({ data }: { data: StatisticsOverview }) {
       </div>
 
       {sinBusquedas && (
-        <div className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white px-5 py-4">
+        <div className="flex items-start gap-3 rounded-xl border border-gray-100 bg-white px-5 py-4">
           <AlertCircle size={17} className="mt-0.5 shrink-0 text-gray-400" />
           <p className="text-sm text-gray-600">
             No se registraron búsquedas en {rangoLabel}. Las secciones de
@@ -427,7 +428,7 @@ function Kpi({
   hint: string;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
       <div className="flex items-center gap-2 text-[11px] font-bold tracking-wide text-gray-500 uppercase">
         <Icon size={13} className="text-[#0b7a4b]" />
         {label}
@@ -447,15 +448,3 @@ function Dato({ label, value }: { label: string; value: string }) {
   );
 }
 
-function BackLink() {
-  return (
-    <Link
-      href="/dashboardAdmin"
-      className="group inline-flex w-fit items-center gap-2 text-sm font-medium text-[#0b7a4b] transition-colors hover:text-[#0f8c58]"
-    >
-      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white transition-transform group-hover:-translate-x-0.5">
-        <ArrowLeft size={14} />
-      </span>
-    </Link>
-  );
-}

@@ -5,12 +5,13 @@ import api from '@/modules/shared/lib/axios';
 import { toast } from 'sonner';
 import {
   BellOff, Check, CheckCheck, TrendingDown,
-  TrendingUp, Clock, ChevronDown, ChevronUp,
-  ArrowLeft, Eye, UserPlus, ClipboardList,
+  TrendingUp, Clock, ChevronDown, ChevronUp, Eye, UserPlus, ClipboardList,
   MessageSquare, Star, AlertTriangle, Bell,
   Heart,
 } from 'lucide-react';
 import Link from 'next/link';
+import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
+import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 import {
   NotifItem, getNotifType, getConfig,
   type AdminNotification as Notification, type NotifType,
@@ -144,17 +145,10 @@ const handleMarkAllAsRead = async () => {
   };
 
   return (
-    <div className="flex flex-col gap-5">
+    <DashboardPage>
 
       {/* Back */}
-      <Link
-        href="/dashboardAdmin"
-        className="inline-flex items-center gap-2 text-sm font-medium text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors w-fit"
-      >
-        <span className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
-          <ArrowLeft size={14} />
-        </span>
-      </Link>
+      <DashboardBackLink href="/dashboardAdmin" label="Volver al panel" />
 
       {/* Header */}
       <div className="flex mt-1 items-start justify-between gap-4 flex-wrap">
@@ -255,7 +249,7 @@ const handleMarkAllAsRead = async () => {
       {loading && (
         <div className="flex flex-col gap-2.5">
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="bg-white rounded-2xl p-4 border border-gray-100 animate-pulse flex gap-4">
+            <div key={i} className="bg-white rounded-xl p-4 border border-gray-100 animate-pulse flex gap-4">
               <div className="w-10 h-10 rounded-xl bg-gray-100 shrink-0" />
               <div className="flex-1 flex flex-col gap-2 justify-center">
                 <div className="h-3.5 bg-gray-100 rounded-full w-2/3" />
@@ -268,8 +262,8 @@ const handleMarkAllAsRead = async () => {
 
       {/* Empty */}
       {!loading && filtered.length === 0 && (
-        <div className="bg-white rounded-2xl p-12 border border-gray-100 flex flex-col items-center gap-4 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#0b7a4b]/8 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-12 border border-gray-100 flex flex-col items-center gap-4 text-center">
+          <div className="w-14 h-14 rounded-xl bg-[#0b7a4b]/8 flex items-center justify-center">
             <BellOff size={24} className="text-[#0b7a4b]" />
           </div>
           <div>
@@ -321,6 +315,6 @@ const handleMarkAllAsRead = async () => {
         </div>
       )}
 
-    </div>
+    </DashboardPage>
   );
 }

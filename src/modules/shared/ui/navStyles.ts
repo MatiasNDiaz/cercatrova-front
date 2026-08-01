@@ -19,7 +19,7 @@
  * translúcida con blur; se cambió a este formato para un tono más sobrio.
  */
 export const NAV_SHELL =
-  'fixed top-3 right-0 left-0 z-50 mx-auto flex w-[96%] max-w-350 flex-row items-center justify-between rounded-xl border border-ink-100 bg-white px-4 py-2.5 shadow-[0_1px_2px_rgba(10,12,11,0.04),0_10px_30px_-12px_rgba(10,12,11,0.22)] transition-transform duration-300 ease-in-out lg:justify-start';
+  'fixed top-3 right-0 left-0 z-50 mx-auto flex w-[96%] max-w-350 flex-row items-center justify-between rounded-xl border border-ink-100 bg-white px-4 py-2.5 shadow-[0_1px_2px_rgba(10,12,11,0.04),0_10px_30px_-12px_rgba(10,12,11,0.22)] transition-transform duration-300 ease-in-out xl:justify-start';
 
 /**
  * Ítem de navegación — hover SOBRIO.
@@ -47,9 +47,29 @@ export const NAV_DROPDOWN =
 export const NAV_DROPDOWN_ITEM =
   'block px-4 py-2.5 text-sm font-medium text-ink-600 transition-colors duration-200 hover:bg-brand-50 hover:text-brand-700';
 
-/** Botón principal (iniciar sesión / CTA) — verde sólido, sin gradiente. */
+/**
+ * Botón principal (iniciar sesión / CTA) — verde sólido, sin gradiente.
+ *
+ * `relative overflow-hidden` NO es decorativo: es lo que contiene el barrido de
+ * luz del hover.
+ *
+ * La versión del cajón mobile mete adentro un `<span absolute inset-0
+ * -translate-x-full>` que hace de brillo. Sin `relative` en el botón, ese span
+ * no tenía ningún ancestro posicionado cerca y terminaba anclándose al cajón
+ * entero (`fixed`): `inset-0` lo estiraba sobre todo el panel y
+ * `-translate-x-full` lo corría un ancho completo a la izquierda, así que el
+ * gradiente blanco aparecía como una franja suelta flotando en el medio de la
+ * pantalla, desenganchada del botón.
+ *
+ * `overflow-hidden` completa el arreglo: aun con `relative`, el brillo arranca
+ * y termina FUERA de los límites del botón, y sin recorte se vería asomar por
+ * los costados.
+ *
+ * En escritorio no se notaba porque ahí el CTA se renderiza sin el span de
+ * brillo — el bug solo existía en mobile.
+ */
 export const NAV_CTA =
-  'group inline-flex items-center justify-center gap-2 rounded-lg bg-brand-700 px-5 py-2.5 text-[14px] font-bold whitespace-nowrap text-white transition-colors duration-200 hover:bg-brand-800 active:scale-95';
+  'group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-lg bg-brand-700 px-5 py-2.5 text-[14px] font-bold whitespace-nowrap text-white transition-colors duration-200 hover:bg-brand-800 active:scale-95';
 
 /** Ítem del menú mobile (drawer). */
 export const NAV_MOBILE_ITEM =

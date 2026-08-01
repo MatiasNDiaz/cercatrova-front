@@ -6,12 +6,13 @@ import api from '@/modules/shared/lib/axios';
 import { toast } from 'sonner';
 import {
   BellOff, Check, CheckCheck, Home, TrendingDown,
-  ClipboardList, Clock, ChevronDown, ChevronUp,
-  ArrowLeft, Eye, Sparkles, Bell, Megaphone, MessageCircle,
+  ClipboardList, Clock, ChevronDown, ChevronUp, Eye, Sparkles, Bell, Megaphone, MessageCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useUrlFilter } from '@/modules/shared/hooks/useUrlFilter';
 
+import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
+import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 interface Notification {
   id: number;
   title: string;
@@ -109,7 +110,7 @@ function timeAgo(dateStr: string): string {
 function NotifItem({ n, onRead }: { n: Notification; onRead: (id: number) => void }) {
   const cfg = getConfig(n.title, n.message);
   return (
-    <div className={`group flex items-start gap-4 px-5 py-4 rounded-2xl border transition-all duration-200 ${
+    <div className={`group flex items-start gap-4 px-5 py-4 rounded-xl border transition-all duration-200 ${
       n.read ? 'bg-white border-gray-100' : 'bg-white border-[#0b7a4b]/20 shadow-sm'
     }`}>
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${cfg.bg} ${cfg.border}`}>
@@ -295,15 +296,10 @@ export default function NotificacionesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-5">
+    <DashboardPage>
 
       {/* Back */}
-      <Link href="/dashboard"
-        className="inline-flex items-center gap-2 text-sm font-medium text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors w-fit">
-        <span className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
-          <ArrowLeft size={14} />
-        </span>
-      </Link>
+      <DashboardBackLink />
 
       {/* Header */}
       <div className="mt-1 flex items-center justify-between gap-4 flex-wrap">
@@ -379,7 +375,7 @@ export default function NotificacionesPage() {
       {loading && (
         <div className="flex flex-col gap-2.5">
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="bg-white rounded-2xl p-4 border border-gray-100 animate-pulse flex gap-4">
+            <div key={i} className="bg-white rounded-xl p-4 border border-gray-100 animate-pulse flex gap-4">
               <div className="w-10 h-10 rounded-xl bg-gray-100 shrink-0" />
               <div className="flex-1 flex flex-col gap-2 justify-center">
                 <div className="h-3.5 bg-gray-100 rounded-full w-2/3" />
@@ -392,8 +388,8 @@ export default function NotificacionesPage() {
 
       {/* Empty */}
       {!loading && filtered.length === 0 && (
-        <div className="bg-white rounded-2xl p-12 border border-gray-100 flex flex-col items-center gap-4 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#0b7a4b]/8 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-12 border border-gray-100 flex flex-col items-center gap-4 text-center">
+          <div className="w-14 h-14 rounded-xl bg-[#0b7a4b]/8 flex items-center justify-center">
             <BellOff size={24} className="text-[#0b7a4b]" />
           </div>
           <div>
@@ -432,6 +428,6 @@ export default function NotificacionesPage() {
         </div>
       )}
 
-    </div>
+    </DashboardPage>
   );
 }

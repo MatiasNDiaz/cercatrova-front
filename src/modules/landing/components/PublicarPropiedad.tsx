@@ -13,7 +13,7 @@ const badges = [
 
 export default function PublicarPropiedad() {
   return (
-    <section className="overflow-hidden bg-brand-50 py-28">
+    <section className="overflow-hidden bg-surface-mint py-28">
       <div className="mx-auto max-w-7xl px-6">
 
         {/* Badge superior */}

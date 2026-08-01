@@ -345,14 +345,20 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
                   [antigüedad | m² mín] en la misma fila (dos cosas sin relación) y
                   una celda huérfana vacía al final. */}
               <FilterGroup icon={DollarSign} label="Presupuesto y superficie">
-                <div className="grid grid-cols-2 gap-3">
+                {/* La parte más densa del modal (6 inputs numéricos en pares).
+                    A 375px las dos columnas dejaban ~140px por campo, con el
+                    placeholder cortado. Una sola columna hasta sm. */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <IconNumber icon={DollarSign} placeholder="Precio mín." value={nums.minPrice} onChange={(v) => setNum('minPrice', v)} />
                   <IconNumber icon={DollarSign} placeholder="Precio máx." value={nums.maxPrice} onChange={(v) => setNum('maxPrice', v)} />
                   <IconNumber icon={Maximize} placeholder="Sup. Total mín." value={nums.minSupTotal} onChange={(v) => setNum('minSupTotal', v)} />
                   <IconNumber icon={Maximize} placeholder="Sup. Total máx." value={nums.maxSupTotal} onChange={(v) => setNum('maxSupTotal', v)} />
                   <IconNumber icon={Maximize} placeholder="Sup. Cubierta mín." value={nums.minSupCubierta} onChange={(v) => setNum('minSupCubierta', v)} />
                   <IconNumber icon={Maximize} placeholder="Sup. Cubierta máx." value={nums.maxSupCubierta} onChange={(v) => setNum('maxSupCubierta', v)} />
-                  <div className="col-span-2">
+                  {/* `col-span-1` de base: con la grilla en una sola columna,
+                      un `col-span-2` suelto crea una segunda columna implícita
+                      y este campo queda al doble de ancho que los de arriba. */}
+                  <div className="col-span-1 sm:col-span-2">
                     <IconNumber icon={Calendar} placeholder="Antigüedad máx. (años)" value={nums.maxAntiquity} onChange={(v) => setNum('maxAntiquity', v)} />
                   </div>
                 </div>
@@ -459,9 +465,13 @@ function FilterGroup({
   // El espaciado entre secciones lo da el `gap-y` de la grilla de 2 columnas.
   // Cada grupo va dentro de su propia tarjeta clara: así las 4 secciones se leen
   // como bloques separados en vez de una sopa de inputs sueltos, y los controles
-  // (que son BLANCOS) ganan contraste contra el fondo `ink-50` de la tarjeta.
+  // (que son BLANCOS) ganan contraste contra el fondo de la tarjeta.
+  //
+  // `surface-mint` y no `ink-100`: es el mismo verde de sección que usan el
+  // catálogo y el detalle, así el modal se lee como parte de ese sistema y no
+  // como un cuadro gris aparte.
   return (
-    <div className="rounded-2xl border border-ink-100 bg-ink-100 p-5">
+    <div className="rounded-2xl border border-brand-700/10 bg-surface-mint p-5">
       <h3 className="mb-3.5 flex items-center gap-2.5">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-700/10 text-brand-700">
           <Icon size={15} />

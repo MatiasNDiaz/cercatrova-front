@@ -13,6 +13,7 @@ import {
 import { BsWhatsapp } from 'react-icons/bs';
 import { toast } from 'sonner';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
+import { fechaLarga } from '@/modules/shared/lib/fecha';
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
@@ -73,8 +74,11 @@ const QUICK_LINK_BASE =
   'group inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all duration-300 ease-out hover:bg-brand-700 hover:text-white hover:shadow-[0_6px_16px_-8px_rgba(6,57,35,0.7)]';
 
 // ── TARJETA DE SECCIÓN ────────────────────────────────────────────────────────
-// El fondo de la página es gris (`bg-surface`); con `shadow-sm` las tarjetas
-// blancas casi no se despegaban y todo se leía plano. Esta sombra en dos capas
+// El fondo de la página es el verde de sección (`bg-surface-mint`) — el mismo
+// que el catálogo y el modal de filtros, para que las tres pantallas se lean
+// como un solo sistema. Antes era `bg-surface`, un gris a ~2 puntos de
+// luminancia del blanco de las tarjetas: no separaba nada.
+// Con `shadow-sm` las tarjetas blancas casi no se despegaban y todo se leía plano. Esta sombra en dos capas
 // (una corta de contacto + una larga difusa) las levanta del fondo sin
 // ensuciar. Es el mismo criterio que ya usan las cards del catálogo.
 const CARD =
@@ -111,9 +115,7 @@ function StarRating({ score, size = 18 }: { score: number; size?: number }) {
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('es-AR', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  });
+  return fechaLarga(dateStr);
 }
 
 // ── SLIDER ────────────────────────────────────────────────────────────────────
@@ -122,7 +124,7 @@ function ImageSlider({ images, title }: { images: PropertyImage[]; title: string
 
   if (!images.length) return (
     <div className="flex h-96 w-full items-center justify-center rounded-3xl bg-ink-100">
-      <Home size={48} className="text-ink-300" />
+      <Home size={48} className="text-ink-400" />
     </div>
   );
 
@@ -401,7 +403,7 @@ function CommentsAndRatings({
         </h2>
 
         {ratings.length > 0 && (
-          <div className="mb-6 flex items-center gap-4 rounded-2xl bg-surface p-5">
+          <div className="mb-6 flex items-center gap-4 rounded-2xl bg-surface-mint p-5">
             <span className="text-5xl font-black text-brand-700">{ratingAverage.toFixed(1)}</span>
             <div>
               <StarRating score={ratingAverage} size={22} />
@@ -485,7 +487,7 @@ function CommentsAndRatings({
               <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Escribí tu comentario sobre esta propiedad..."
                 maxLength={500} rows={3}
-                className="w-full resize-none rounded-2xl border border-ink-200 bg-surface px-4 py-3 text-sm text-ink-700 transition-all duration-200 placeholder:text-ink-500 focus:border-brand-700 focus:bg-white focus:outline-none"
+                className="w-full resize-none rounded-2xl border border-ink-200 bg-surface-mint px-4 py-3 text-sm text-ink-700 transition-all duration-200 placeholder:text-ink-500 focus:border-brand-700 focus:bg-white focus:outline-none"
               />
               <div className="flex items-center justify-between">
                 <span className="text-xs text-ink-500">{newMessage.length}/500</span>
@@ -508,7 +510,7 @@ function CommentsAndRatings({
 
         {comments.length === 0 ? (
           <div className="flex flex-col items-center py-10 text-center text-ink-500">
-            <MessageCircle size={36} className="mb-3 text-ink-200" />
+            <MessageCircle size={36} className="mb-3 text-ink-400" />
             <p className="text-sm font-medium">Todavía no hay comentarios.</p>
             <p className="mt-1 text-xs">¡Sé el primero en opinar!</p>
           </div>
@@ -528,7 +530,7 @@ function CommentsAndRatings({
                   </div>
                   {/* Un comentario oculto solo lo recibe el admin (el backend lo
                       filtra para el resto); se marca en ámbar para que se note. */}
-                  <div className={`flex-1 rounded-2xl px-5 py-4 ${comment.isHidden ? 'border border-amber-200 bg-amber-50' : 'bg-surface'}`}>
+                  <div className={`flex-1 rounded-2xl px-5 py-4 ${comment.isHidden ? 'border border-amber-200 bg-amber-50' : 'bg-surface-mint'}`}>
                     <div className="mb-1 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-ink-800">
@@ -682,7 +684,7 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
   };
 
   return (
-    <main className="min-h-screen bg-surface">
+    <main className="min-h-screen bg-surface-mint">
       <div className="mx-auto max-w-6xl px-4 pt-32 pb-20">
 
         {/* ── BARRA DE ACCESOS RÁPIDOS ── */}
@@ -692,17 +694,17 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
               <ArrowLeft size={16} className="shrink-0 transition-transform duration-300 ease-out group-hover:-translate-x-1" />
               Volver al catálogo
             </Link>
-            <span className="text-ink-300">|</span>
+            <span className="text-ink-400">|</span>
             <a href="#mapa-ubicacion" onClick={scrollTo('mapa-ubicacion')} className={`${QUICK_LINK_BASE} text-ink-500`}>
               <MapPin size={16} className="shrink-0 transition-transform duration-300 ease-out group-hover:scale-110" />
               Ver dirección exacta
             </a>
-            <span className="text-ink-300">|</span>
+            <span className="text-ink-400">|</span>
             <a href="#comentarios" onClick={scrollTo('comentarios')} className={`${QUICK_LINK_BASE} text-ink-500`}>
               <MessageCircleMore size={16} className="shrink-0 transition-transform duration-300 ease-out group-hover:scale-110" />
               Ver Comentarios
             </a>
-            <span className="text-ink-300">|</span>
+            <span className="text-ink-400">|</span>
             <a href="#valoracion" onClick={scrollTo('valoracion')} className={`${QUICK_LINK_BASE} text-ink-500`}>
               <Star size={16} className="shrink-0 transition-transform duration-300 ease-out group-hover:scale-110" />
               Ver Valoraciones
@@ -758,7 +760,7 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                   .map(({ icon: Icon, label, value }) => (
                     <span
                       key={label}
-                      className="group inline-flex items-center gap-2.5 rounded-full border border-ink-100 bg-surface py-1.5 pr-5 pl-1.5 transition-all duration-200 hover:border-brand-700/30 hover:bg-brand-50"
+                      className="group inline-flex items-center gap-2.5 rounded-full border border-ink-100 bg-surface-mint py-1.5 pr-5 pl-1.5 transition-all duration-200 hover:border-brand-700/30 hover:bg-brand-50"
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-700/10 text-brand-700 transition-colors duration-200 group-hover:bg-brand-700 group-hover:text-white">
                         <Icon size={15} />
@@ -808,7 +810,7 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                   return (
                     <div
                       key={i}
-                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-ink-100 bg-surface px-3 py-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-700/30 hover:bg-brand-50 hover:shadow-[0_10px_24px_-12px_rgba(6,57,35,0.3)]"
+                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-ink-100 bg-surface-mint px-3 py-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-700/30 hover:bg-brand-50 hover:shadow-[0_10px_24px_-12px_rgba(6,57,35,0.3)]"
                     >
                       <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-700/10 text-brand-700 transition-colors duration-300 group-hover:bg-brand-700 group-hover:text-white">
                         <Icon size={20} />
@@ -843,7 +845,7 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                       className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition-all duration-200 ${
                         item.value
                           ? 'border-brand-700/25 bg-brand-50 text-brand-800'
-                          : 'border-ink-100 bg-surface text-ink-500'
+                          : 'border-ink-100 bg-surface-mint text-ink-500'
                       }`}
                     >
                       <span

@@ -9,10 +9,12 @@ import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { validateImageFile } from '@/modules/shared/lib/validateImage';
 import {
   User, Camera, Save, Eye, EyeOff, Lock, Mail,
-  Phone, BadgeCheck, Pencil, ArrowLeft,
+  Phone, BadgeCheck, Pencil,
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
+import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 export default function AdminPerfilPage() {
   const { user, updateUser, logout } = useAuth();
 
@@ -119,16 +121,9 @@ export default function AdminPerfilPage() {
   const currentPhoto = previewPhoto ?? user?.photo ?? null;
 
   return (
-    <div className="flex flex-col gap-6">
+    <DashboardPage width="form">
 
-      <Link
-        href="/dashboardAdmin"
-        className="inline-flex items-center gap-2 text-sm font-medium text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors w-fit"
-      >
-        <span className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
-          <ArrowLeft size={14} />
-        </span>
-      </Link>
+      <DashboardBackLink href="/dashboardAdmin" label="Volver al panel" />
 
       <div>
         <h1 className="text-2xl font-bold text-[#0b7a4b]">Mi Perfil</h1>
@@ -136,7 +131,7 @@ export default function AdminPerfilPage() {
       </div>
 
       {/* ── FOTO ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
         <h2 className="text-sm font-bold text-[#0b7a4b] uppercase tracking-wider mb-5 flex items-center gap-2">
           <Camera size={14} /> Foto de perfil
         </h2>
@@ -174,7 +169,7 @@ export default function AdminPerfilPage() {
       </div>
 
       {/* ── DATOS PERSONALES ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
         <h2 className="text-sm font-bold text-[#0b7a4b] uppercase tracking-wider mb-5 flex items-center gap-2">
           <BadgeCheck size={14} /> Datos personales
         </h2>
@@ -227,7 +222,7 @@ export default function AdminPerfilPage() {
       </div>
 
       {/* ── CONTRASEÑA ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
         <h2 className="text-sm font-bold text-[#0b7a4b] uppercase tracking-wider mb-5 flex items-center gap-2">
           <Lock size={14} /> Cambiar contraseña
         </h2>
@@ -276,6 +271,6 @@ export default function AdminPerfilPage() {
         </div>
       </div>
 
-    </div>
+    </DashboardPage>
   );
 }

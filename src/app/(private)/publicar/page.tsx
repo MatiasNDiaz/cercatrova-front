@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
@@ -8,7 +9,7 @@ import { Field } from '@/modules/shared/ui/Field';
 import { Input, inputBaseClasses } from '@/modules/shared/ui/Input';
 import { Select } from '@/modules/shared/ui/Select';
 import { toast } from 'sonner';
-import { Save, ArrowLeft, MapPin, Home, Ruler, DollarSign, FileTextIcon, CheckSquare } from 'lucide-react';
+import { Save, ArrowLeft, MapPin, Home, Ruler, DollarSign, CheckSquare, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 // Valores EXACTOS de los enums del backend (CreateRequestPropertyDto) — otro valor da 400
@@ -17,13 +18,29 @@ const TIPOS_OPERACION   = ['Venta', 'Alquiler', 'Alquiler temporal'];
 const ESTADOS           = ['Excelente', 'Muy bueno', 'Bueno', 'Regular', 'A refaccionar'];
 const ORIENTACIONES     = ['Norte', 'Sur', 'Este', 'Oeste', 'Noreste', 'Noroeste', 'Sureste', 'Suroeste'];
 
+/**
+ * Encabezado de sección del formulario.
+ *
+ * Ahora usa el mismo lenguaje que el resto del sitio: ícono en pastilla verde
+ * + título en negro, con una línea que ocupa el espacio sobrante. Antes era
+ * texto verde en mayúsculas suelto, sin la pastilla, y no se parecía a ningún
+ * otro encabezado del proyecto.
+ */
 function SectionTitle({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
   return (
-    <h2 className="text-sm font-bold text-[#0b7a4b] uppercase tracking-wider flex items-center gap-2 mb-4">
-      <Icon size={14} />{label}
+    <h2 className="mb-5 flex items-center gap-2.5">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-700/10 text-brand-700">
+        <Icon size={15} />
+      </span>
+      <span className="text-sm font-bold tracking-tight text-ink-900">{label}</span>
+      <span className="ml-1 h-px flex-1 bg-ink-200/70" />
     </h2>
   );
 }
+
+/** Tarjeta de sección — mismo radio y sombra en dos capas que el dashboard. */
+const CARD =
+  'rounded-xl border border-ink-100 bg-white p-6 shadow-[0_1px_2px_rgba(10,12,11,0.04),0_8px_24px_-12px_rgba(10,12,11,0.12)]';
 
 // `Field`, `Input` y `Select` ahora vienen de shared/ui (antes estaban duplicados acá).
 
@@ -92,22 +109,44 @@ export default function NuevaSolicitudPage() {
   };
 
   return (
-    <div className="flex flex-col w-[90%] m-auto mt-30 gap-6">
-
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link href="/"
-          className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-          <ArrowLeft className='text-[#0b7a4b]' size={18} />
+    // Esta página vive FUERA del layout del dashboard (tiene navbar y footer
+    // públicos), así que se le da acá el fondo verde de sección que usan el
+    // catálogo y el detalle — antes no tenía fondo propio y se veía el
+    // `#f2f1f1` del body, con las tarjetas blancas flotando sin contexto.
+    // El ancho es el mismo `max-w-4xl` que los formularios del dashboard.
+    <main className="min-h-screen bg-surface-mint px-4 pt-28 pb-16 sm:px-6">
+      <motion.div
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className="mx-auto flex w-full max-w-4xl flex-col gap-6"
+      >
+        {/* Header — mismo patrón que `DashboardHeader`: volver arriba de todo,
+            después ícono + título + bajada. */}
+        <Link
+          href="/"
+          className="group inline-flex w-fit items-center gap-2.5 text-sm font-semibold text-brand-700 transition-colors duration-200 hover:text-brand-800"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-full border border-ink-200 bg-white shadow-sm transition-transform duration-200 group-hover:-translate-x-0.5">
+            <ArrowLeft size={14} />
+          </span>
+          Volver al inicio
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-[#0b7a4b]">Nueva Solicitud</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Completá los datos y un agente te contactará</p>
+
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-700/10 text-brand-700">
+            <Home size={20} />
+          </span>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-ink-900">Publicá tu propiedad</h1>
+            <p className="mt-0.5 text-sm text-gray-500">
+              Completá los datos y un agente de Cerca Trova se contactará con vos de inmediato.
+            </p>
+          </div>
         </div>
-      </div>
 
       {/* ── UBICACIÓN ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+      <div className={CARD}>
         <SectionTitle icon={MapPin} label="Ubicación" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Localidad *">
@@ -126,7 +165,7 @@ export default function NuevaSolicitudPage() {
       </div>
 
       {/* ── CARACTERÍSTICAS ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+      <div className={CARD}>
         <SectionTitle icon={Home} label="Características" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Tipo de propiedad *">
@@ -166,7 +205,7 @@ export default function NuevaSolicitudPage() {
       </div>
 
       {/* ── SUPERFICIES ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+      <div className={CARD}>
         <SectionTitle icon={Ruler} label="Superficies" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="M² totales *">
@@ -179,7 +218,7 @@ export default function NuevaSolicitudPage() {
       </div>
 
       {/* ── ATRIBUTOS ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+      <div className={CARD}>
         <SectionTitle icon={CheckSquare} label="Atributos" />
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
@@ -193,13 +232,13 @@ export default function NuevaSolicitudPage() {
               key={key}
               type="button"
               onClick={() => set(key, !form[key as keyof typeof form])}
-              className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold border transition-all ${
+              className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition-all duration-200 active:scale-[0.97] ${
                 form[key as keyof typeof form]
-                  ? 'bg-[#0b7a4b]/10 border-[#0b7a4b]/30 text-[#0b7a4b]'
-                  : 'bg-gray-50 border-gray-200 text-gray-400'
+                  ? 'border-brand-700/30 bg-brand-700/10 text-brand-700'
+                  : 'border-ink-200 bg-white text-ink-500 hover:border-brand-700/30 hover:text-ink-700'
               }`}>
-              <div className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${
-                form[key as keyof typeof form] ? 'bg-[#0b7a4b] border-[#0b7a4b]' : 'border-gray-300'
+              <div className={`flex h-4 w-4 items-center justify-center rounded-md border-2 transition-all duration-200 ${
+                form[key as keyof typeof form] ? 'border-brand-700 bg-brand-700' : 'border-ink-300'
               }`}>
                 {form[key as keyof typeof form] && <span className="text-white text-[10px] font-black">✓</span>}
               </div>
@@ -210,7 +249,7 @@ export default function NuevaSolicitudPage() {
       </div>
 
       {/* ── PRECIO Y MENSAJE ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+      <div className={CARD}>
         <SectionTitle icon={DollarSign} label="Precio y contacto" />
         <div className="flex flex-col gap-4">
           <Field label="Precio estimado (USD) *">
@@ -230,19 +269,22 @@ export default function NuevaSolicitudPage() {
       </div>
 
       {/* ── SUBMIT ── */}
-      <div className="flex justify-end gap-3 pb-4">
+      {/* ── SUBMIT ── */}
+      <div className={`${CARD} flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end`}>
         <Link href="/"
-          className="px-6 py-2.5 text-sm font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all">
+          className="rounded-xl border border-ink-200 px-6 py-3 text-center text-sm font-bold text-ink-500 transition-all duration-200 hover:border-ink-400 hover:text-ink-700">
           Cancelar
         </Link>
         <button onClick={handleSubmit} disabled={saving}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white rounded-xl transition-all disabled:opacity-50 active:scale-95"
-          style={{ background: 'linear-gradient(135deg, #0f8b57, #14a366)' }}>
-          <Save size={15} />
-          {saving ? 'Enviando...' : 'Enviar solicitud'}
+          className="flex cursor-pointer items-center justify-center gap-2 rounded-xl px-7 py-3 text-sm font-bold text-white shadow-[0_10px_24px_-10px_rgba(6,57,35,0.7)] transition-all duration-300 hover:-translate-y-0.5 hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+          style={{ background: 'var(--gradient-brand)' }}>
+          {saving
+            ? <><Loader2 size={15} className="animate-spin" />Enviando…</>
+            : <><Save size={15} />Enviar solicitud</>}
         </button>
       </div>
 
-    </div>
+      </motion.div>
+    </main>
   );
 }

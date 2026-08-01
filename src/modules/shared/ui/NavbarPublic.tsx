@@ -1,5 +1,6 @@
 "use client";
 
+import { useScrollToSection } from '@/modules/shared/ui/useScrollToSection';
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -16,7 +17,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   NAV_SHELL, NAV_ITEM, NAV_CTA, NAV_DROPDOWN, NAV_DROPDOWN_ITEM,
   NAV_MOBILE_ITEM, navItemClass,
@@ -54,29 +55,6 @@ function useHideOnScroll() {
   return isVisible;
 }
 
-// ── HOOK: scroll suave a sección ──────────────────────────────────────────────
-function useScrollToSection() {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  return (sectionId: string, closeMenu?: () => void) => {
-    closeMenu?.();
-
-    const scrollToEl = () => {
-      const el = document.getElementById(sectionId);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    };
-
-    if (pathname === "/") {
-      scrollToEl();
-    } else {
-      router.push("/");
-      setTimeout(scrollToEl, 600);
-    }
-  };
-}
 
 // ── TIPOS ─────────────────────────────────────────────────────────────────────
 interface NavLinkScrollProps {
@@ -136,6 +114,7 @@ export const NavbarPublic = () => {
   // (WhatsApp / Instagram / Facebook) siguen estando en el footer.
 
   return (
+    <>
     <nav className={`${NAV_SHELL} ${isVisible ? "translate-y-0" : "-translate-y-[130%]"}`}>
       {/* ── LOGO ── */}
       <button
@@ -153,16 +132,27 @@ export const NavbarPublic = () => {
         />
       </button>
 
-      {/* ── HAMBURGUESA MOBILE ── */}
-      <button onClick={toggleMenu} aria-label="Abrir navegación" className="mr-2 rounded-2xl p-2 text-brand-700 transition-all duration-200 hover:bg-brand-50 active:scale-95 lg:hidden">
-        <Menu size={30} />
+      {/* ── HAMBURGUESA MOBILE (< xl) ──
+          La barra mobile queda con lo mínimo: logo + hamburguesa. "Iniciar
+          sesión" NO va acá — vive solo dentro del cajón, como una opción más
+          del menú, para no competir por el ancho de la barra.
+
+          `ml-auto` empuja el botón al borde derecho: sin él, con la lista de
+          escritorio oculta (`hidden xl:flex`), quedaba pegado al logo. */}
+      <button
+        onClick={toggleMenu}
+        aria-label="Abrir navegación"
+        aria-expanded={isMenuOpen}
+        className="ml-auto flex min-h-11 min-w-11 items-center justify-center rounded-xl text-brand-700 transition-colors duration-200 hover:bg-brand-50 active:scale-95 xl:hidden"
+      >
+        <Menu size={28} />
       </button>
 
       {/* ── DESKTOP NAV ──
           Orden: inicio · publicaciones · propiedades · servicios · nosotros ·
           consultas. "Publicaciones" es nuevo y entra a la izquierda de
           propiedades; "contacto" se quitó (sigue en el footer). */}
-      <ul className="ml-auto mr-4 hidden flex-row items-center gap-1 lg:flex">
+      <ul className="ml-auto mr-4 hidden flex-row items-center gap-1 xl:flex">
         <li>
           <NavLinkScroll sectionId="inicio" icon={<Home size={16} />} label="Inicio" />
         </li>
@@ -220,11 +210,31 @@ export const NavbarPublic = () => {
         </li>
       </ul>
 
+    </nav>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          OVERLAY + CAJÓN MOBILE — van FUERA del <nav> a propósito.
+
+          Estaban adentro, y ahí `position: fixed` NO se medía contra la
+          ventana. El <nav> lleva `translate-y-0` (para esconderse al
+          scrollear), y cualquier valor de `transform`/`translate` distinto de
+          `none` convierte al elemento en el bloque contenedor de sus
+          descendientes fixed. Resultado: el cajón se posicionaba contra la
+          BARRITA, no contra la pantalla —
+            `top-0 right-0` → esquina de la navbar
+            `h-full`        → 100% del alto de la navbar (~90px)
+          y por eso se veía como una pastilla blanca corta arriba, con el
+          resto del contenido (avatar, nombre, "cerrar sesión") desbordando
+          sin fondo por encima del hero.
+
+          Como hermanos del <nav>, ya no hay ancestro transformado y `fixed`
+          vuelve a referirse a la ventana: el cajón ocupa el alto completo.
+          ══════════════════════════════════════════════════════════════════ */}
       {/* ── MOBILE: Overlay ── */}
-      <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden z-60 ${isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`} onClick={toggleMenu} />
+      <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 xl:hidden z-60 ${isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`} onClick={toggleMenu} />
 
       {/* ── MOBILE: Drawer ── */}
-      <div className={`fixed top-0 right-0 h-full w-75 rounded-2xl rounded-tr-none bg-white shadow-2xl transform transition-transform duration-300 ease-out lg:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
+      <div className={`fixed top-0 right-0 h-full w-75 rounded-2xl rounded-tr-none bg-white shadow-2xl transform transition-transform duration-300 ease-out xl:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-6 border-b-2 border-gray-200 shadow-md">
             <span className="font-bold text-[#0b7a4b] text-xl">Menú</span>
@@ -303,6 +313,6 @@ export const NavbarPublic = () => {
           ))}
         </div>
       </div>
-    </nav>
+    </>
   );
 };

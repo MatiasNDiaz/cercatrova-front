@@ -3,12 +3,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link';
 import { toast } from 'sonner';
-import { ArrowLeft, ImagePlus, Loader2, Send, Trash2, Megaphone } from 'lucide-react';
+import { ImagePlus, Loader2, Send, Trash2, Megaphone } from 'lucide-react';
 import { postsService } from '@/modules/posts/services/posts.service';
 import { validateImageFile } from '@/modules/shared/lib/validateImage';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { DashboardPage, DashboardHeader } from '@/modules/shared/ui/DashboardPage';
 
 const MAX_DESCRIPTION = 1000;
 
@@ -73,30 +73,23 @@ export default function NuevaPublicacionPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <Link
-        href="/dashboardAdmin/publicaciones"
-        className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-[#0b7a4b] transition-colors hover:text-[#0f8b57]"
-      >
-        <ArrowLeft size={16} />Volver a Publicaciones
-      </Link>
-
-      <div className="mb-6 flex items-center gap-3">
-        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0b7a4b]/10 text-[#0b7a4b]">
-          <Megaphone size={20} />
-        </span>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Nueva publicación</h1>
-          <p className="text-sm text-gray-500">Se elimina automáticamente a los 7 días.</p>
-        </div>
-      </div>
+    // `width="form"` — el mismo ancho que el resto de los formularios del
+    // dashboard. Antes era `max-w-3xl`, más angosto que cualquier otro, y el
+    // link de volver estaba reimplementado inline con su propio estilo.
+    <DashboardPage width="form">
+      <DashboardHeader
+        back={{ href: '/dashboardAdmin/publicaciones', label: 'Volver a Publicaciones' }}
+        icon={Megaphone}
+        title="Nueva publicación"
+        subtitle="Se elimina automáticamente a los 7 días de publicada."
+      />
 
       {/* ── IMAGEN ── */}
-      <div className="mb-5 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-ink-100 bg-white p-6 shadow-[0_1px_2px_rgba(10,12,11,0.04),0_8px_24px_-12px_rgba(10,12,11,0.12)]">
         <p className="mb-3 text-sm font-bold text-gray-700">Imagen de la publicación</p>
 
         {preview ? (
-          <div className="relative overflow-hidden rounded-2xl border border-gray-200">
+          <div className="relative overflow-hidden rounded-xl border border-gray-200">
             {/* `unoptimized`: es un blob: local, el optimizador de Next no aplica */}
             <Image
               src={preview}
@@ -120,7 +113,7 @@ export default function NuevaPublicacionPage() {
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
-            className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-all duration-200 ${
+            className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-16 text-center transition-all duration-200 ${
               dragging
                 ? 'border-[#0b7a4b] bg-[#0b7a4b]/5'
                 : 'border-gray-300 bg-gray-50 hover:border-[#0b7a4b]/50 hover:bg-[#0b7a4b]/5'
@@ -142,7 +135,7 @@ export default function NuevaPublicacionPage() {
       </div>
 
       {/* ── DESCRIPCIÓN ── */}
-      <div className="mb-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-ink-100 bg-white p-6 shadow-[0_1px_2px_rgba(10,12,11,0.04),0_8px_24px_-12px_rgba(10,12,11,0.12)]">
         <label htmlFor="post-description" className="mb-3 block text-sm font-bold text-gray-700">
           Descripción
         </label>
@@ -152,7 +145,7 @@ export default function NuevaPublicacionPage() {
           onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESCRIPTION))}
           rows={5}
           placeholder="Ej: Casa a estrenar en Villa Carlos Paz. Consultanos por WhatsApp."
-          className="w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 transition-all placeholder:text-gray-400 focus:border-[#0b7a4b] focus:bg-white focus:outline-none"
+          className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 transition-all placeholder:text-gray-400 focus:border-[#0b7a4b] focus:bg-white focus:outline-none"
         />
         <p className="mt-2 text-right text-xs text-gray-500">
           {description.length}/{MAX_DESCRIPTION}
@@ -163,10 +156,10 @@ export default function NuevaPublicacionPage() {
         type="button"
         onClick={handleSubmit}
         disabled={saving}
-        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[#0b7a4b] py-4 font-bold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0f8b57] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#0b7a4b] py-4 font-bold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0f8b57] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {saving ? <><Loader2 size={18} className="animate-spin" />Publicando…</> : <><Send size={18} />Publicar</>}
       </button>
-    </div>
+    </DashboardPage>
   );
 }

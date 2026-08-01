@@ -9,11 +9,12 @@ import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { validateImageFile } from '@/modules/shared/lib/validateImage';
 import {
   User, Camera, Save, Eye, EyeOff, Lock, Mail,
-  Phone, BadgeCheck, Pencil,
-  ArrowLeft, Bell,
+  Phone, BadgeCheck, Pencil, Bell,
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
+import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 export default function PerfilPage() {
   const { user, updateUser, logout } = useAuth();
 
@@ -148,15 +149,8 @@ export default function PerfilPage() {
   const currentPhoto = previewPhoto ?? user?.photo ?? null;
 
   return (
-    <div className="flex flex-col gap-6">
-   <Link
-        href="/dashboard"
-        className="inline-flex items-center gap-2 text-sm font-medium text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors w-fit"
-      >
-        <span className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
-          <ArrowLeft size={14} />
-        </span>
-      </Link>
+    <DashboardPage width="form">
+   <DashboardBackLink />
       {/* ── HEADER ── */}
       <div>
         <h1 className="text-2xl font-bold text-[#0b7a4b] not-prose">Mi Perfil</h1>
@@ -164,7 +158,7 @@ export default function PerfilPage() {
       </div>
 
       {/* ── FOTO DE PERFIL ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
         <h2 className="text-sm font-bold text-[#0b7a4b] uppercase tracking-wider mb-5 flex items-center gap-2">
           <Camera size={14} />Foto de perfil
         </h2>
@@ -203,7 +197,7 @@ export default function PerfilPage() {
       </div>
 
       {/* ── DATOS PERSONALES ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
         <h2 className="text-sm font-bold text-[#0b7a4b] uppercase tracking-wider mb-5 flex items-center gap-2">
           <BadgeCheck size={14} />Datos personales
         </h2>
@@ -261,7 +255,7 @@ export default function PerfilPage() {
       </div>
 
       {/* ── NOTIFICACIONES POR EMAIL ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
         <h2 className="text-sm font-bold text-[#0b7a4b] uppercase tracking-wider mb-5 flex items-center gap-2">
           <Bell size={14} />Notificaciones
         </h2>
@@ -288,7 +282,7 @@ export default function PerfilPage() {
       </div>
 
       {/* ── CONTRASEÑA ── */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
         <h2 className="text-sm font-bold text-[#0b7a4b] uppercase tracking-wider mb-5 flex items-center gap-2">
           <Lock size={14} />Cambiar contraseña
         </h2>
@@ -341,6 +335,6 @@ export default function PerfilPage() {
         </div>
       </div>
 
-    </div>
+    </DashboardPage>
   );
 }

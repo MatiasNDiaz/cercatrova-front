@@ -136,10 +136,11 @@ export default function PropertiesCatalog({ initialItems, initialTotal }: Props)
           (cuyo contenido tiene `relative z-10`) en vez de pasar por detrás.
           OJO: nada de `overflow-hidden` acá — volvería a recortar los menús.
 
-          Fondo: `brand-50`, el verde muy suave que ya usan otras secciones de la
-          Landing. Se eligió sobre blanco a propósito: el panel de filtros y sus
-          controles son BLANCOS, así que sobre blanco no habría contraste. */}
-      <section className="relative z-20 bg-brand-50 pt-28 pb-14">
+          Fondo: `surface-mint`, el mismo verde de sección que alterna en la
+          Landing. Antes era `brand-50`, que contra el blanco del panel de
+          filtros daba una diferencia de ~3 puntos de luminancia: el panel se
+          fundía con su propio fondo. */}
+      <section className="relative z-20 bg-surface-mint pt-28 pb-14">
         <div className="mx-auto max-w-350 px-4 sm:px-6">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
@@ -169,15 +170,16 @@ export default function PropertiesCatalog({ initialItems, initialTotal }: Props)
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          SECCIÓN 2 — Resultados. Corte de fondo evidente contra el `brand-50`
-          de arriba: acá empieza "explorar".
-          Usa el token `surface-alt` (#e5e7e5) en vez del `bg-gray-200` que
-          había: ese gris es de la escala nativa de Tailwind, frío y fuera de la
-          paleta del proyecto (los neutros de la marca son la escala `ink`/
-          `surface`, con un dejo verde). Sobre él, las tarjetas blancas resaltan
-          igual pero el conjunto deja de verse "apagado".
+          SECCIÓN 2 — Resultados. Acá empieza "explorar".
+
+          Baja un paso más de verde respecto del hero (`surface-mint-deep` vs
+          `surface-mint`): el corte entre buscar y explorar se ve de entrada, y
+          las tarjetas blancas ganan el contraste que tenían de menos.
+          Antes usaba `surface-alt` (#e5e7e5) — mismo nivel de luminancia que el
+          `brand-50` de arriba, así que las dos secciones se leían como una sola
+          mancha clara con un cambio de tinte apenas perceptible.
           ═══════════════════════════════════════════════════════════════ */}
-      <section className="min-h-[70vh] bg-surface-alt pt-10 pb-16">
+      <section className="min-h-[70vh] bg-surface-mint-deep pt-10 pb-16">
         <div className="relative z-10 mx-auto max-w-350 px-4 sm:px-6">
 
           {/* ── TOOLBAR: resultados + switch de vista ── */}
@@ -230,7 +232,7 @@ export default function PropertiesCatalog({ initialItems, initialTotal }: Props)
             <SkeletonGrid viewMode={viewMode} />
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-ink-200/70 bg-white py-24 text-center">
-              <SearchX size={48} className="mb-4 text-ink-300" />
+              <SearchX size={48} className="mb-4 text-ink-400" />
               <h3 className="mb-2 text-xl font-bold text-ink-700">No encontramos propiedades</h3>
               <p className="max-w-sm text-sm text-ink-400">
                 Probá ajustando los filtros o buscando con otros términos.

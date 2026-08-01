@@ -1,21 +1,44 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, Loader2, Star, Bed, Bath, Maximize } from 'lucide-react';
+import { ArrowRight, Loader2, Star, Bed, Bath, Maximize, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import { myActivityService, type MyRating } from '@/modules/properties/services/myActivity.service';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 
+import { DashboardPage, DashboardHeader, CARD_INTERACTIVE, ListReveal } from '@/modules/shared/ui/DashboardPage';
+import { ListToolbar, ListSearch, ListSelect, NoMatches } from '@/modules/shared/ui/ListToolbar';
+
+type SortBy = 'recientes' | 'mejor' | 'peor';
 /** Propiedades que el usuario valoró, con la puntuación que les puso. */
 export default function ValoradasPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [ratings, setRatings] = useState<MyRating[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<SortBy>('recientes');
+
+  // Filtrado de presentación sobre lo ya traído por `getMyRatings()`.
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = q
+      ? ratings.filter((r) =>
+          r.property?.title?.toLowerCase().includes(q) ||
+          r.property?.barrio?.toLowerCase().includes(q) ||
+          r.property?.localidad?.toLowerCase().includes(q))
+      : ratings;
+
+    return [...list].sort((a, b) => {
+      if (sortBy === 'mejor') return b.score - a.score;
+      if (sortBy === 'peor')  return a.score - b.score;
+      return b.id - a.id; // sin fecha en `MyRating`: el id mayor es el más nuevo
+    });
+  }, [ratings, search, sortBy]);
 
   // Sin sesión → al login, en vez de una pantalla vacía o un error crudo.
   useEffect(() => {
@@ -34,56 +57,62 @@ export default function ValoradasPage() {
   }, [user]);
 
   return (
-    <div className="flex flex-col gap-5">
-      <Link
-        href="/dashboard"
-        className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-[#0b7a4b] transition-colors hover:text-[#0f8b57]"
-      >
-        <ArrowLeft size={16} />Volver al panel
-      </Link>
+    <DashboardPage>
+      <DashboardHeader
+        icon={Star}
+        title="Propiedades que valoré"
+        subtitle={
+          loading
+            ? 'Cargando…'
+            : search
+              ? `${visible.length} de ${ratings.length} valoraciones`
+              : `${ratings.length} ${ratings.length === 1 ? 'valoración' : 'valoraciones'}`
+        }
+      />
 
-      <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-500">
-          <Star size={20} className="fill-amber-400 text-amber-400" />
-        </span>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Propiedades que valoré</h1>
-          <p className="text-sm text-gray-500">
-            {loading ? 'Cargando…' : `${ratings.length} ${ratings.length === 1 ? 'valoración' : 'valoraciones'}`}
-          </p>
-        </div>
-      </div>
+      {!loading && ratings.length > 0 && (
+        <ListToolbar>
+          <ListSearch value={search} onChange={setSearch} placeholder="Buscar por propiedad, barrio o localidad..." />
+          <ListSelect value={sortBy} onChange={(v) => setSortBy(v as SortBy)} label="Ordenar valoraciones" icon={ArrowUpDown}>
+            <option value="recientes">Más recientes</option>
+            <option value="mejor">Mejor puntuadas</option>
+            <option value="peor">Peor puntuadas</option>
+          </ListSelect>
+        </ListToolbar>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center gap-2 py-24 text-gray-500">
           <Loader2 size={20} className="animate-spin" />Cargando tus valoraciones…
         </div>
       ) : ratings.length === 0 ? (
-        <div className="rounded-3xl border border-gray-200 bg-white px-6 py-20 text-center shadow-sm">
-          <Star size={38} className="mx-auto mb-4 text-gray-300" />
+        <div className="rounded-xl border border-gray-200 bg-white px-6 py-20 text-center shadow-sm">
+          <Star size={38} className="mx-auto mb-4 text-gray-400" />
           <p className="text-lg font-bold text-gray-900">Todavía no valoraste ninguna propiedad</p>
           <p className="mt-2 text-sm text-gray-500">
             Entrá a una propiedad del catálogo y dejá tu puntuación.
           </p>
           <Link
             href="/properties"
-            className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-[#0b7a4b] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#0f8b57]"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#0b7a4b] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#0f8b57]"
           >
             Ver el catálogo<ArrowRight size={16} />
           </Link>
         </div>
+      ) : visible.length === 0 ? (
+        <NoMatches onClear={() => setSearch('')} message="Ninguna propiedad valorada coincide con esa búsqueda." />
       ) : (
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {ratings.map((rating) => {
+        <ListReveal className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {visible.map((rating) => {
             const p = rating.property;
             const cover = p?.images?.find((i) => i.isCover)?.url || p?.images?.[0]?.url;
             return (
-              <li key={rating.id}>
+              <ListReveal.Item key={rating.id}>
                 <Link
                   href={`/properties/${p?.id}`}
-                  className="group flex gap-4 overflow-hidden rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0b7a4b]/30 hover:shadow-md"
+                  className={`group flex gap-4 overflow-hidden p-4 ${CARD_INTERACTIVE}`}
                 >
-                  <div className="relative h-28 w-32 shrink-0 overflow-hidden rounded-2xl bg-gray-100">
+                  <div className="relative h-28 w-32 shrink-0 overflow-hidden rounded-xl bg-gray-100">
                     {cover && <Image src={cover} alt={p.title} fill sizes="128px" className="object-cover" />}
                   </div>
 
@@ -118,11 +147,11 @@ export default function ValoradasPage() {
                     </div>
                   </div>
                 </Link>
-              </li>
+              </ListReveal.Item>
             );
           })}
-        </ul>
+        </ListReveal>
       )}
-    </div>
+    </DashboardPage>
   );
 }

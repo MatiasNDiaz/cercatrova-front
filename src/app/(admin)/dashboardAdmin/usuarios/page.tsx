@@ -8,10 +8,11 @@ import { toast } from 'sonner';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import Image from 'next/image';
 import Link from 'next/link';
+import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
+import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 import {
   Users, Search, Trash2, Mail, FileText,
-  User, Shield, ChevronDown, ChevronUp,
-  ArrowLeft, ArrowUpDown,
+  User, Shield, ChevronDown, ChevronUp, ArrowUpDown,
 } from 'lucide-react';
 
 interface UserType {
@@ -54,15 +55,44 @@ interface UserCardProps {
   gmailUrl: (email: string, name: string) => string;
 }
 
+/** Sección rotulada del detalle de usuario. */
+function FieldGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-5">
+      <p className="mb-2.5 text-[10px] font-bold tracking-wider text-gray-500 uppercase">{title}</p>
+      <div className="grid grid-cols-2 gap-4 rounded-xl border border-gray-100 bg-white p-4 sm:grid-cols-4">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Par etiqueta/valor dentro de un `FieldGroup`. */
+function Dato({ label, value, truncate }: { label: string; value: string; truncate?: boolean }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <p className="text-[10px] font-semibold tracking-wider text-gray-500 uppercase">{label}</p>
+      <p className={`text-sm font-medium text-gray-700 ${truncate ? 'truncate' : ''}`}>{value}</p>
+    </div>
+  );
+}
+
 function UserCard({ u, isExpanded, isDeleting, requestCount, onToggle, onDelete, whatsappUrl, gmailUrl }: UserCardProps) {
   return (
     <div
-      className={`bg-white rounded-2xl mb-2 border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-sm hover:border-gray-200 ${
+      className={`bg-white rounded-xl mb-2 border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-sm hover:border-gray-200 ${
         isDeleting ? 'opacity-40 pointer-events-none' : ''
       }`}
     >
-      {/* ── Fila principal ── */}
-      <div className="flex items-center  gap-5 px-5 py-4">
+      {/* ── Fila principal ──
+          En mobile es una columna: primero identidad (avatar + nombre +
+          email), después las acciones en su propia fila. Antes iba todo en
+          una sola línea y a 390px las 4 acciones se llevaban ~208px, así que
+          al nombre le quedaban ~74px y se truncaba a "R..". */}
+      <div className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:gap-5">
+
+        {/* Identidad — avatar + datos, siempre juntos */}
+        <div className="flex min-w-0 flex-1 items-center gap-4">
 
         {/* Avatar */}
         <div className="relative shrink-0">
@@ -70,7 +100,7 @@ function UserCard({ u, isExpanded, isDeleting, requestCount, onToggle, onDelete,
             {u.photo ? (
               <Image src={u.photo} alt={u.name} width={48} height={48} className="object-cover w-full h-full" />
             ) : (
-              <User size={18} className="text-gray-300" />
+              <User size={18} className="text-gray-400" />
             )}
           </div>
           <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-white rounded-full" />
@@ -101,9 +131,11 @@ function UserCard({ u, isExpanded, isDeleting, requestCount, onToggle, onDelete,
             Registrado {timeAgo(u.createdAt)} · ID #{u.id}
           </p>
         </div>
+        </div>
 
-        {/* Acciones rápidas */}
-        <div className="flex items-center gap-4 shrink-0">
+        {/* Acciones rápidas — fila propia en mobile, con 44px de alto y
+            separadas entre sí; antes iban pegadas al costado de la foto. */}
+        <div className="flex shrink-0 items-center gap-2 border-t border-gray-100 pt-3 lg:gap-3 lg:border-0 lg:pt-0">
           <a
             href={whatsappUrl(u.phone)}
             target="_blank"
@@ -149,30 +181,44 @@ function UserCard({ u, isExpanded, isDeleting, requestCount, onToggle, onDelete,
         }`}
       >
         <div className="overflow-hidden">
-          <div className="border-t border-gray-50 bg-[#fcfffd] px-8 py-6">
+          {/* Detalle en SECCIONES rotuladas en vez de una grilla corrida de 4
+              datos + una fila de botones. Antes todo tenía el mismo peso
+              visual y había que leerlo entero para encontrar un dato. */}
+          <div className="border-t border-gray-50 bg-[#fcfffd] px-5 py-6 sm:px-8">
 
-            {/* Grid de datos */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-5 mb-6">
-              {[
-                { label: 'Nombre completo', value: `${u.name} ${u.surname}` },
-                { label: 'Email', value: u.email, truncate: true },
-                { label: 'Teléfono', value: u.phone || '—' },
-                {
-                  label: 'Miembro desde',
-                  value: new Date(u.createdAt).toLocaleDateString('es-AR', {
-                    day: '2-digit', month: 'short', year: 'numeric',
-                  }),
-                },
-              ].map(({ label, value, truncate }) => (
-                <div key={label} className="flex flex-col gap-1">
-                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{label}</p>
-                  <p className={`text-sm font-medium text-gray-700 ${truncate ? 'truncate' : ''}`}>{value}</p>
-                </div>
-              ))}
-            </div>
+            {/* ── Datos de contacto ── */}
+            <FieldGroup title="Datos de contacto">
+              <Dato label="Nombre completo" value={`${u.name} ${u.surname}`} />
+              <Dato label="Email" value={u.email} truncate />
+              <Dato label="Teléfono" value={u.phone || '—'} />
+            </FieldGroup>
 
-            {/* Botones de acción */}
-            <div className="flex flex-wrap gap-5">
+            {/* ── Estado de la cuenta ── */}
+            <FieldGroup title="Estado de la cuenta">
+              <Dato
+                label="Miembro desde"
+                value={new Date(u.createdAt).toLocaleDateString('es-AR', {
+                  day: '2-digit', month: 'short', year: 'numeric',
+                })}
+              />
+              <Dato label="Rol" value={u.role === 'admin' ? 'Administrador' : 'Usuario'} />
+              <Dato
+                label="Perfil"
+                value={u.profileIncomplete ? 'Incompleto' : 'Completo'}
+              />
+              <Dato
+                label="Solicitudes"
+                value={requestCount === 0 ? 'Ninguna' : `${requestCount}`}
+              />
+            </FieldGroup>
+
+            {/* ── Acciones disponibles ── */}
+            <p className="mb-3 text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+              Acciones disponibles
+            </p>
+            {/* `grid` de 1 columna en mobile: los 4 botones tienen textos largos
+                ("Contactar por WhatsApp") y en `flex-wrap` quedaban cortados. */}
+            <div className="grid grid-cols-1 gap-2.5 sm:flex sm:flex-wrap sm:gap-3">
               <a
                 href={whatsappUrl(u.phone)}
                 target="_blank"
@@ -306,17 +352,10 @@ export default function UsuariosAdminPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <DashboardPage>
 
       {/* Back */}
-      <Link
-        href="/dashboardAdmin"
-        className="inline-flex items-center gap-2 text-sm font-medium text-[#0b7a4b] hover:text-[#0f8c58] group transition-colors w-fit"
-      >
-        <span className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
-          <ArrowLeft size={14} />
-        </span>
-      </Link>
+      <DashboardBackLink href="/dashboardAdmin" label="Volver al panel" />
 
       {/* Header */}
       <div className="flex items-end justify-between gap-4">
@@ -393,7 +432,7 @@ export default function UsuariosAdminPage() {
       {loading && (
         <div className="flex flex-col gap-2.5">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse flex gap-4">
+            <div key={i} className="bg-white rounded-xl p-5 border border-gray-100 animate-pulse flex gap-4">
               <div className="w-12 h-12 rounded-xl bg-gray-100 shrink-0" />
               <div className="flex-1 flex flex-col gap-2 justify-center">
                 <div className="h-3.5 bg-gray-100 rounded-full w-1/3" />
@@ -406,8 +445,8 @@ export default function UsuariosAdminPage() {
 
       {/* Empty state */}
       {!loading && filtered.length === 0 && (
-        <div className="bg-white rounded-2xl p-12 border  border-gray-100 flex flex-col items-center gap-4 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#0b7a4b]/8 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-12 border  border-gray-100 flex flex-col items-center gap-4 text-center">
+          <div className="w-14 h-14 rounded-xl bg-[#0b7a4b]/8 flex items-center justify-center">
             <Users size={24} className="text-[#0b7a4b]" />
           </div>
           <p className="font-bold text-gray-600 text-sm">
@@ -466,6 +505,6 @@ export default function UsuariosAdminPage() {
         </div>
       )}
 
-    </div>
+    </DashboardPage>
   );
 }

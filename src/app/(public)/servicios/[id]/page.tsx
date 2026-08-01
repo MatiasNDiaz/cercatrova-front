@@ -1,12 +1,20 @@
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import Reveal from '@/modules/landing/components/Reveal';
+import {
+  ServiceSplit, ServiceFeatures, ServiceSteps, ServiceCta,
+  ServiceStat, ServiceQuote, ServiceInlineCta,
+  type ServiceFeature, type ServiceStep, type ServiceImage, type ServiceAction,
+  type ServiceFeaturesVariant, type ServiceReveal,
+} from '@/modules/servicios/components/ServiceBlocks';
+import { ServiceFaq } from '@/modules/servicios/components/ServiceFaq';
 import { whatsappLink } from "@/modules/shared/lib/contact";
 import { ServicioHero } from "./ServicioHero";
 import {
   Home, Key, DollarSign, Briefcase, Megaphone, FileCheck,
   CheckCircle2, TrendingUp, Clock, Shield, Users,
-  Star, FileText, MessageCircle, ArrowRight, HelpCircle,
+  Star, FileText, MessageCircle, ArrowRight, HelpCircle, ShieldCheck,
 } from "lucide-react";
 
 /**
@@ -358,6 +366,617 @@ A partir de ahí redactamos o revisamos el boleto de compraventa —qué se entr
   },
 };
 
+
+/* ===========================================================================
+   CONTENIDO POR BLOQUES
+   ---------------------------------------------------------------------------
+   Esta es la estructura única que comparten los 5 servicios. Cada uno define
+   su propio objeto y la plantilla los renderiza con los mismos componentes:
+   no se reescribe la página por servicio.
+
+   Hoy solo `venta` tiene contenido cargado. Los otros cuatro siguen usando el
+   layout anterior hasta que llegue su copy — migrarlos con datos derivados a
+   medias empeoraría cuatro páginas que hoy funcionan. Para dar de alta el
+   próximo alcanza con agregar su entrada acá.
+   =========================================================================== */
+
+interface BloqueSplit {
+  eyebrow?: string;
+  title: string;
+  paragraphs?: string[];
+  highlight?: string;
+  image: ServiceImage;
+  /** Recibe el link de WhatsApp ya armado con el nombre del servicio. */
+  actions?: (wa: string) => ServiceAction[];
+}
+
+/**
+ * Bloque distintivo opcional: como mucho UNO por página, y solo cuando el
+ * contenido real ya lo sugiere. No se inventan datos para llenarlo.
+ */
+type BloqueDestacado =
+  | { tipo: 'stat'; value: string; label: string; text?: string }
+  | { tipo: 'quote'; quote: string; attribution?: string }
+  | { tipo: 'cta'; title: string; text?: string; label: string; href: string };
+
+interface ServicioBloques {
+  presentacion: BloqueSplit;
+  beneficios: { title: string; items: ServiceFeature[]; variant?: ServiceFeaturesVariant };
+  tasacion: BloqueSplit;
+  pasos: { title: string; items: ServiceStep[] };
+  compromiso: BloqueSplit;
+  faqTitle: string;
+  cta: { title: string; text: string; label: string };
+
+  /** Entrada de los bloques. Varía entre páginas para que no se sientan calcadas. */
+  reveal?: ServiceReveal;
+
+  /**
+   * De qué lado cae la imagen en cada bloque alternado.
+   * `true` = imagen a la izquierda. Cada servicio arma su propio patrón.
+   */
+  invertir?: { presentacion?: boolean; tasacion?: boolean; compromiso?: boolean };
+
+  /** Se inserta después del timeline de pasos. */
+  destacado?: BloqueDestacado;
+}
+
+const BLOQUES: Record<string, ServicioBloques> = {
+  venta: {
+    // Patrón original: texto a la izquierda, imagen a la izquierda solo en el
+    // bloque de tasación. Entrada `slide` (la del resto del sitio).
+    invertir: { tasacion: true },
+    presentacion: {
+      eyebrow: 'Tu propiedad, en las mejores manos.',
+      title: 'Venta de Propiedades en Córdoba.',
+      paragraphs: [
+        'Acompañamos tu proceso desde la tasación hasta la escritura, con el respaldo de un martillero matriculado. Vendé seguro, vendé al mejor precio.',
+      ],
+      image: {
+        src: '/servicios/venta-entrega-llaves.png',
+        alt: 'Un agente entrega las llaves de una propiedad a su nueva dueña',
+      },
+      actions: (wa) => [
+        { label: 'Ver Propiedades en Venta', href: '/properties?operationType=venta' },
+        { label: 'Consultar por WhatsApp', href: wa, variant: 'outline', external: true, icon: <MessageCircle size={16} /> },
+      ],
+    },
+
+    beneficios: {
+      title: '¿Por qué elegir Cerca Trova para vender?',
+      items: [
+        { icon: TrendingUp,  title: 'Precio Optimizado',    text: 'Análisis real del mercado actual para maximizar tu rentabilidad.' },
+        { icon: Clock,       title: 'Menor Tiempo Posible', text: 'Estrategia ágil para cerrar la operación rápidamente.' },
+        { icon: ShieldCheck, title: 'Proceso 100% Seguro',  text: 'Transparencia total y respaldo legal en cada etapa.' },
+      ],
+    },
+
+    tasacion: {
+      title: 'No solo publicamos, vendemos. El secreto está en la tasación.',
+      paragraphs: [
+        'Vender una propiedad en Córdoba no es solo publicar un aviso. El punto de partida es definir un precio que el mercado convalide. Una propiedad sobrevaluada se "quema".',
+      ],
+      highlight: 'Arrancamos con un análisis comparativo de operaciones cerradas, no de precios publicados inflados.',
+      image: {
+        src: '/servicios/venta-tasacion-tablet.png',
+        alt: 'Martillero analizando fotos y el plano de una propiedad en una tablet',
+      },
+      actions: (wa) => [
+        { label: 'Solicitar Tasación Gratuita', href: wa, external: true },
+      ],
+    },
+
+    pasos: {
+      title: 'Tu camino a la venta, paso a paso',
+      items: [
+        { titulo: 'Tasación Gratuita',      desc: 'Análisis de mercado para el precio óptimo.' },
+        { titulo: 'Estrategia de Venta',    desc: 'Plan de marketing personalizado.' },
+        { titulo: 'Fotografía Profesional', desc: 'Sesión de fotos y recorrido 360° sin cargo.' },
+        { titulo: 'Publicación Masiva',     desc: 'Portales líderes, redes y base de clientes.' },
+        { titulo: 'Gestión de Visitas',     desc: 'Coordinación y acompañamiento presencial.' },
+        { titulo: 'Negociación y Cierre',   desc: 'Respaldo profesional hasta la escritura.' },
+      ],
+    },
+
+    compromiso: {
+      title: 'Del otro lado siempre hay una familia esperando',
+      paragraphs: [
+        'Cada propiedad que vendemos termina siendo la casa de alguien. No trabajamos con volumen, sino con atención personalizada. Tendrás un agente asignado que conoce tu inmueble de verdad.',
+      ],
+      highlight: 'Te damos una devolución honesta, incluso si conviene esperar.',
+      image: {
+        src: '/servicios/venta-familia-casa.png',
+        alt: 'Una familia mira su nueva casa desde el jardín, al atardecer',
+      },
+      actions: (wa) => [
+        { label: 'Hablar con un Agente', href: wa, external: true, icon: <MessageCircle size={16} /> },
+      ],
+    },
+
+    faqTitle: 'Lo que necesitás saber',
+
+    cta: {
+      title: '¿Te interesa vender tu propiedad con nosotros?',
+      text: 'Consultanos sin compromiso. Un agente te responderá a la brevedad.',
+      label: 'Consultar por WhatsApp',
+    },
+  },
+
+  /* ── ALQUILER ──
+     Variación respecto de Venta: el orden de columnas está invertido (la
+     presentación abre con imagen a la izquierda), los beneficios usan la
+     variante `list` porque acá son cuatro etiquetas de una línea y no tres
+     con explicación, y la entrada de los bloques es `fade` en vez de `slide`.
+     El copy sale del contenido que ya tenía la página. */
+  alquiler: {
+    // Espejo del patrón de Venta: acá la imagen abre a la izquierda en la
+    // presentación y en compromiso, y el bloque del medio arranca con texto.
+    invertir: { presentacion: true, compromiso: true },
+    reveal: 'fade',
+    presentacion: {
+      eyebrow: 'Tu renta, sin sobresaltos.',
+      title: 'Alquiler de Propiedades en Córdoba.',
+      paragraphs: [
+        'Gestionamos tu alquiler de punta a punta: inquilino evaluado, contrato en regla y cobranza puntual.',
+      ],
+      image: {
+        src: '/serviceAlquiler/alquiler-depto-luminoso.png',
+        alt: 'Living vacío y luminoso de un departamento listo para alquilar',
+      },
+      actions: (wa) => [
+        { label: 'Ver Propiedades en Alquiler', href: '/properties?operationType=alquiler' },
+        { label: 'Consultar por WhatsApp', href: wa, variant: 'outline', external: true, icon: <MessageCircle size={16} /> },
+      ],
+    },
+
+    beneficios: {
+      title: '¿Por qué administrar tu alquiler con nosotros?',
+      variant: 'list',
+      items: [
+        { icon: Users,      title: 'Inquilinos verificados y confiables' },
+        { icon: Shield,     title: 'Contratos respaldados legalmente' },
+        { icon: Clock,      title: 'Administración mensual sin esfuerzo' },
+        { icon: TrendingUp, title: 'Rentabilidad asegurada para tu inversión' },
+      ],
+    },
+
+    tasacion: {
+      title: 'El riesgo no es que quede vacía un mes. Es entregarle las llaves a la persona equivocada.',
+      paragraphs: [
+        'Un inquilino que deja de pagar puede costar meses de ingresos y un desgaste que ningún alquiler compensa. Por eso el corazón de este servicio es la evaluación previa, no la publicación.',
+        'Antes de firmar verificamos situación laboral, ingresos declarados y antecedentes crediticios de cada candidato, y revisamos la garantía propuesta para confirmar que sea ejecutable de verdad.',
+      ],
+      highlight: 'Recién cuando el candidato pasa ese filtro avanzamos con el contrato.',
+      image: {
+        src: '/serviceAlquiler/alquiler-revision-contrato.png',
+        alt: 'Agente revisando la documentación de un candidato antes de firmar',
+      },
+      actions: (wa) => [
+        { label: 'Quiero alquilar mi propiedad', href: wa, external: true },
+      ],
+    },
+
+    pasos: {
+      title: 'Del aviso a la cobranza, paso a paso',
+      items: [
+        { titulo: 'Publicación y difusión',      desc: 'Lanzamos tu propiedad en todos los canales disponibles.' },
+        { titulo: 'Filtrado de interesados',     desc: 'Preseleccionamos candidatos según criterios de solvencia.' },
+        { titulo: 'Evaluación del inquilino',    desc: 'Verificación crediticia, laboral y de antecedentes completa.' },
+        { titulo: 'Redacción del contrato',      desc: 'Contrato ajustado a la normativa vigente y tus condiciones.' },
+        { titulo: 'Cobro mensual',               desc: 'Rendición puntual de alquileres con detalle de gastos.' },
+        { titulo: 'Renovaciones y rescisiones',  desc: 'Gestión completa de todo el ciclo del contrato.' },
+      ],
+    },
+
+    compromiso: {
+      title: 'Tu departamento, en manos de alguien que lo va a cuidar',
+      paragraphs: [
+        'Buena parte de quienes alquilan con nosotros son estudiantes que llegan a Córdoba y familias que se mudan por trabajo. Los conocemos, los entrevistamos y sabemos a quién le estamos entregando las llaves.',
+      ],
+      highlight: 'Si tenés una propiedad parada, escribinos: te decimos en el día en cuánto se puede alquilar y qué haría falta para ponerla en valor.',
+      image: {
+        src: '/serviceAlquiler/alquiler-entrega-llaves.png',
+        alt: 'Inquilina recibiendo las llaves en la puerta de su nuevo departamento',
+      },
+      actions: (wa) => [
+        { label: 'Hablar con un Agente', href: wa, external: true, icon: <MessageCircle size={16} /> },
+      ],
+    },
+
+    faqTitle: 'Dudas frecuentes de propietarios',
+
+    cta: {
+      title: '¿Querés poner tu propiedad en alquiler?',
+      text: 'Consultanos sin compromiso. Un agente te responderá a la brevedad.',
+      label: 'Consultar por WhatsApp',
+    },
+  },
+
+  /* ── TASACIONES ──
+     Patrón de columnas propio: texto / texto / imagen a la izquierda.
+     Beneficios en `grid4` (son cuatro credenciales cortas, no tres con
+     explicación). Bloque distintivo: el plazo de entrega del informe — sale
+     textual de su propia pregunta frecuente, no es un dato inventado. */
+  tasaciones: {
+    invertir: { compromiso: true },
+    reveal: 'slide',
+    presentacion: {
+      eyebrow: 'Un número que se puede defender.',
+      title: 'Tasaciones Profesionales en Córdoba.',
+      paragraphs: [
+        'Un valor fundamentado y por escrito, con validez ante bancos, escribanías y tribunales.',
+      ],
+      image: {
+        src: '/serviceTasacion/tasacion-informe-plano.png',
+        alt: 'Informe de tasación sobre el escritorio, junto al plano del inmueble',
+      },
+      actions: (wa) => [
+        { label: 'Solicitar una Tasación', href: wa, external: true },
+        { label: 'Consultar por WhatsApp', href: wa, variant: 'outline', external: true, icon: <MessageCircle size={16} /> },
+      ],
+    },
+
+    beneficios: {
+      title: '¿Qué respalda nuestro informe?',
+      variant: 'grid4',
+      items: [
+        { icon: Star,       title: 'Tasadores matriculados y certificados' },
+        { icon: TrendingUp, title: 'Análisis de mercado actualizado' },
+        { icon: FileText,   title: 'Informe oficial con validez legal' },
+        { icon: Shield,     title: 'Metodología reconocida internacionalmente' },
+      ],
+    },
+
+    tasacion: {
+      title: 'Una tasación no es una opinión sobre cuánto vale una casa.',
+      paragraphs: [
+        'Es un informe técnico que explica cómo se llegó a ese número, y que tiene que poder defenderse frente a un banco, un juez o la otra parte de una sucesión.',
+        'Cada tipo de inmueble se valúa con los comparables que le corresponden: no se tasa igual un departamento que un galpón o un terreno.',
+      ],
+      highlight: 'El informe lo firma un martillero matriculado y es válido ante entidades bancarias, escribanías e instancias judiciales.',
+      image: {
+        src: '/serviceTasacion/tasacion-medicion.png',
+        alt: 'Tasador midiendo un ambiente durante la inspección técnica',
+      },
+      actions: (wa) => [
+        { label: 'Consultar mi caso', href: wa, external: true },
+      ],
+    },
+
+    pasos: {
+      title: 'Cómo llegamos al valor, paso a paso',
+      items: [
+        { titulo: 'Solicitud y coordinación',   desc: 'Agendamos la visita en el horario que más te convenga.' },
+        { titulo: 'Inspección técnica',         desc: 'Relevamiento detallado del inmueble y sus características.' },
+        { titulo: 'Análisis comparativo',       desc: 'Estudio de operaciones similares realizadas en la zona.' },
+        { titulo: 'Evaluación del mercado',     desc: 'Análisis de tendencias actuales y proyecciones del sector.' },
+        { titulo: 'Elaboración del informe',    desc: 'Documento técnico detallado con metodología y fundamentos.' },
+        { titulo: 'Entrega y asesoramiento',    desc: 'Explicación del informe con recomendaciones incluidas.' },
+      ],
+    },
+
+    // Dato real, tomado de la pregunta frecuente "¿En cuánto tiempo tengo el informe?".
+    destacado: {
+      tipo: 'stat',
+      value: '48–72 h',
+      label: 'Plazo de entrega del informe',
+      text: 'Hábiles, desde la visita al inmueble, según la complejidad del caso.',
+    },
+
+    compromiso: {
+      title: 'Preferimos darte el número real, aunque no sea el que esperabas',
+      paragraphs: [
+        'Muchas tasaciones se inflan para conseguir la exclusividad de la venta, y el que termina perdiendo meses es el propietario.',
+      ],
+      highlight: 'Preferimos decirte desde el primer día cuánto vale realmente tu propiedad.',
+      image: {
+        src: '/serviceTasacion/tasacion-explicacion-informe.png',
+        alt: 'Tasador explicando el informe a un propietario, sentados a la mesa',
+      },
+      actions: (wa) => [
+        { label: 'Hablar con un Tasador', href: wa, external: true, icon: <MessageCircle size={16} /> },
+      ],
+    },
+
+    faqTitle: 'Lo que suelen preguntarnos',
+
+    cta: {
+      title: '¿Necesitás tasar tu propiedad?',
+      text: 'Consultanos sin compromiso. Un agente te responderá a la brevedad.',
+      label: 'Consultar por WhatsApp',
+    },
+  },
+
+  /* ── ASESORAMIENTO ──
+     Columnas invertidas respecto de Venta (imagen a la izquierda en la
+     presentación y en el bloque del medio). Beneficios en `list`, que son
+     cuatro etiquetas cortas. Entrada `fade`.
+     Bloque distintivo: una CITA. No es inventada — la frase entrecomillada
+     ya estaba en el texto de la página ("quería preguntar algo antes de
+     firmar"), descrita como el modo en que empiezan muchas consultas. */
+  asesoramiento: {
+    invertir: { presentacion: true, tasacion: true },
+    reveal: 'fade',
+    presentacion: {
+      eyebrow: 'Decidí con información, no con intuición.',
+      title: 'Asesoramiento Profesional Inmobiliario.',
+      paragraphs: [
+        'Te ayudamos a decidir antes de firmar: qué comprar, cuándo vender y qué conviene en tu caso.',
+      ],
+      image: {
+        src: '/serviceAsesoramiento/asesoramiento-reunion-opciones.png',
+        alt: 'Asesor repasando opciones con una pareja sobre la mesa de reunión',
+      },
+      actions: (wa) => [
+        { label: 'Pedir una Reunión', href: wa, external: true },
+        { label: 'Consultar por WhatsApp', href: wa, variant: 'outline', external: true, icon: <MessageCircle size={16} /> },
+      ],
+    },
+
+    beneficios: {
+      title: '¿Qué ganás con un asesor de tu lado?',
+      variant: 'list',
+      items: [
+        { icon: Users,        title: 'Asesor dedicado exclusivamente a tu caso' },
+        { icon: Shield,       title: 'Decisiones respaldadas por expertos' },
+        { icon: CheckCircle2, title: 'Resultados orientados a tus metas' },
+        { icon: TrendingUp,   title: 'Estrategia patrimonial a largo plazo' },
+      ],
+    },
+
+    tasacion: {
+      title: 'Los errores caros no se cometen al firmar. Se cometen antes.',
+      paragraphs: [
+        'Comprar en una zona sin averiguar qué se está construyendo enfrente, vender en el peor momento del año, o aceptar una permuta sin entender cómo se valúa la diferencia.',
+        'Trabajamos con perfiles muy distintos y a cada uno le corresponde una conversación distinta: quien compra su primera vivienda necesita entender cuánto puede afrontar realmente entre anticipo, escrituración y mudanza; quien invierte necesita comparar rendimiento contra alternativas.',
+      ],
+      highlight: 'La reunión inicial de diagnóstico es sin cargo.',
+      image: {
+        src: '/serviceAsesoramiento/asesoramiento-comparando-opciones.png',
+        alt: 'Asesor y clienta comparando dos propiedades entre el folleto y la tablet',
+      },
+      actions: (wa) => [
+        { label: 'Agendar Diagnóstico', href: wa, external: true },
+      ],
+    },
+
+    pasos: {
+      title: 'Cómo te acompañamos',
+      items: [
+        { titulo: 'Diagnóstico inicial',            desc: 'Entendemos tu situación, objetivos y posibilidades reales.' },
+        { titulo: 'Análisis del mercado',           desc: 'Evaluamos las opciones disponibles según tu perfil.' },
+        { titulo: 'Presentación de opciones',       desc: 'Te mostramos escenarios claros con ventajas y riesgos.' },
+        { titulo: 'Asesoramiento financiero',       desc: 'Orientación sobre créditos, inversiones y aspectos impositivos.' },
+        { titulo: 'Acompañamiento en decisiones',   desc: 'Estamos con vos en cada negociación y etapa clave.' },
+        { titulo: 'Seguimiento post-operación',     desc: 'Continuamos asesorándote después de concretada la operación.' },
+      ],
+    },
+
+    destacado: {
+      tipo: 'quote',
+      quote: 'Quería preguntar algo antes de firmar.',
+      attribution: 'Así empiezan muchas de las consultas que recibimos. Esa llamada suele ser la que evita el error.',
+    },
+
+    compromiso: {
+      title: 'Una charla a tiempo evita un problema caro',
+      paragraphs: [
+        'No hace falta tener la decisión tomada para consultarnos. Al contrario: cuanto antes aparezca la duda, más opciones hay sobre la mesa.',
+      ],
+      highlight: 'Si estás por firmar algo y tenés una duda, escribinos antes.',
+      image: {
+        src: '/serviceAsesoramiento/asesoramiento-familia-charla.png',
+        alt: 'Una pareja conversa con su asesor mientras sus hijos juegan cerca',
+      },
+      actions: (wa) => [
+        { label: 'Hablar con un Asesor', href: wa, external: true, icon: <MessageCircle size={16} /> },
+      ],
+    },
+
+    faqTitle: 'Antes de escribirnos',
+
+    cta: {
+      title: '¿Tenés una decisión inmobiliaria por delante?',
+      text: 'Consultanos sin compromiso. Un agente te responderá a la brevedad.',
+      label: 'Consultar por WhatsApp',
+    },
+  },
+
+  /* ── PUBLICAMOS TU PROPIEDAD ──
+     Patrón de columnas propio: imagen izquierda solo en el bloque del medio.
+     Beneficios en `grid4` (cuatro etiquetas cortas). Entrada `slide`.
+     Bloque distintivo: CTA intermedio directo al formulario de /publicar —
+     esta es la única página de servicio cuya acción principal no es WhatsApp
+     sino cargar la solicitud, y ya tenía un bloque con ese fin. */
+  comercializacion: {
+    invertir: { tasacion: true },
+    reveal: 'slide',
+    presentacion: {
+      eyebrow: 'De tu casa al catálogo, en 48 horas.',
+      title: 'Publicamos tu Propiedad en Cerca Trova.',
+      paragraphs: [
+        'Cargá los datos de tu inmueble, lo revisamos y sale publicado en nuestro catálogo y en los portales.',
+      ],
+      image: {
+        src: '/servicePublicacionPropiedad/publicar.jpg',
+        alt: 'Propietario publicando su inmueble desde la notebook',
+      },
+      actions: () => [
+        { label: 'Publicar mi Propiedad', href: '/publicar' },
+        { label: 'Ver el Catálogo', href: '/properties', variant: 'outline' },
+      ],
+    },
+
+    beneficios: {
+      title: '¿Qué conseguís al publicar con nosotros?',
+      variant: 'grid4',
+      items: [
+        { icon: Megaphone,  title: 'Difusión masiva en todos los canales' },
+        { icon: Clock,      title: 'Publicación activa en menos de 48hs' },
+        { icon: TrendingUp, title: 'Mayor exposición, mejor precio final' },
+        { icon: Users,      title: 'Base activa de compradores e inquilinos' },
+      ],
+    },
+
+    tasacion: {
+      title: 'No necesitás tener todo resuelto para empezar',
+      paragraphs: [
+        'No hace falta que tengas las fotos listas ni el precio decidido: con los datos básicos del inmueble alcanza para que un agente lo revise.',
+        'Si se aprueba, coordinamos la visita y la sesión fotográfica, y redactamos el aviso por vos.',
+      ],
+      highlight: 'La publicación no tiene costo: la comisión se cobra recién cuando la operación se concreta.',
+      image: {
+        src: '/servicePublicacionPropiedad/publicar-formulario-celular.png',
+        alt: 'Propietario completando el formulario de publicación desde el celular',
+      },
+      actions: () => [
+        { label: 'Completar el Formulario', href: '/publicar' },
+      ],
+    },
+
+    pasos: {
+      title: 'Del formulario a la primera consulta',
+      items: [
+        { titulo: 'Enviás el formulario',   desc: 'Completás los datos de tu propiedad de forma online.' },
+        { titulo: 'Revisión del agente',    desc: 'Evaluamos tu solicitud en 24 a 48 horas hábiles.' },
+        { titulo: 'Aprobación y contacto',  desc: 'Si se aprueba, coordinamos visita y sesión fotográfica.' },
+        { titulo: 'Creación del aviso',     desc: 'Redacción profesional con fotos de calidad y descripción.' },
+        { titulo: 'Publicación masiva',     desc: 'Lanzamos en portales, redes y base de clientes activos.' },
+        { titulo: 'Gestión de consultas',   desc: 'Respondemos consultas y coordinamos visitas por vos.' },
+      ],
+    },
+
+    destacado: {
+      tipo: 'cta',
+      title: '¿Empezamos?',
+      text: 'Completá el formulario online y un agente evalúa tu propiedad en 24 a 48hs hábiles.',
+      label: 'Publicar mi Propiedad',
+      href: '/publicar',
+    },
+
+    compromiso: {
+      title: 'Empezá ahora y en 48 horas tenés una respuesta',
+      paragraphs: [
+        'Si tu solicitud no avanza, te explicamos el motivo. Casi siempre es algo corregible: falta documentación o el precio está fuera de mercado.',
+      ],
+      highlight: 'Podés publicar aunque ya esté en otra inmobiliaria, salvo que tengas una exclusividad vigente.',
+      image: {
+        src: '/servicePublicacionPropiedad/publicar-desde-casa.png',
+        alt: 'Propietaria enviando su solicitud desde el living de su casa',
+      },
+      actions: () => [
+        { label: 'Publicar mi Propiedad', href: '/publicar' },
+      ],
+    },
+
+    faqTitle: 'Antes de publicar',
+
+    cta: {
+      title: '¿Querés publicar tu propiedad?',
+      text: 'Consultanos sin compromiso. Un agente te responderá a la brevedad.',
+      label: 'Consultar por WhatsApp',
+    },
+  },
+};
+
+/** Plantilla común: el orden y los fondos de los 7 bloques. */
+function ServicioTemplate({
+  b, faq, whatsappUrl,
+}: {
+  b: ServicioBloques;
+  faq: { p: string; r: string }[];
+  whatsappUrl: string;
+}) {
+  const reveal = b.reveal ?? 'slide';
+  const inv = b.invertir ?? {};
+  const d = b.destacado;
+
+  return (
+    <main className="bg-white">
+      {/* 1 - Presentación. NO es un hero: imagen y texto en columnas, sin
+             superposición. Por eso el h1 vive acá y no sobre una foto. */}
+      <ServiceSplit
+        as="h1"
+        tone="white"
+        reveal={reveal}
+        reverse={inv.presentacion}
+        eyebrow={b.presentacion.eyebrow}
+        title={b.presentacion.title}
+        paragraphs={b.presentacion.paragraphs}
+        image={b.presentacion.image}
+        actions={b.presentacion.actions?.(whatsappUrl)}
+      />
+
+      {/* 2 - Beneficios */}
+      <ServiceFeatures
+        tone="soft"
+        reveal={reveal}
+        variant={b.beneficios.variant}
+        title={b.beneficios.title}
+        items={b.beneficios.items}
+      />
+
+      {/* 3 - Tasación (imagen a la izquierda) */}
+      <ServiceSplit
+        tone="white"
+        reveal={reveal}
+        reverse={inv.tasacion}
+        title={b.tasacion.title}
+        paragraphs={b.tasacion.paragraphs}
+        highlight={b.tasacion.highlight}
+        image={b.tasacion.image}
+        actions={b.tasacion.actions?.(whatsappUrl)}
+      />
+
+      {/* 4 - Pasos */}
+      <ServiceSteps tone="soft" reveal={reveal} title={b.pasos.title} steps={b.pasos.items} />
+
+      {/* Bloque distintivo — solo si la página lo define. */}
+      {d?.tipo === 'stat' && (
+        <ServiceStat value={d.value} label={d.label} text={d.text} />
+      )}
+      {d?.tipo === 'quote' && (
+        <ServiceQuote quote={d.quote} attribution={d.attribution} tone="white" />
+      )}
+      {d?.tipo === 'cta' && (
+        <ServiceInlineCta
+          title={d.title}
+          text={d.text}
+          action={{ label: d.label, href: d.href }}
+          tone="white"
+        />
+      )}
+
+      {/* 5 - Compromiso (texto a la izquierda) */}
+      <ServiceSplit
+        tone="white"
+        reveal={reveal}
+        reverse={inv.compromiso}
+        title={b.compromiso.title}
+        paragraphs={b.compromiso.paragraphs}
+        highlight={b.compromiso.highlight}
+        image={b.compromiso.image}
+        actions={b.compromiso.actions?.(whatsappUrl)}
+      />
+
+      {/* 6 - FAQ */}
+      <ServiceFaq tone="white" title={b.faqTitle} items={faq} />
+
+      {/* 7 - CTA final, sobre verde profundo */}
+      <ServiceCta
+        title={b.cta.title}
+        text={b.cta.text}
+        action={{
+          label: b.cta.label,
+          href: whatsappUrl,
+          external: true,
+          icon: <MessageCircle size={17} />,
+        }}
+      />
+    </main>
+  );
+}
+
 export default async function ServicioDetallePage({ params }: { params: Promise<{ id: string }> }) {
   // Next 15: `params` es una promesa y hay que esperarla antes de leerla.
   const { id } = await params;
@@ -366,8 +985,22 @@ export default async function ServicioDetallePage({ params }: { params: Promise<
 
   const whatsappUrl = whatsappLink(`¡Hola! Estoy interesado en el servicio de: ${s.whatsapp}`);
 
+  // Servicios ya migrados a la estructura de bloques.
+  const bloques = BLOQUES[id];
+  if (bloques) {
+    return <ServicioTemplate b={bloques} faq={s.faq} whatsappUrl={whatsappUrl} />;
+  }
+
+  // Los 3 primeros beneficios se suben a la franja verde de abajo del hero;
+  // el sidebar sigue mostrando la lista completa.
+  const destacados = s.beneficios.slice(0, 3);
+
   return (
-    <main className="min-h-screen bg-surface">
+    // `surface-mint` en vez de `surface`: el mismo verde de sección que el
+    // catálogo, el detalle de propiedad y /publicar. Con `surface` (gris casi
+    // blanco) las tarjetas blancas quedaban a ~2 puntos de luminancia del
+    // fondo y toda la página se leía plana.
+    <main className="min-h-screen bg-surface-mint">
 
       {/* ══ HERO — mismo lenguaje visual que el de la landing ═════════ */}
       <ServicioHero
@@ -380,6 +1013,41 @@ export default async function ServicioDetallePage({ params }: { params: Promise<
         accent={s.accent}
         whatsappUrl={whatsappUrl}
       />
+
+      {/* ══ FRANJA VERDE 1 — por qué elegirnos ══════════════════════
+          Bloque a fondo verde profundo (`surface-brand-deep`, la misma clase
+          de la franja de Trayectoria y del Hero de la landing). Corta el
+          bloque claro apenas termina el hero y le da respiro a la página
+          antes del muro de texto.
+
+          Usa `s.beneficios`, que YA existía en los datos de cada servicio —
+          no se inventó contenido nuevo para llenar la franja. */}
+      <section className="surface-brand-deep relative overflow-hidden py-14 md:py-16">
+        <div className="relative z-10 mx-auto max-w-6xl px-4">
+          <Reveal>
+            <p className="text-center text-[11px] font-bold tracking-[0.22em] text-white/70 uppercase">
+              Por qué elegirnos
+            </p>
+          </Reveal>
+          <div className="mt-8 grid gap-5 sm:grid-cols-3">
+            {destacados.map((b, i) => {
+              const BIcon = b.icon;
+              return (
+                <Reveal key={i} delay={0.08 * i}>
+                  <div className="flex h-full flex-col items-center gap-3 rounded-xl border border-white/15 bg-white/10 px-5 py-6 text-center backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-white/30 hover:bg-white/15">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white">
+                      <BIcon size={19} />
+                    </span>
+                    <span className="text-sm leading-snug font-semibold text-white/90">
+                      {b.texto}
+                    </span>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* ══ BODY ════════════════════════════════════════════════════ */}
       <section className="mx-auto max-w-6xl px-4 py-16">
@@ -417,7 +1085,7 @@ export default async function ServicioDetallePage({ params }: { params: Promise<
               {s.galeria.map((img) => (
                 <div
                   key={img.src}
-                  className="relative aspect-square overflow-hidden rounded-2xl border border-ink-200/70 shadow-sm"
+                  className="relative aspect-square overflow-hidden rounded-xl border border-ink-200/70 shadow-sm"
                 >
                   <Image
                     src={img.src}
@@ -464,7 +1132,7 @@ export default async function ServicioDetallePage({ params }: { params: Promise<
                 Va acá, justo antes de las FAQ y del cierre, porque es el punto
                 donde la persona ya entendió el servicio y está decidiendo si
                 nos escribe o no. */}
-            <div className="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-ink-200/70 bg-white shadow-sm">
               <div className="relative h-56 w-full sm:h-64">
                 <Image
                   src={s.persuasion.imagen}
@@ -522,7 +1190,7 @@ export default async function ServicioDetallePage({ params }: { params: Promise<
             {/* CTA especial — solo comercialización */}
             {'ctaEspecial' in s && s.ctaEspecial && (
               <div
-                className="relative overflow-hidden rounded-3xl p-7"
+                className="relative overflow-hidden rounded-xl p-7"
                 style={{ background: s.light, border: `2px solid ${s.accent}20` }}
               >
                 <span
@@ -566,7 +1234,7 @@ export default async function ServicioDetallePage({ params }: { params: Promise<
                   return (
                     <div
                       key={i}
-                      className="group flex cursor-default items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-surface"
+                      className="group flex cursor-default items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-surface"
                     >
                       <div
                         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
@@ -583,14 +1251,14 @@ export default async function ServicioDetallePage({ params }: { params: Promise<
 
             {/* Tarjeta CTA WhatsApp */}
             <div
-              className="relative overflow-hidden rounded-3xl p-6 text-white shadow-lg"
+              className="relative overflow-hidden rounded-xl p-6 text-white shadow-lg"
               style={{ background: `linear-gradient(135deg, ${s.g1} 0%, ${s.g2} 100%)` }}
             >
               <span className="pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full bg-white/10" />
               <span className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-white/5" />
               <div className="relative z-10">
                 <div
-                  className="mb-4 flex h-10 w-10 items-center justify-center rounded-2xl"
+                  className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl"
                   style={{ background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }}
                 >
                   <MessageCircle size={18} />
@@ -625,7 +1293,7 @@ export default async function ServicioDetallePage({ params }: { params: Promise<
                       <Link
                         key={key}
                         href={`/servicios/${key}`}
-                        className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-ink-500 transition-all hover:bg-surface hover:text-ink-900"
+                        className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-ink-500 transition-all hover:bg-surface hover:text-ink-900"
                       >
                         <div
                           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
@@ -647,6 +1315,51 @@ export default async function ServicioDetallePage({ params }: { params: Promise<
           </div>
         </div>
       </section>
+
+      {/* ══ FRANJA VERDE 2 — cierre ═════════════════════════════════
+          Segundo bloque a fondo verde, esta vez en la variante más oscura
+          (`surface-brand-deepest`, la del footer). Cierra la página antes del
+          footer y evita que el último bloque claro muera contra el verde del
+          footer sin transición. */}
+      <section className="surface-brand-deepest relative overflow-hidden py-16 md:py-20">
+        <div className="relative z-10 mx-auto max-w-3xl px-4 text-center">
+          <Reveal>
+            <span className="inline-block rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-[11px] font-bold tracking-[0.22em] text-white uppercase backdrop-blur-sm">
+              {s.titulo}
+            </span>
+          </Reveal>
+          <Reveal delay={0.08}>
+            <h2 className="mt-5 text-3xl font-bold tracking-tight text-white md:text-4xl">
+              ¿Empezamos?
+            </h2>
+          </Reveal>
+          <Reveal delay={0.14}>
+            <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-white/75">
+              Contanos tu caso y un agente de Cerca Trova te responde a la brevedad,
+              sin compromiso.
+            </p>
+          </Reveal>
+          <Reveal delay={0.2}>
+            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 text-sm font-bold text-brand-800 shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] sm:w-auto"
+              >
+                <MessageCircle size={16} />
+                Consultar por WhatsApp
+              </a>
+              <Link
+                href="/properties"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-white/30 px-8 py-4 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-brand-800 active:scale-[0.98] sm:w-auto"
+              >
+                Ver propiedades <ArrowRight size={15} />
+              </Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
     </main>
   );
 }
@@ -656,7 +1369,7 @@ export default async function ServicioDetallePage({ params }: { params: Promise<
 function Card({ children, compact = false }: { children: React.ReactNode; compact?: boolean }) {
   return (
     <div
-      className={`rounded-3xl border border-ink-200/70 bg-white shadow-sm ${compact ? "p-6" : "p-8"}`}
+      className={`rounded-xl border border-ink-100 bg-white shadow-[0_1px_2px_rgba(10,12,11,0.04),0_10px_28px_-14px_rgba(10,12,11,0.16)] ${compact ? "p-6" : "p-8"}`}
     >
       {children}
     </div>

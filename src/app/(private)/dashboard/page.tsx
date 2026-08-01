@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import Link from 'next/link';
+import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 import {
   User, Heart, Settings, Bell, FileText, ChevronRight,
 } from 'lucide-react';
@@ -44,71 +45,76 @@ const sections = [
   },
 ];
 
-export default function DashboardPage() {
+// Se llama `DashboardHomePage` y no `DashboardPage` para no chocar con el
+// componente de layout compartido que se importa arriba.
+export default function DashboardHomePage() {
   const { user } = useAuth();
 
   return (
-    <div className="flex flex-col gap-3  w-full ">
+    <DashboardPage>
 
-      {/* Bienvenida */}
-<div
-  className="relative flex flex-col items-center justify-center rounded-tr-3xl rounded-tl-3xl rounded-br-xl rounded-bl-xl h-74 shadow-lg px-6"
-  style={{
-    backgroundImage: 'url(/BannerInmo.png)',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-  }}
->
-  <div className="absolute z-0 inset-0 bg-black/50  rounded-tr-3xl rounded-tl-3xl rounded-br-xl rounded-bl-xl"></div>
-  {/* Mensaje de bienvenida (movido un poco a la derecha para no chocar con el nombre si es largo) */}
-  <h2 className="relative z-10 text-white text-4xl font-bold tracking-tight max-w-2xl leading-tight">
-    ¡Hola, {user?.name}! Qué bueno verte de nuevo! <br /> 
-    <span className="text-white text-2xl mt-0 font-medium">Tu próximo hogar te está esperando. 👋</span>
-  </h2>
+      {/* ── BIENVENIDA ──
+          Antes el bloque de avatar + nombre + email iba `absolute -bottom-14
+          left-14` encima del banner, con un avatar de 144px y el texto al
+          lado. A 390px eso no entraba de ninguna forma: el saludo centrado
+          quedaba pisado por la foto, y el nombre y el email salían cortados
+          por el círculo.
 
-  {/* Contenedor del Avatar + Info a la derecha */}
-  <div className="absolute -bottom-14 left-14 flex items-end gap-6">
-    
-    {/* Avatar con borde */}
-    <div className="relative shrink-0">
-      <div className="w-36 h-36 rounded-full border-[6px] border-[#F8FAFC] shadow-2xl bg-white overflow-hidden flex items-center justify-center">
-        {user?.photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.photo} alt="Avatar" className="w-full h-full object-cover" />
-        ) : (
-          <User size={45} className="text-[#0b7a4b]" />
-        )}
+          Ahora son dos piezas en flujo normal: el banner con el saludo, y
+          debajo una tarjeta propia con foto + nombre + email + badge. La
+          tarjeta se solapa con el banner (margen negativo) recién desde `sm`,
+          que es donde hay ancho para que se vea bien; en mobile simplemente va
+          debajo. Sin `absolute`, no hay nada que se pueda superponer. */}
+      <div>
+        <div className="relative overflow-hidden rounded-xl shadow-lg">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: 'url(/BannerInmo.png)' }}
+          />
+          <div className="absolute inset-0 bg-black/50" />
+
+          <div className="relative z-10 flex min-h-44 items-center justify-center px-5 py-10 sm:min-h-56 sm:px-8 md:h-64">
+            <h2 className="max-w-2xl text-center text-xl leading-tight font-bold tracking-tight text-white sm:text-3xl md:text-4xl">
+              ¡Hola, {user?.name}! Qué bueno verte de nuevo!
+              <span className="mt-2 block text-sm font-medium text-white/90 sm:text-lg md:text-2xl">
+                Tu próximo hogar te está esperando. 👋
+              </span>
+            </h2>
+          </div>
+        </div>
+
+        {/* Tarjeta de perfil */}
+        <div className="relative z-10 mx-3 -mt-8 flex flex-col items-center gap-4 rounded-xl border border-ink-100 bg-white p-5 text-center shadow-[0_1px_2px_rgba(10,12,11,0.04),0_10px_28px_-14px_rgba(10,12,11,0.2)] sm:mx-6 sm:-mt-12 sm:flex-row sm:items-center sm:gap-5 sm:text-left">
+          <div className="relative shrink-0">
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-white shadow-xl sm:h-28 sm:w-28">
+              {user?.photo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.photo} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                <User size={40} className="text-[#0b7a4b]" />
+              )}
+            </div>
+            <span className="absolute right-1.5 bottom-1.5 h-5 w-5 rounded-full border-4 border-white bg-emerald-500 shadow-md" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-xl font-bold tracking-tight text-ink-900 sm:text-2xl">
+              {user?.name} {user?.surname}
+            </h1>
+            <p className="mt-0.5 truncate text-sm text-gray-500">{user?.email}</p>
+            <p className="mt-2 inline-block rounded-full bg-[#0b7a4b]/12 px-4 py-1 text-[10px] font-bold tracking-wider text-[#0b7a4b] uppercase">
+              usuario desde 2026
+            </p>
+          </div>
+        </div>
       </div>
-      <div className="absolute bottom-2 right-2 w-7 h-7 bg-emerald-500 border-4 border-white rounded-full shadow-md"></div>
-    </div>
-
-    {/* Bloque de Nombre y Detalle */}
-    <div className="flex flex-col pb-1"> 
-      {/* El Nombre queda sobre la parte verde por el alineamiento del flex */}
-      <h1 className="text-3xl font-bold -ml-0.5 text-white drop-shadow-md tracking-tight">
-        {user?.name} {user?.surname}
-      </h1>
-      
-      {/* El resto queda debajo, sobre el fondo claro de la página */}
-      <div className="mt-2 gap-1 text-left">
-        <p className="text-slate-600 text-sm -ml-1">{user?.email}</p>
-        <p className="text-[10px] mt-1.5 -ml-3.5 w-fit px-6 font-bold uppercase text-center tracking-wider text-[#0b7a4b] bg-[#0b7a4b]/12  py-1 rounded-full">
-           usuario desde 2026
-        </p>
-      </div>
-    </div>
-
-  </div>
-</div>
-{/* Spacer: Importante para que el contenido de abajo no se pegue al avatar */}
-<div className="h-16"></div>
 
       {/* Cards de secciones */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {sections.map(({ href, icon: Icon, label, description, color }) => (
           <Link key={href} href={href}
-            className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-5 group">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${color}`}>
+            className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-5 group">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
               <Icon size={22} />
             </div>
             <div className="flex-1 min-w-0">
@@ -120,6 +126,6 @@ export default function DashboardPage() {
         ))}
       </div>
 
-    </div>
+    </DashboardPage>
   );
 }

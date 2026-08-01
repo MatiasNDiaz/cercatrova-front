@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
@@ -12,6 +13,17 @@ import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { whatsappLink } from '@/modules/shared/lib/contact';
 import type { Post, PostSortBy } from '@/modules/shared/types/api';
 import { PostCard } from './PostCard';
+
+/* Variantes de entrada del feed. Duración y curva alineadas con `ListReveal`
+   del dashboard y con la grilla del catálogo — un solo ritmo en todo el sitio. */
+const feedContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+};
+const feedItem = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const } },
+};
 
 const SORT_OPTIONS: { value: PostSortBy; label: string; icon: React.ElementType }[] = [
   { value: 'recent',    label: 'Más recientes', icon: Clock },
@@ -47,9 +59,10 @@ export function PostsFeed({ initialPosts }: { initialPosts: Post[] }) {
   }, [sortBy]);
 
   return (
-    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 pb-20 lg:grid-cols-3">
-      {/* ══ COLUMNA IZQUIERDA — FEED ══ */}
-      <div className="flex flex-col gap-6 lg:col-span-2">
+    /* Columna única y angosta, como un feed de red social: la lectura baja
+       en línea recta y la imagen manda. Antes eran dos columnas (feed +
+       barra lateral fija), que en una página de este tipo compiten. */
+    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 pb-20">
         {/* Controles de orden */}
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-ink-100 bg-white p-2 shadow-[0_2px_4px_-2px_rgba(10,12,11,0.06),0_14px_34px_-14px_rgba(10,12,11,0.20)]">
           {SORT_OPTIONS.map(({ value, label, icon: Icon }) => {
@@ -74,20 +87,38 @@ export function PostsFeed({ initialPosts }: { initialPosts: Post[] }) {
 
         {posts.length === 0 ? (
           <div className="rounded-3xl border border-ink-100 bg-white px-6 py-20 text-center shadow-[0_2px_4px_-2px_rgba(10,12,11,0.06),0_14px_34px_-14px_rgba(10,12,11,0.20)]">
-            <Megaphone size={38} className="mx-auto mb-4 text-ink-300" />
+            <Megaphone size={38} className="mx-auto mb-4 text-ink-400" />
             <p className="text-lg font-bold text-ink-900">Todavía no hay publicaciones</p>
             <p className="mt-2 text-sm text-ink-600">
               Volvé a pasar pronto: subimos novedades seguido.
             </p>
           </div>
         ) : (
-          posts.map((post) => <PostCard key={post.id} post={post} />)
+          /* Entrada escalonada del feed — el mismo fade+slide corto que usan el
+             catálogo y las listas del dashboard, para que las tres secciones se
+             sientan igual de rápidas. `key={sortBy}` re-dispara la animación al
+             cambiar el orden, así el reordenamiento se percibe. */
+          <motion.div
+            key={sortBy}
+            variants={feedContainer}
+            initial="hidden"
+            animate="show"
+            className="flex flex-col gap-6"
+          >
+            {posts.map((post) => (
+              <motion.div key={post.id} variants={feedItem}>
+                <PostCard post={post} />
+              </motion.div>
+            ))}
+          </motion.div>
         )}
-      </div>
 
-      {/* ══ COLUMNA DERECHA — INFO SECUNDARIA ══ */}
-      <aside className="lg:col-span-1">
-        <div className="sticky top-28 flex flex-col gap-5">
+      {/* ══ INFO SECUNDARIA ══
+          Al pie del feed, no en una columna aparte: en una sola columna no
+          hay dónde fijarla, y acá aparece justo cuando terminaste de mirar
+          las publicaciones. */}
+      <aside className="mt-2">
+        <div className="grid gap-5 sm:grid-cols-2">
           {/* Contacto */}
           <div className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-[0_2px_4px_-2px_rgba(10,12,11,0.06),0_14px_34px_-14px_rgba(10,12,11,0.20)]">
             <div className="h-1.5 w-full" style={{ background: 'var(--gradient-brand)' }} />

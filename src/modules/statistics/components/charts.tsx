@@ -17,6 +17,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { Info, ImageOff } from 'lucide-react';
+import { useIsNarrow } from '@/modules/shared/hooks/useMediaQuery';
 import type { StatRow, PropertyRankRow } from '../types';
 
 /** Paleta derivada del verde de marca, de más oscuro a más claro. */
@@ -148,6 +149,11 @@ export function BarStat({
   showPercentage?: boolean;
 }) {
   const rows = data.filter(d => d.count > 0);
+  // El eje Y de Recharts se dimensiona en píxeles, no con clases: a 375px de
+  // ancho un eje de 140px se comía casi la mitad del gráfico y las barras
+  // quedaban en ~140px. En mobile se achica el eje y se baja un punto la
+  // tipografía; los valores exactos igual están en la lista de abajo.
+  const narrow = useIsNarrow();
   if (rows.length === 0) return <NoData message={emptyMessage} />;
 
   return (
@@ -160,8 +166,8 @@ export function BarStat({
             <YAxis
               type="category"
               dataKey="label"
-              width={140}
-              tick={{ fontSize: 11, fill: '#374151' }}
+              width={narrow ? 96 : 140}
+              tick={{ fontSize: narrow ? 10 : 11, fill: '#374151' }}
               axisLine={false}
               tickLine={false}
             />
@@ -210,12 +216,20 @@ export function PropertyRankStat({
   /** Segunda métrica a mostrar por fila (promedio de estrellas, únicos…). */
   extra?: (row: PropertyRankRow) => string | null;
 }) {
+  // El eje Y de Recharts se mide en píxeles, no con clases de Tailwind: a
+  // 375px de ancho un eje de 170px se llevaba más de la mitad del gráfico y las
+  // barras quedaban ilegibles. En mobile se achica el eje, se baja un punto la
+  // tipografía y se recorta más el título. El dato exacto no se pierde: la
+  // lista de abajo muestra el título completo y el número.
+  const narrow = useIsNarrow();
+  const maxLabel = narrow ? 16 : 26;
+
   if (data.length === 0) return <NoData message={emptyMessage} />;
 
   // Títulos largos rompen el eje: se recortan solo para el gráfico.
   const chartData = data.map(d => ({
     ...d,
-    label: d.title.length > 26 ? `${d.title.slice(0, 25)}…` : d.title,
+    label: d.title.length > maxLabel ? `${d.title.slice(0, maxLabel - 1)}…` : d.title,
   }));
 
   return (
@@ -228,8 +242,8 @@ export function PropertyRankStat({
             <YAxis
               type="category"
               dataKey="label"
-              width={170}
-              tick={{ fontSize: 11, fill: '#374151' }}
+              width={narrow ? 104 : 170}
+              tick={{ fontSize: narrow ? 10 : 11, fill: '#374151' }}
               axisLine={false}
               tickLine={false}
             />
@@ -259,7 +273,7 @@ export function PropertyRankStat({
                   <Image src={p.imageUrl} alt={p.title} fill sizes="56px" className="object-cover" />
                 ) : (
                   <span className="flex h-full w-full items-center justify-center">
-                    <ImageOff size={14} className="text-gray-300" />
+                    <ImageOff size={14} className="text-gray-400" />
                   </span>
                 )}
               </span>

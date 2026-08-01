@@ -75,8 +75,11 @@ export default function RealEstateFAQ() {
 
   const visible = showAll ? faqData : faqData.slice(0, INITIAL_VISIBLE);
 
+  // `bg-gray-150` NO existe en Tailwind (la escala salta de 100 a 200), así que
+  // esta sección no tenía fondo: se veía el `#f2f1f1` del body y quedaba pegada
+  // a la de arriba. Ahora usa el mismo verde de sección que el resto.
   return (
-    <section id="faq" className="bg-gray-150 py-24 md:py-28">
+    <section id="faq" className="bg-surface-mint py-24 md:py-28">
       <div className="mx-auto max-w-4xl px-6">
         <SectionHeading
           eyebrow="Preguntas frecuentes"

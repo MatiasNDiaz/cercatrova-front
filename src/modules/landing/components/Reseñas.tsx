@@ -121,7 +121,7 @@ const reviews = [
 
 export default function Resenas() {
   return (
-    <section id="reseñas" className="overflow-hidden bg-brand-50 py-24 md:py-28">
+    <section id="reseñas" className="overflow-hidden bg-surface-mint py-24 md:py-28">
       <div className="mx-auto max-w-7xl px-6">
         <SectionHeading
           eyebrow="Testimonios"
