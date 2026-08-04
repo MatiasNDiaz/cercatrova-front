@@ -1845,3 +1845,29 @@ el resto de la iconografía de la Landing. El componente `ChessKing` se eliminó
 - **Estado:** ✅ `npm run build` exit 0, 23/23 rutas, 11 warnings preexistentes.
   Verificado en navegador a 1600×1000: los 5 slides del Hero uno por uno (clickeando
   los dots), `/login` y `/register`.
+
+## Crédito del desarrollador en el Footer
+
+**Archivo:** `FooterPublic.tsx`.
+
+- Se agregó una línea de crédito técnico en la fila inferior del footer (la de
+  copyright + links legales), entre "© 2026 Inmobiliaria Cerca Trova — Córdoba,
+  Argentina | Matrícula N° 04 4838" y los links "Privacidad" / "Términos": **"Desarrollado
+  por Matías Diaz"**, con el nombre como link `mailto:matidiazargentino21@gmail.com`.
+- **Layout:** la fila era `flex justify-between` con 2 hijos (copyright / links). Se
+  agregó el crédito como un tercer hijo en el medio — con 3 elementos,
+  `justify-between` reparte el espacio en dos tramos iguales y el del medio queda
+  centrado sin necesidad de un wrapper extra ni de tocar el layout existente. En
+  mobile (`flex-col`) cae naturalmente como segunda línea, entre el copyright y los
+  links, que es el orden pedido.
+- **Jerarquía tipográfica deliberada:** `text-[11px] text-white/40` — un paso más
+  chico y más apagado que el resto de la fila (`text-xs text-white/55`). Es una firma
+  técnica, no otro dato institucional: no debe competir visualmente con la matrícula
+  ni con los links legales. El link del email usa `text-white/55` con subrayado
+  punteado sutil (`decoration-white/20`) y aclara a `white/85` en hover — mismo
+  lenguaje de interacción que el resto de los links del footer, sin introducir un
+  color nuevo.
+- **Estado:** ✅ `npx tsc --noEmit` sin errores, `npm run build` exit 0 (39/39 rutas,
+  0 warnings). Verificado contra el HTML servido en producción (`next start`): el
+  texto "Desarrollado por" y el `href="mailto:matidiazargentino21@gmail.com"`
+  aparecen en la respuesta.

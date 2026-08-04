@@ -212,12 +212,29 @@ export const FooterPublic = () => {
           </div>
         </div>
 
-        {/* ══ COPYRIGHT ═════════════════════════════════════════ */}
+        {/* ══ COPYRIGHT ═════════════════════════════════════════
+            Tres columnas (copyright / crédito del desarrollador / links
+            legales). `justify-between` con 3 hijos reparte el espacio en dos
+            tramos iguales, así el crédito queda centrado sin un wrapper extra.
+            El crédito va en un tono más apagado (`white/40` vs `white/55` del
+            resto) y una fuente un paso más chica (11px vs 12px): es una firma
+            técnica, no otro dato institucional — no debe competir con la
+            matrícula ni con los links de Privacidad/Términos. */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 md:flex-row">
           <p className="text-center text-xs font-medium text-white/55 md:text-left">
             © {new Date().getFullYear()} Inmobiliaria Cerca Trova — Córdoba, Argentina
             <span className="mx-2 text-white/25">|</span>
             Matrícula N° 04 4838
+          </p>
+
+          <p className="text-center text-[11px] font-medium text-white/40">
+            Desarrollado por{' '}
+            <a
+              href="mailto:matidiazargentino21@gmail.com"
+              className="text-white/55 underline decoration-white/20 underline-offset-2 transition-colors hover:text-white/85"
+            >
+              Matías Diaz
+            </a>
           </p>
 
           <div className="flex gap-6">
