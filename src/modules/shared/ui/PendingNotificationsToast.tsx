@@ -10,6 +10,7 @@ import {
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import api from '@/modules/shared/lib/axios';
 import { PENDING_TOAST_KEY_PREFIX } from '@/modules/shared/lib/pendingNotifSession';
+import { NotificationType } from '@/modules/shared/types/api';
 
 /**
  * Banner de notificaciones pendientes al iniciar sesión (canal 3 de 4).
@@ -35,6 +36,8 @@ interface NotificacionMinima {
   title: string;
   message: string;
   read: boolean;
+  /** Campo real del backend; opcional por las filas previas a la migración. */
+  type?: NotificationType;
   createdAt: string;
 }
 
@@ -47,14 +50,33 @@ const TICK_MS = 16;
 /** Tope de notificaciones que se encolan. Más que esto es spam, no aviso. */
 const MAX_EN_COLA = 6;
 
+/** Ícono y color por `NotificationType` del backend. */
+const ESTILO_POR_TIPO: Record<NotificationType, { icon: React.ElementType; tono: string }> = {
+  [NotificationType.ADMIN_NUEVO_USUARIO]:          { icon: UserPlus,      tono: 'bg-blue-50 text-blue-600' },
+  [NotificationType.ADMIN_NUEVA_SOLICITUD]:        { icon: ClipboardList, tono: 'bg-amber-50 text-amber-600' },
+  [NotificationType.ESTADO_SOLICITUD]:             { icon: ClipboardList, tono: 'bg-amber-50 text-amber-600' },
+  [NotificationType.ADMIN_NUEVA_VALORACION]:       { icon: Star,          tono: 'bg-amber-50 text-amber-500' },
+  [NotificationType.ADMIN_NUEVO_COMENTARIO]:       { icon: MessageSquare, tono: 'bg-sky-50 text-sky-600' },
+  [NotificationType.ADMIN_COMENTARIO_PUBLICACION]: { icon: MessageSquare, tono: 'bg-sky-50 text-sky-600' },
+  [NotificationType.RESPUESTA_COMENTARIO]:         { icon: MessageSquare, tono: 'bg-sky-50 text-sky-600' },
+  [NotificationType.ADMIN_NUEVO_FAVORITO]:         { icon: Heart,         tono: 'bg-rose-50 text-rose-500' },
+  [NotificationType.CAMBIO_PRECIO]:                { icon: TrendingDown,  tono: 'bg-emerald-50 text-emerald-600' },
+  [NotificationType.NUEVA_PUBLICACION]:            { icon: Megaphone,     tono: 'bg-violet-50 text-violet-600' },
+  [NotificationType.NUEVA_PROPIEDAD]:              { icon: Megaphone,     tono: 'bg-violet-50 text-violet-600' },
+  [NotificationType.PROPIEDAD_MATCH]:              { icon: Star,          tono: 'bg-brand-50 text-brand-700' },
+  [NotificationType.GENERICA]:                     { icon: Bell,          tono: 'bg-brand-50 text-brand-700' },
+};
+
 /**
- * Ícono y color por tipo de notificación, inferidos del texto.
+ * Ícono y color de una notificación.
  *
- * El backend no manda un campo `type` — los títulos los arma
- * `NotificationService`, así que son estables. Es el mismo criterio que ya usa
- * `getNotifType` en las notificaciones del admin.
+ * Usa el campo `type` del backend. El matcheo por texto que había antes queda
+ * sólo como fallback para las filas anteriores a la migración (ver la nota en
+ * `dashboardAdmin/notificaciones/notifShared.tsx` — es transitorio).
  */
-function estiloDe(title: string, message: string) {
+function estiloDe(title: string, message: string, type?: NotificationType) {
+  if (type && ESTILO_POR_TIPO[type]) return ESTILO_POR_TIPO[type];
+
   const t = `${title} ${message}`.toLowerCase();
   if (t.includes('usuario registrado') || t.includes('se registró'))
     return { icon: UserPlus, tono: 'bg-blue-50 text-blue-600' };
@@ -150,7 +172,7 @@ export function PendingNotificationsToast() {
     return () => clearTimeout(id);
   }, [progreso, actual, siguiente]);
 
-  const { icon: Icono, tono } = estiloDe(actual?.title ?? '', actual?.message ?? '');
+  const { icon: Icono, tono } = estiloDe(actual?.title ?? '', actual?.message ?? '', actual?.type);
   const restantes = cola.length - indice - 1;
 
   return (

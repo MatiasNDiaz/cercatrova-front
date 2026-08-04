@@ -19,8 +19,14 @@ export function FavoriteButton({ propertyId, variant = 'default' }: FavoriteButt
   const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Favoritos es exclusivo de los usuarios comunes: TODAS las rutas de
+  // `/favorites` llevan `@Roles(Role.USER)` con `RolesGuard`, así que un admin
+  // logueado recibe 403 en el GET de chequeo y en el toggle. Mostrarle un
+  // corazón que siempre falla es peor que no mostrarlo.
+  const isAdmin = user?.role === 'admin';
+
   useEffect(() => {
-    if (!user) { setLoading(false); return; }
+    if (!user || isAdmin) { setLoading(false); return; }
     const check = async () => {
       try {
         // El userId sale del token en el backend — GET /favorites, sin id en la URL
@@ -30,7 +36,9 @@ export function FavoriteButton({ propertyId, variant = 'default' }: FavoriteButt
       finally { setLoading(false); }
     };
     check();
-  }, [user, propertyId]);
+  }, [user, isAdmin, propertyId]);
+
+  if (isAdmin) return null;
 
   const handleToggle = async () => {
     if (!user) { router.push('/login'); return; }

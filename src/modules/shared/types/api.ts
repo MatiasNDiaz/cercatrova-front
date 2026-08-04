@@ -172,6 +172,36 @@ export interface Comment {
   property?: Property; // solo en POST
 }
 
+/**
+ * Qué originó una notificación (`Notification.type`).
+ *
+ * Espejo de `NotificationType` del backend. Antes este campo no existía y el
+ * frontend clasificaba buscando substrings en el texto en español ("Bajó el
+ * precio", "se registró"…): cualquier corrección de redacción rompía los íconos
+ * y los contadores por categoría sin que nada fallara visiblemente.
+ *
+ * `targetRole` decide EN QUÉ FEED aparece; `type` decide CÓMO SE MUESTRA.
+ * Los valores `ADMIN_*` sólo aparecen en el feed del admin.
+ */
+export enum NotificationType {
+  // ── Feed del usuario ──
+  PROPIEDAD_MATCH = 'propiedad_match',
+  NUEVA_PROPIEDAD = 'nueva_propiedad',
+  CAMBIO_PRECIO = 'cambio_precio',
+  NUEVA_PUBLICACION = 'nueva_publicacion',
+  RESPUESTA_COMENTARIO = 'respuesta_comentario',
+  ESTADO_SOLICITUD = 'estado_solicitud',
+  // ── Feed del admin ──
+  ADMIN_NUEVO_USUARIO = 'admin_nuevo_usuario',
+  ADMIN_NUEVO_COMENTARIO = 'admin_nuevo_comentario',
+  ADMIN_NUEVA_VALORACION = 'admin_nueva_valoracion',
+  ADMIN_NUEVA_SOLICITUD = 'admin_nueva_solicitud',
+  ADMIN_NUEVO_FAVORITO = 'admin_nuevo_favorito',
+  ADMIN_COMENTARIO_PUBLICACION = 'admin_comentario_publicacion',
+  /** Fallback del backend: filas viejas que el backfill no pudo clasificar. */
+  GENERICA = 'generica',
+}
+
 export interface Notification {
   id: number;
   title: string;
@@ -179,6 +209,8 @@ export interface Notification {
   propertyId: number | null;
   read: boolean;
   targetRole: 'user' | 'admin';
+  /** Ver `NotificationType`. Opcional por las filas anteriores a la migración. */
+  type?: NotificationType;
   relatedUserId: number | null;
   createdAt: string;
 }

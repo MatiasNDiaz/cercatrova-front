@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -29,7 +29,16 @@ import {
 
 // ── INTERFACES ────────────────────────────────────────────────────────────────
 interface PropertyImage { id: number; url: string; isCover?: boolean; }
-interface Agent { id: number; name: string; email?: string; phone?: string; avatar?: string; }
+/**
+ * Agente de la propiedad.
+ *
+ * `phone` y `email` admiten `null` porque así los declara el contrato
+ * (`User.phone: string | null`, y los usuarios creados por Google llegan con
+ * `phone: ''`). Antes eran `string | undefined` y encajaba sólo porque la
+ * página pasaba la propiedad sin tipar (`getOne` devolvía `any`); al tipar el
+ * fetch en `page.tsx` quedó a la vista el desajuste.
+ */
+interface Agent { id: number; name: string; email?: string | null; phone?: string | null; avatar?: string | null; }
 
 interface Comment {
   id: number;
@@ -54,7 +63,7 @@ interface Rating {
  * se sobreescriben las relaciones, que en esta pantalla se consumen con los
  * shapes reducidos de arriba (`Agent`, `Comment`, `Rating`, `PropertyImage`).
  */
-type PropertyFull = Omit<
+export type PropertyFull = Omit<
   Property,
   'agent' | 'comments' | 'ratings' | 'images' | 'typeOfProperty'
 > & {
@@ -84,15 +93,35 @@ const QUICK_LINK_BASE =
 const CARD =
   'rounded-3xl border border-ink-100 bg-white shadow-[0_2px_4px_-2px_rgba(10,12,11,0.06),0_14px_34px_-14px_rgba(10,12,11,0.20)]';
 
+/**
+ * Tonos semánticos de las pastillas de ícono del detalle.
+ *
+ * Antes TODAS eran verdes (`bg-brand-700/10 text-brand-700`): ubicación,
+ * descripción, características y comentarios se veían idénticas, así que el
+ * ícono no aportaba ninguna pista de qué sección era — solo decoraba.
+ * Ahora cada tipo de contenido tiene su color, y ese color se repite en la
+ * barra de accesos rápidos de arriba, de modo que el enlace y la sección a la
+ * que lleva comparten la misma señal visual.
+ */
+const TONO_ICONO = {
+  brand: { pastilla: 'bg-brand-700/10 text-brand-700',  texto: 'text-brand-700'  },
+  rojo:  { pastilla: 'bg-red-100 text-red-600',         texto: 'text-red-600'    },
+  azul:  { pastilla: 'bg-blue-100 text-blue-600',       texto: 'text-blue-600'   },
+  ambar: { pastilla: 'bg-amber-100 text-amber-500',     texto: 'text-amber-500'  },
+} as const;
+
+export type TonoIcono = keyof typeof TONO_ICONO;
+
 /** Encabezado de sección: ícono en pastilla tintada + título. */
 function SectionHeader({
-  icon: Icon, title, id, className = 'mb-6',
+  icon: Icon, title, id, className = 'mb-6', tono = 'brand',
 }: {
   icon: React.ElementType; title: string; id?: string; className?: string;
+  tono?: TonoIcono;
 }) {
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-700/10 text-brand-700">
+      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${TONO_ICONO[tono].pastilla}`}>
         <Icon size={18} />
       </span>
       <h2 id={id} className="text-lg font-bold text-ink-900">{title}</h2>
@@ -138,7 +167,17 @@ function ImageSlider({ images, title }: { images: PropertyImage[]; title: string
       <div className="relative h-105 w-full md:h-130">
         {images.map((img, i) => (
           <div key={img.id} className={`absolute inset-0 transition-opacity duration-500 ${i === current ? 'opacity-100' : 'opacity-0'}`}>
-            <Image src={img.url} alt={`${title} - foto ${i + 1}`} fill className="object-cover" priority={i === 0} />
+            {/* Sin `sizes`, next/image asume 100vw y sirve la variante más
+                grande en cualquier pantalla. Acá la galería llega como mucho a
+                la columna principal del detalle (~62vw en desktop). */}
+            <Image
+              src={img.url}
+              alt={`${title} - foto ${i + 1}`}
+              fill
+              sizes="(max-width: 1024px) 100vw, 62vw"
+              className="object-cover"
+              priority={i === 0}
+            />
           </div>
         ))}
         <div className="absolute inset-0 bg-linear-to-t from-ink-950/50 via-transparent to-transparent" />
@@ -161,7 +200,13 @@ function ImageSlider({ images, title }: { images: PropertyImage[]; title: string
           {images.map((img, i) => (
             <button aria-label={`Ver foto ${i + 1}`} key={img.id} onClick={() => setCurrent(i)}
               className={`relative h-12 w-16 shrink-0 cursor-pointer overflow-hidden rounded-xl border-2 transition-all duration-200 ${i === current ? 'scale-105 border-brand-500' : 'border-transparent opacity-60 hover:opacity-100'}`}>
-              <Image src={img.url} alt="" fill className="object-cover" />
+              <Image
+                src={img.url}
+                alt={`Ver foto ${i + 1} de ${title}`}
+                fill
+                sizes="64px"
+                className="object-cover"
+              />
             </button>
           ))}
         </div>
@@ -176,7 +221,7 @@ function GoogleMapSection({ address }: { address: string }) {
   const mapUrl = `https://www.google.com/maps?q=${encodedAddress}&output=embed`;
   return (
     <div className={`scroll-mt-28 ${CARD} p-8`}>
-      <SectionHeader icon={MapPin} title="Ubicación" id="mapa-ubicacion" className="mb-3" />
+      <SectionHeader icon={MapPin} title="Ubicación" id="mapa-ubicacion" className="mb-3" tono="rojo" />
       <p className="mb-6 flex items-center gap-2 text-sm font-medium text-ink-600">
         <Navigation size={14} className="shrink-0 text-brand-700" />{address}
       </p>
@@ -266,7 +311,7 @@ function CommentsAndRatings({
       } catch {}
     };
     fetchData();
-  }, [propertyId]);
+  }, [propertyId, onRatingsChange]);
 
   // Sincroniza selectedScore cuando llegan los ratings frescos
   useEffect(() => {
@@ -439,7 +484,14 @@ function CommentsAndRatings({
           </div>
         )}
 
-        {user ? (
+        {user?.role === 'admin' ? (
+          /* Valorar es exclusivo de usuarios comunes: `POST /ratings/:id` lleva
+             `@Roles(Role.USER)`, así que al admin le devolvería 403. Se le
+             muestra el motivo en vez de un formulario que no puede usar. */
+          <p className="rounded-2xl border border-dashed border-ink-200 p-4 text-center text-sm text-ink-500">
+            Las valoraciones son de los usuarios: desde una cuenta de administrador no se puede valorar.
+          </p>
+        ) : user ? (
           <div className="rounded-2xl border border-brand-700/10 bg-brand-700/5 p-5">
             <p className="mb-3 text-sm font-bold text-ink-700">
               {myRating ? '✏️ Modificar tu valoración' : '⭐ Valorá esta propiedad'}
@@ -465,11 +517,11 @@ function CommentsAndRatings({
       {/* ── COMENTARIOS ── */}
       <div id="comentarios" className={`scroll-mt-28 ${CARD} p-8`}>
         <h2 className="mb-6 flex items-center gap-3 text-lg font-bold text-ink-900">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-700/10 text-brand-700">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
             <MessageCircleMore size={18} />
           </span>
           Comentarios
-          <span className="ml-1 rounded-full bg-brand-700/10 px-2 py-0.5 text-xs font-bold text-brand-700">
+          <span className="ml-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-600">
             {comments.length}
           </span>
         </h2>
@@ -664,10 +716,21 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
   const [liveRatingsCount, setLiveRatingsCount] = useState(ratings.length);
   const [liveAverage, setLiveAverage] = useState(ratingAverage);
 
-  const handleRatingsChange = (updatedRatings: Rating[], updatedAverage: number) => {
+  /**
+   * `useCallback` con `[]`: sólo llama a dos setters de estado, que React
+   * garantiza estables, así que la identidad de esta función no necesita
+   * cambiar nunca.
+   *
+   * Importa porque `CommentsAndRatings` la recibe como prop y la usa dentro de
+   * un `useEffect`. Sin memoizar, la función se recreaba en cada render del
+   * padre y no se podía incluir en las dependencias del efecto sin provocar un
+   * refetch infinito de comentarios y valoraciones — por eso estaba omitida y
+   * ESLint lo marcaba. Memoizada, la dependencia se puede declarar de verdad.
+   */
+  const handleRatingsChange = useCallback((updatedRatings: Rating[], updatedAverage: number) => {
     setLiveRatingsCount(updatedRatings.length);
     setLiveAverage(updatedAverage);
-  };
+  }, []);
 
   const sortedImages = [...images].sort((a, b) => a.isCover ? -1 : b.isCover ? 1 : 0);
   const isAvailable = status === 'disponible';
@@ -695,18 +758,18 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
               Volver al catálogo
             </Link>
             <span className="text-ink-400">|</span>
-            <a href="#mapa-ubicacion" onClick={scrollTo('mapa-ubicacion')} className={`${QUICK_LINK_BASE} text-ink-500`}>
-              <MapPin size={16} className="shrink-0 transition-transform duration-300 ease-out group-hover:scale-110" />
+            <a href="#mapa-ubicacion" onClick={scrollTo('mapa-ubicacion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:!bg-red-600`}>
+              <MapPin size={16} className="shrink-0 text-red-600 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:text-white" />
               Ver dirección exacta
             </a>
             <span className="text-ink-400">|</span>
-            <a href="#comentarios" onClick={scrollTo('comentarios')} className={`${QUICK_LINK_BASE} text-ink-500`}>
-              <MessageCircleMore size={16} className="shrink-0 transition-transform duration-300 ease-out group-hover:scale-110" />
+            <a href="#comentarios" onClick={scrollTo('comentarios')} className={`${QUICK_LINK_BASE} text-ink-600 hover:!bg-blue-600`}>
+              <MessageCircleMore size={16} className="shrink-0 text-blue-600 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:text-white" />
               Ver Comentarios
             </a>
             <span className="text-ink-400">|</span>
-            <a href="#valoracion" onClick={scrollTo('valoracion')} className={`${QUICK_LINK_BASE} text-ink-500`}>
-              <Star size={16} className="shrink-0 transition-transform duration-300 ease-out group-hover:scale-110" />
+            <a href="#valoracion" onClick={scrollTo('valoracion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:!bg-amber-500`}>
+              <Star size={16} className="shrink-0 fill-amber-400 text-amber-500 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:fill-white group-hover:text-white" />
               Ver Valoraciones
             </a>
           </div>
@@ -893,12 +956,29 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                 {/* Franja de marca arriba: le da jerarquía a la tarjeta de
                     precio, que es el dato más importante del sidebar. */}
                 <div className="h-1.5 w-full" style={{ background: 'var(--gradient-brand)' }} />
-                <div className="px-7 pt-6 pb-5">
-                  <p className="mb-1.5 text-[11px] font-bold tracking-[0.14em] text-ink-500 uppercase">Precio</p>
-                  <p className="text-4xl font-black tracking-tight text-brand-700">
-                    ${price.toLocaleString('es-AR')}
-                    <span className="ml-1.5 text-base font-semibold text-ink-500">USD</span>
+                {/* El precio es el dato más importante del sidebar, pero antes
+                    era solo un número grande sobre blanco con un rótulo gris
+                    encima — se leía como un dato más de la lista. Ahora vive en
+                    su propio panel verde clarísimo: la etiqueta es una píldora
+                    de marca, el monto está separado del sufijo USD en su propia
+                    línea de base, y debajo va el tipo de operación, que antes
+                    solo aparecía arriba en los badges del título. */}
+                <div className="border-b border-brand-100 bg-brand-50/60 px-7 pt-6 pb-6">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-700 px-3 py-1 text-[10px] font-bold tracking-[0.16em] text-white uppercase">
+                    <Landmark size={12} />
+                    Precio
+                  </span>
+                  <p className="mt-3 flex items-baseline gap-1.5 leading-none">
+                    <span className="text-[2.6rem] font-black tracking-tight text-brand-800">
+                      ${price.toLocaleString('es-AR')}
+                    </span>
+                    <span className="text-sm font-bold tracking-wide text-brand-600">USD</span>
                   </p>
+                  {operationType && (
+                    <p className="mt-2.5 text-xs font-semibold text-ink-500">
+                      Publicada en <span className="text-brand-700 capitalize">{operationType}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="px-7 pb-7">
                   <a href={wa} target="_blank" rel="noopener noreferrer"
@@ -916,14 +996,21 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                 <div className={`${CARD} p-7`}>
                   <p className="mb-4 text-[11px] font-bold tracking-[0.14em] text-brand-700 uppercase">Agente a cargo</p>
                   <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-brand-700/10">
+                    {/* Circular, no `rounded-2xl`: es una CARA, y el cuadrado
+                        redondeado la recortaba por las mejillas. Además el
+                        <Image> no llenaba el contenedor — sin `h-full w-full`
+                        una foto no cuadrada quedaba descentrada dentro de la
+                        caja. El aro verde la separa del fondo blanco. */}
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-700/10 ring-2 ring-brand-200 ring-offset-2 ring-offset-white">
                       {agent.avatar
-                        ? <Image src={agent.avatar} alt={agent.name} width={56} height={56} className="object-cover" />
-                        : <User size={24} className="text-brand-700" />}
+                        ? <Image src={agent.avatar} alt={agent.name} width={64} height={64} className="h-full w-full object-cover" />
+                        : <User size={26} className="text-brand-700" />}
                     </div>
-                    <div>
-                      <p className="font-bold text-ink-800">{agent.name}</p>
-                      {agent.email && <p className="mt-0.5 text-xs text-ink-500">{agent.email}</p>}
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-bold text-ink-900">{agent.name}</p>
+                      {agent.email && (
+                        <p className="mt-0.5 truncate text-xs text-ink-500" title={agent.email}>{agent.email}</p>
+                      )}
                     </div>
                   </div>
                 </div>

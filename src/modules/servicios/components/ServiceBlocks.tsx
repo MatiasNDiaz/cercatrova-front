@@ -41,6 +41,7 @@ export type ServiceTone = 'white' | 'soft' | 'deep';
  */
 export type ServiceReveal = 'fade' | 'slide';
 
+
 /** Desplazamiento vertical de entrada, en px, por tipo. */
 const REVEAL_Y: Record<ServiceReveal, number> = {
   fade: 0,   // solo opacidad
@@ -222,9 +223,9 @@ export function ServiceSplit({
               {title}
             </Title>
 
-            {paragraphs.map((p, i) => (
+            {paragraphs.map((par, i) => (
               <p key={i} className="text-[15px] leading-relaxed text-ink-600 sm:text-base">
-                {p}
+                {par}
               </p>
             ))}
 
@@ -539,19 +540,24 @@ export function ServiceCta({
   action: ServiceAction;
 }) {
   return (
-    <ServiceSection tone="deep">
+    /* Fondo BLANCO, no verde profundo.
+       El cierre iba sobre `surface-brand-deep` y quedaba pegado al footer, que
+       también es verde oscuro: los dos bloques se fundían en una única mancha
+       oscura al final de la página. Con el cierre en claro, el footer vuelve a
+       leerse como el remate y no como una continuación. */
+    <ServiceSection tone="white">
       <div className="mx-auto max-w-3xl text-center">
         <Reveal>
-          <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
+          <h2 className="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl lg:text-4xl">
             {title}
           </h2>
         </Reveal>
         <Reveal delay={0.08}>
-          <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-white/80">{text}</p>
+          <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-ink-600">{text}</p>
         </Reveal>
         <Reveal delay={0.14}>
           <div className="mt-8 flex justify-center">
-            <ServiceButton action={action} onDark />
+            <ServiceButton action={action} />
           </div>
         </Reveal>
       </div>

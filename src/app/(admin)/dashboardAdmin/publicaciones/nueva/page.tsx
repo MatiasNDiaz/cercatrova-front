@@ -80,6 +80,7 @@ export default function NuevaPublicacionPage() {
       <DashboardHeader
         back={{ href: '/dashboardAdmin/publicaciones', label: 'Volver a Publicaciones' }}
         icon={Megaphone}
+        iconTone="publicacion"
         title="Nueva publicación"
         subtitle="Se elimina automáticamente a los 7 días de publicada."
       />

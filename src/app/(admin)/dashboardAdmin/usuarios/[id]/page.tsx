@@ -10,6 +10,7 @@ import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
 import Image from 'next/image';
 import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
+import { WhatsappLink } from '@/modules/shared/ui/WhatsappLink';
 import {
   User, Mail, Phone, Calendar,
   FileText, CheckCircle, XCircle, Clock,
@@ -356,7 +357,6 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
       message: `Se va a eliminar la solicitud #${reqId}. Esta acción no se puede deshacer.`,
       confirmLabel: 'Eliminar',
       variant: 'danger',
-      icon: Trash2,
       onConfirm: async () => {
         setDeletingId(reqId);
         try {
@@ -466,11 +466,11 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           </div>
 
           <div className="flex gap-2 flex-wrap">
-            <a href={`https://wa.me/${user.phone?.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
+            <WhatsappLink phone={user.phone}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95 shadow-sm"
               style={{ background: 'linear-gradient(135deg, #25d366, #1ebe5d)' }}>
               <WhatsappIcon size={14} /> WhatsApp
-            </a>
+            </WhatsappLink>
             <a href={gmailUrl(user.email, user.name)} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#0b7a4b] bg-[#0b7a4b]/10 hover:bg-[#0b7a4b]/16 transition-all active:scale-95">
               <Mail size={14} /> Gmail
@@ -517,8 +517,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
 
         {requests.length === 0 && (
           <div className="bg-white rounded-xl p-10 border border-gray-100 flex flex-col items-center gap-3 text-center">
-            <div className="w-12 h-12 rounded-xl bg-[#0b7a4b]/8 flex items-center justify-center">
-              <FileText size={20} className="text-[#0b7a4b]" />
+            <div className="w-12 h-12 rounded-xl bg-white ring-1 ring-ink-100 shadow-sm flex items-center justify-center">
+              <FileText size={20} className="text-amber-600 " />
             </div>
             <p className="font-medium text-gray-600 text-sm">Este usuario no tiene solicitudes todavía</p>
           </div>
@@ -536,8 +536,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
               className={`bg-white rounded-xl border border-gray-100 overflow-hidden transition-all hover:border-gray-200 hover:shadow-sm ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}>
 
               <div className="flex items-center gap-5 px-5 py-4">
-                <div className="w-11 h-11 rounded-xl bg-[#0b7a4b]/16 flex items-center justify-center shrink-0">
-                  <Home size={18} className="text-[#0b7a4b]" />
+                <div className="w-11 h-11 rounded-xl bg-white ring-1 ring-ink-100 shadow-sm flex items-center justify-center shrink-0">
+                  <Home size={18} className="text-brand-700 " />
                 </div>
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">

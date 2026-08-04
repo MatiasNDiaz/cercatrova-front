@@ -80,7 +80,6 @@ export function CommentModeration({ postId }: { postId: number }) {
       confirmLabel: 'Sí, eliminar',
       cancelLabel: 'Cancelar',
       variant: 'danger',
-      icon: Trash2,
       onConfirm: async () => {
         try {
           await postsService.removeComment(comment.id);

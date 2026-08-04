@@ -9,9 +9,8 @@ import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { validateImageFile } from '@/modules/shared/lib/validateImage';
 import {
   User, Camera, Save, Eye, EyeOff, Lock, Mail,
-  Phone, BadgeCheck, Pencil,
+  Phone, BadgeCheck, Pencil
 } from 'lucide-react';
-import Link from 'next/link';
 
 import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
 import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
@@ -105,7 +104,7 @@ export default function AdminPerfilPage() {
       // estaba) deja el header sin boundary y el backend no puede parsear el
       // archivo → 400. Mismo bug que se corrigió en PropertyForm.
       const { data: updated } = await api.patch(`/users/${user!.id}/photo`, formData, {
-        headers: { 'Content-Type': undefined },
+        headers: { 'Content-Type': undefined }
       });
       updateUser({ photo: updated.photo });
       toast.success('Foto actualizada');

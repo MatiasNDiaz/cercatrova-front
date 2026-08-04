@@ -1,6 +1,7 @@
 'use client';
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { GOOGLE_CLIENT_ID as CLIENT_ID } from '@/modules/shared/lib/env';
 
 /**
  * Provider de Google OAuth (Bloque H).
@@ -18,7 +19,8 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
  * de Google simplemente no aparece (ver `GoogleAuthButton`).
  */
 
-export const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? '';
+/** Re-export para no romper los imports existentes; la fuente es `shared/lib/env`. */
+export const GOOGLE_CLIENT_ID = CLIENT_ID;
 
 export function GoogleProvider({ children }: { children: React.ReactNode }) {
   if (!GOOGLE_CLIENT_ID) {

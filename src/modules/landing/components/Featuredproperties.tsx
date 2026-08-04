@@ -12,34 +12,24 @@ const HOW_MANY = 4;
 /**
  * Propiedades destacadas (Bloque LANDING §2 y §7).
  *
- * Regla de negocio: las mejor valoradas primero. Se usa GET /properties
- * (vía `propertiesService.getAll`) porque es el único listado que incluye
- * `ratingAverage`; GET /properties/filter no lo trae.
+ * Regla de negocio: las mejor valoradas primero. El orden y el recorte los
+ * resuelve el backend con `sortBy=rating&order=DESC&limit=4`
+ * (`propertiesService.getFeatured`).
  *
- * Orden: ratingAverage desc → created_at desc. Ese segundo criterio hace que,
- * si hay empates o pocas propiedades valoradas, la lista se complete sola con
- * las más recientes hasta llegar a 4, sin lógica extra.
+ * Antes esta sección descargaba el catálogo COMPLETO con `GET /properties` y
+ * ordenaba en memoria, porque era el único listado que incluía `ratingAverage`.
+ * Ya no hace falta: `/properties/filter` devuelve ese campo, y encima filtra
+ * por `status: 'disponible'`, así que nunca se destaca algo ya vendido.
  *
  * Fondo `surface` (gris) con tarjetas blancas: así las tarjetas se despegan del
  * fondo de verdad, no solo por la sombra.
  */
-function pickFeatured(all: Property[]): Property[] {
-  return [...all]
-    .sort((a, b) => {
-      const ra = a.ratingAverage ?? 0;
-      const rb = b.ratingAverage ?? 0;
-      if (rb !== ra) return rb - ra;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    })
-    .slice(0, HOW_MANY);
-}
-
 export default async function FeaturedProperties() {
   // Si el backend no está disponible (ej. durante el build) se renderiza el
   // estado vacío en vez de romper el prerender de la landing.
   let featured: Property[] = [];
   try {
-    featured = pickFeatured(await propertiesService.getAll());
+    featured = await propertiesService.getFeatured(HOW_MANY);
   } catch {
     featured = [];
   }

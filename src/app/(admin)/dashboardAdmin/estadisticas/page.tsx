@@ -9,16 +9,15 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
 import { toast } from 'sonner';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { useUrlFilter } from '@/modules/shared/hooks/useUrlFilter';
 import { BarChart3, Loader2, RefreshCw, Users, Eye,
-  Timer, Building2, ClipboardList, Search, AlertCircle,
+  Timer, Building2, ClipboardList, Search, AlertCircle
 } from 'lucide-react';
 import {
-  ChartCard, PieStat, BarStat, PropertyRankStat, TrafficChart, NoData, fmt,
+  ChartCard, PieStat, BarStat, PropertyRankStat, TrafficChart, NoData, fmt
 } from '@/modules/statistics/components/charts';
 import { RANGE_LABELS, type StatisticsOverview, type StatsRange } from '@/modules/statistics/types';
 
@@ -130,7 +129,7 @@ export default function EstadisticasPage() {
 function Contenido({ data }: { data: StatisticsOverview }) {
   const {
     busquedas, operacion, favoritas, comentadas, valoradas,
-    visitadas, trafico, registros, solicitudes, tiempo, inventario,
+    visitadas, trafico, registros, solicitudes, tiempo, inventario
   } = data;
 
   const rangoLabel = RANGE_LABELS[data.range].toLowerCase();
@@ -228,12 +227,12 @@ function Contenido({ data }: { data: StatisticsOverview }) {
               {
                 label: 'Con cuenta',
                 count: trafico.visitantesLogueados,
-                percentage: pct(trafico.visitantesLogueados, trafico.visitantesUnicos),
+                percentage: pct(trafico.visitantesLogueados, trafico.visitantesUnicos)
               },
               {
                 label: 'Anónimos',
                 count: trafico.visitantesAnonimos,
-                percentage: pct(trafico.visitantesAnonimos, trafico.visitantesUnicos),
+                percentage: pct(trafico.visitantesAnonimos, trafico.visitantesUnicos)
               },
             ]}
             unit="visitantes"
@@ -372,7 +371,7 @@ function Contenido({ data }: { data: StatisticsOverview }) {
               data={tiempo.porPagina.map(p => ({
                 label: p.label,
                 count: p.segundos,
-                percentage: p.muestras,
+                percentage: p.muestras
               }))}
               unit="seg."
               showPercentage={false}
@@ -399,7 +398,7 @@ function Contenido({ data }: { data: StatisticsOverview }) {
       <p className="pb-2 text-center text-xs text-gray-400">
         Generado el{' '}
         {new Date(data.generadoEn).toLocaleString('es-AR', {
-          day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+          day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
         })}
       </p>
     </div>
@@ -420,7 +419,7 @@ function Titulo({ children }: { children: React.ReactNode }) {
 }
 
 function Kpi({
-  icon: Icon, label, value, hint,
+  icon: Icon, label, value, hint
 }: {
   icon: React.ElementType;
   label: string;

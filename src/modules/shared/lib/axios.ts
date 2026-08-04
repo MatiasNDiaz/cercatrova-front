@@ -1,9 +1,20 @@
 import axios, { isAxiosError } from 'axios';
 import { emitUnauthorized } from './authEvents';
+import { API_URL } from './env';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+  baseURL: API_URL,
   withCredentials: true, // 👈 todas las requests mandan cookies automáticamente
+  // Sin esto el default de axios es 0 = SIN LÍMITE. En los Server Components
+  // (landing, catálogo, detalle, publicaciones) una API lenta o colgada
+  // bloqueaba la respuesta HTTP indefinidamente: se midió una request a `/` sin
+  // responder por más de 4 minutos con el backend caído. El `try/catch` no
+  // ayudaba porque la promesa nunca se rechazaba.
+  //
+  // 15s es holgado para la operación más pesada del contrato (subir hasta 10
+  // imágenes a Cloudinary) y muy por debajo del umbral en que un visitante
+  // asume que el sitio está roto.
+  timeout: 15_000,
   headers: {
     'Content-Type': 'application/json',
   },

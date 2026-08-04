@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutGrid, List, SearchX } from 'lucide-react';
 import { usePropertyFilters } from '@/modules/properties/hooks/usePropertyFilters';
@@ -9,6 +9,7 @@ import { PropertyCard } from '@/modules/properties/components/PropertyCard';
 import { PropertyRow } from '@/modules/properties/components/PropertyRow';
 import { CatalogFilterBar } from '@/modules/properties/components/CatalogFilterBar';
 import { FiltersModal } from '@/modules/properties/components/FiltersModal';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { Property } from '@/modules/properties/interfaces/propertyInterface';
 
 interface Props {
@@ -46,55 +47,49 @@ export default function PropertiesCatalog({ initialItems, initialTotal }: Props)
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [nonce, setNonce] = useState(0); // fuerza el re-stagger en cada fetch
-  // Mapa id→promedio de valoración. `GET /properties/filter` NO devuelve
-  // `ratingAverage` (solo `GET /properties` y `/:id`), así que lo traemos una
-  // vez de `getAll()` y lo cruzamos con la página filtrada que se muestra.
-  const [ratings, setRatings] = useState<Record<number, number>>({});
+  /**
+   * Si la última búsqueda falló.
+   *
+   * Antes el `catch` sólo hacía `console.error`: con el backend caído la
+   * pantalla mostraba el estado vacío ("No encontramos propiedades. Probá
+   * ajustando los filtros"), que es directamente falso —no falló la búsqueda,
+   * falló la conexión— y dejaba al visitante tocando filtros sin entender nada.
+   */
+  const [fetchError, setFetchError] = useState(false);
   const isFirstRender = useRef(true);
 
   // ── FETCH cuando cambian los filtros (la URL es la fuente de verdad) ──
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setFetchError(false);
+    try {
+      const response = await propertiesService.getFilteredProperties(filters);
+      setItems(response?.data || []);
+      setTotal(response?.meta?.totalItems || 0);
+      setNonce((n) => n + 1);
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+      setFetchError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const response = await propertiesService.getFilteredProperties(filters);
-        setItems(response?.data || []);
-        setTotal(response?.meta?.totalItems || 0);
-        setNonce((n) => n + 1);
-      } catch (error) {
-        console.error('Error fetching properties:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
-  }, [filters]);
+  }, [fetchData]);
 
-  // ── Valoraciones (una sola vez) ──
-  useEffect(() => {
-    propertiesService
-      .getAll()
-      .then((all) => {
-        const map: Record<number, number> = {};
-        all.forEach((p) => {
-          if (typeof p.ratingAverage === 'number' && p.ratingAverage > 0) {
-            map[p.id] = p.ratingAverage;
-          }
-        });
-        setRatings(map);
-      })
-      .catch(() => {});
-  }, []);
-
-  // Items enriquecidos con su valoración para pasarla a las tarjetas.
-  const itemsWithRatings = useMemo(
-    () => items.map((p) => ({ ...p, ratingAverage: ratings[p.id] ?? p.ratingAverage })),
-    [items, ratings]
-  );
+  // `GET /properties/filter` ahora devuelve `ratingAverage` en cada fila, así
+  // que las tarjetas ya lo reciben directamente en `items`.
+  //
+  // Antes acá había un `useEffect` que descargaba el catálogo COMPLETO con
+  // `getAll()` sólo para armar un mapa `id → ratingAverage` y cruzarlo con la
+  // página visible: una request extra sin paginar en cada visita al catálogo,
+  // que además pegaba contra el endpoint N+1 del backend.
 
   const perPage = filters.limit || PAGE_LIMIT;
   const totalPages = Math.ceil(total / perPage);
@@ -228,8 +223,15 @@ export default function PropertiesCatalog({ initialItems, initialTotal }: Props)
           </motion.div>
 
           {/* ── RESULTADOS ── */}
+          {/* El orden importa: "falló" tiene que ganarle a "está vacío", porque
+              cuando la petición falla no sabemos si hay resultados o no. */}
           {loading ? (
             <SkeletonGrid viewMode={viewMode} />
+          ) : fetchError ? (
+            <ErrorState
+              message="No pudimos cargar las propiedades. Puede ser un problema momentáneo de conexión. Probá de nuevo en unos segundos."
+              onRetry={fetchData}
+            />
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-ink-200/70 bg-white py-24 text-center">
               <SearchX size={48} className="mb-4 text-ink-400" />
@@ -252,7 +254,7 @@ export default function PropertiesCatalog({ initialItems, initialTotal }: Props)
                     : 'flex flex-col gap-5'
                 }
               >
-                {itemsWithRatings.map((prop) => (
+                {items.map((prop) => (
                   <motion.div key={prop.id} variants={gridItem}>
                     {viewMode === 'grid' ? (
                       <PropertyCard property={prop} />

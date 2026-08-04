@@ -10,9 +10,8 @@ import { Select } from '@/modules/shared/ui/Select';
 import { toast } from 'sonner';
 import {
   MapPin, Home, Ruler, DollarSign, Bell, Save,
-  Bed, Bath, Hourglass, FileCheck, Car, Trees, SlidersHorizontal, ChevronDown, ChevronUp,
+  Bed, Bath, Hourglass, FileCheck, Car, Trees, SlidersHorizontal, ChevronDown, ChevronUp
 } from 'lucide-react';
-import Link from 'next/link';
 
 import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
 import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
@@ -260,7 +259,7 @@ export default function PreferenciasPage() {
     garage:           false,
     patio:            false,
     notifyNewMatches: true,
-    notifyPriceDrops: true,
+    notifyPriceDrops: true
   });
 
   const set = (key: string, value: string | boolean | number) =>
@@ -296,7 +295,7 @@ export default function PreferenciasPage() {
             garage:           data.garage ?? false,
             patio:            data.patio ?? false,
             notifyNewMatches: data.notifyNewMatches ?? true,
-            notifyPriceDrops: data.notifyPriceDrops ?? true,
+            notifyPriceDrops: data.notifyPriceDrops ?? true
           });
         }
       } catch {
@@ -329,7 +328,7 @@ export default function PreferenciasPage() {
         garage:           form.garage,
         patio:            form.patio,
         notifyNewMatches: form.notifyNewMatches,
-        notifyPriceDrops: form.notifyPriceDrops,
+        notifyPriceDrops: form.notifyPriceDrops
       };
       if (hasPrefs) {
         await api.patch('/search-preferences', payload);
@@ -555,12 +554,12 @@ export default function PreferenciasPage() {
               {
                 key: 'notifyNewMatches',
                 label: 'Nuevas propiedades que coincidan',
-                desc: 'Te avisamos por mail cuando se publique algo que cumpla tus criterios',
+                desc: 'Te avisamos por mail cuando se publique algo que cumpla tus criterios'
               },
               {
                 key: 'notifyPriceDrops',
                 label: 'Bajas de precio',
-                desc: 'Te avisamos cuando una propiedad reduzca su precio',
+                desc: 'Te avisamos cuando una propiedad reduzca su precio'
               },
             ].map(({ key, label, desc }) => (
               <div key={key}

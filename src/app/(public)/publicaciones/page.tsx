@@ -34,14 +34,29 @@ export default async function PublicacionesPage() {
   }
 
   return (
-    /* Fondo verde de sección (`surface-mint-deep`, el mismo de los resultados
-       del catálogo) en vez del gris. Se sacó la franja blanca que separaba el
-       encabezado del feed: ahora el título vive sobre el mismo fondo y la
-       página se lee como una sola pieza. */
-    <main className="min-h-screen bg-surface-mint-deep">
-      {/* Sin encabezado: el feed arranca directo, debajo de la navbar.
-          `pt-26` deja el aire que antes ocupaba la franja blanca. */}
-      <div className="pt-26" />
+    /* `surface-mint` y no `surface-mint-deep`: el tono profundo pesaba
+       demasiado detrás de una columna de tarjetas blancas grandes. Este es el
+       mismo verde de sección que alternan la landing, el hero del catálogo y
+       las páginas de servicio, así que la página se siente parte del sitio en
+       vez de una zona aparte. */
+    <main className="min-h-screen bg-surface-mint">
+      {/* Encabezado con el MISMO tratamiento que el resto del sitio: eyebrow en
+          pastilla verde sólida + h2 centrado. Es el patrón de `SectionHeading`
+          de la landing; se replica acá en vez de importarlo porque este título
+          va más compacto (`mb-10`, sin el `mb-14` que usan las secciones de la
+          landing) y `SectionHeading` no expone ese ajuste. */}
+      <div className="mx-auto max-w-3xl px-4 pt-28 pb-10 text-center">
+        <span className="inline-block rounded-full bg-brand-700 px-4 py-1.5 text-xs font-bold tracking-[0.22em] text-white uppercase shadow-[0_4px_12px_-4px_rgba(11,122,75,0.6)]">
+          Novedades
+        </span>
+        <h2 className="mt-5 text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">
+          Publicaciones
+        </h2>
+        <p className="mt-4 text-base leading-relaxed text-ink-600">
+          Oportunidades y propiedades destacadas. Dejanos tu comentario o
+          consultanos por la que te interese.
+        </p>
+      </div>
 
       <PostsFeed initialPosts={initialPosts} />
     </main>

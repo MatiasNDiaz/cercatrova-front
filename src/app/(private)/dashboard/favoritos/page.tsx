@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -9,6 +9,7 @@ import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { toast } from 'sonner';
 import { DashboardPage, DashboardHeader, ListReveal } from '@/modules/shared/ui/DashboardPage';
 import { ListToolbar, ListSearch, ListSelect, NoMatches } from '@/modules/shared/ui/ListToolbar';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import {
   Heart, MapPin, Bed, Bath, Maximize, Trash2, Home, ArrowRight, ArrowUpDown,
 } from 'lucide-react';
@@ -43,6 +44,8 @@ export default function FavoritosPage() {
   const [removingId, setRemovingId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>('recientes');
+  /** El toast se desvanece; esto deja el motivo del fallo a la vista. */
+  const [fetchError, setFetchError] = useState(false);
 
   // Filtrado de presentación sobre lo ya traído por `GET /favorites`.
   const visible = useMemo(() => {
@@ -67,24 +70,25 @@ export default function FavoritosPage() {
     });
   }, [favorites, search, sortBy]);
 
-  useEffect(() => {
-    const fetchFavorites = async () => {
-      try {
-        // El userId sale del token en el backend — GET /favorites, sin id en la URL
-        const { data } = await api.get('/favorites');
-        // Guard defensivo: si el admin borró una propiedad que estaba en
-        // favoritos y el backend no cascadeó la fila, `property` puede venir
-        // null/undefined. Filtramos esos casos ANTES de renderizar para evitar
-        // el TypeError al acceder a property.images/title/price (ver auditoría).
-        setFavorites(Array.isArray(data) ? data.filter((f: FavoriteProperty) => Boolean(f?.property)) : []);
-      } catch (error) {
-        toast.error(getErrorMessage(error));
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (user) fetchFavorites();
-  }, [user]);
+  const fetchFavorites = useCallback(async () => {
+    setFetchError(false);
+    try {
+      // El userId sale del token en el backend — GET /favorites, sin id en la URL
+      const { data } = await api.get('/favorites');
+      // Guard defensivo: si el admin borró una propiedad que estaba en
+      // favoritos y el backend no cascadeó la fila, `property` puede venir
+      // null/undefined. Filtramos esos casos ANTES de renderizar para evitar
+      // el TypeError al acceder a property.images/title/price (ver auditoría).
+      setFavorites(Array.isArray(data) ? data.filter((f: FavoriteProperty) => Boolean(f?.property)) : []);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+      setFetchError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { if (user) fetchFavorites(); }, [user, fetchFavorites]);
 
   const handleRemove = async (propertyId: number) => {
     setRemovingId(propertyId);
@@ -103,6 +107,7 @@ export default function FavoritosPage() {
     <DashboardPage>
       <DashboardHeader
         icon={Heart}
+        iconTone="favorito"
         title="Favoritos"
         subtitle={
           loading
@@ -147,10 +152,20 @@ export default function FavoritosPage() {
       )}
 
       {/* Empty */}
-      {!loading && favorites.length === 0 && (
+      {/* "Falló" le gana a "está vacío": si la petición no llegó, no sabemos
+          si el usuario tiene favoritos guardados o no. */}
+      {!loading && fetchError && (
+        <ErrorState
+          message="No pudimos cargar tus favoritos. Puede ser un problema momentáneo de conexión."
+          onRetry={fetchFavorites}
+          compact
+        />
+      )}
+
+      {!loading && !fetchError && favorites.length === 0 && (
         <div className="bg-white rounded-xl p-12 border border-gray-100 shadow-sm flex flex-col items-center gap-4 text-center">
-          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center">
-            <Heart size={28} className="text-red-300" />
+          <div className="w-16 h-16 rounded-full bg-white ring-1 ring-ink-100 shadow-sm flex items-center justify-center">
+            <Heart size={28} className="text-rose-500 " />
           </div>
           <div>
             <p className="font-bold text-gray-700">No tenés favoritos todavía</p>
@@ -165,7 +180,7 @@ export default function FavoritosPage() {
       )}
 
       {/* Sin coincidencias — distinto de "no tenés favoritos". */}
-      {!loading && favorites.length > 0 && visible.length === 0 && (
+      {!loading && !fetchError && favorites.length > 0 && visible.length === 0 && (
         <NoMatches onClear={() => setSearch('')} message="Ninguno de tus favoritos coincide con esa búsqueda." />
       )}
 
@@ -186,7 +201,13 @@ export default function FavoritosPage() {
                       si la mirabas en el catálogo o acá. */}
                   <Link href={`/properties/${property_id}`} className="block w-full h-full">
                     {coverImage ? (
-                      <Image src={coverImage} alt={property.title} fill className="object-cover transition-transform duration-700 ease-out group-hover:scale-105" />
+                      <Image
+                        src={coverImage}
+                        alt={property.title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <Home size={32} className="text-gray-400" />

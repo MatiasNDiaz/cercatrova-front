@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { whatsappLink } from '@/modules/shared/lib/contact';
 import type { Post, PostSortBy } from '@/modules/shared/types/api';
 import { PostCard } from './PostCard';
+import { ErrorState } from '@/modules/shared/ui/ErrorState';
 
 /* Variantes de entrada del feed. Duración y curva alineadas con `ListReveal`
    del dashboard y con la grilla del catálogo — un solo ritmo en todo el sitio. */
@@ -38,31 +39,36 @@ export function PostsFeed({ initialPosts }: { initialPosts: Post[] }) {
   // El fetch del servidor va sin sesión, así que `likedByMe` viene siempre en
   // false. Este refetch del cliente (con la cookie) lo corrige al montar.
   const [hydrated, setHydrated] = useState(false);
+  /** El toast se va a los segundos; esto deja el motivo a la vista. */
+  const [fetchError, setFetchError] = useState(false);
 
-  useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      // No mostrar el spinner en la hidratación inicial: ya hay contenido.
-      if (hydrated) setLoading(true);
-      try {
-        const data = await postsService.getAll(sortBy);
-        if (alive) setPosts(data);
-      } catch (error) {
-        if (alive) toast.error(getErrorMessage(error));
-      } finally {
-        if (alive) { setLoading(false); setHydrated(true); }
-      }
-    };
-    load();
-    return () => { alive = false; };
+  const load = useCallback(async () => {
+    // No mostrar el spinner en la hidratación inicial: ya hay contenido.
+    if (hydrated) setLoading(true);
+    setFetchError(false);
+    try {
+      const data = await postsService.getAll(sortBy);
+      setPosts(data);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+      setFetchError(true);
+    } finally {
+      setLoading(false);
+      setHydrated(true);
+    }
+    // `hydrated` a propósito fuera de las deps: sólo decide si se ve el
+    // spinner, y meterlo dispararía un refetch extra apenas se pone en true.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortBy]);
 
+  useEffect(() => { load(); }, [load]);
+
   return (
-    /* Columna única y angosta, como un feed de red social: la lectura baja
-       en línea recta y la imagen manda. Antes eran dos columnas (feed +
-       barra lateral fija), que en una página de este tipo compiten. */
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 pb-20">
+    /* Dos columnas: el feed ocupa 2/3 y la información secundaria 1/3.
+       Por debajo de `lg` se apilan — el feed primero, la info abajo. */
+    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 pb-20 lg:grid-cols-3">
+      {/* ══ COLUMNA IZQUIERDA — FEED ══ */}
+      <div className="flex flex-col gap-6 lg:col-span-2">
         {/* Controles de orden */}
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-ink-100 bg-white p-2 shadow-[0_2px_4px_-2px_rgba(10,12,11,0.06),0_14px_34px_-14px_rgba(10,12,11,0.20)]">
           {SORT_OPTIONS.map(({ value, label, icon: Icon }) => {
@@ -85,7 +91,14 @@ export function PostsFeed({ initialPosts }: { initialPosts: Post[] }) {
           {loading && <Loader2 size={16} className="ml-auto mr-2 animate-spin text-brand-700" />}
         </div>
 
-        {posts.length === 0 ? (
+        {/* "Falló" le gana a "está vacío": con la petición caída no sabemos
+            si hay publicaciones o no. */}
+        {fetchError && posts.length === 0 ? (
+          <ErrorState
+            message="No pudimos cargar las publicaciones. Puede ser un problema momentáneo de conexión."
+            onRetry={load}
+          />
+        ) : posts.length === 0 ? (
           <div className="rounded-3xl border border-ink-100 bg-white px-6 py-20 text-center shadow-[0_2px_4px_-2px_rgba(10,12,11,0.06),0_14px_34px_-14px_rgba(10,12,11,0.20)]">
             <Megaphone size={38} className="mx-auto mb-4 text-ink-400" />
             <p className="text-lg font-bold text-ink-900">Todavía no hay publicaciones</p>
@@ -112,13 +125,13 @@ export function PostsFeed({ initialPosts }: { initialPosts: Post[] }) {
             ))}
           </motion.div>
         )}
+      </div>
 
-      {/* ══ INFO SECUNDARIA ══
-          Al pie del feed, no en una columna aparte: en una sola columna no
-          hay dónde fijarla, y acá aparece justo cuando terminaste de mirar
-          las publicaciones. */}
-      <aside className="mt-2">
-        <div className="grid gap-5 sm:grid-cols-2">
+      {/* ══ COLUMNA DERECHA — INFO SECUNDARIA ══
+          `sticky` para que acompañe el scroll del feed, que es mucho más
+          largo que ella. */}
+      <aside className="lg:col-span-1">
+        <div className="sticky top-28 flex flex-col gap-5">
           {/* Contacto */}
           <div className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-[0_2px_4px_-2px_rgba(10,12,11,0.06),0_14px_34px_-14px_rgba(10,12,11,0.20)]">
             <div className="h-1.5 w-full" style={{ background: 'var(--gradient-brand)' }} />

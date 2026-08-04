@@ -10,6 +10,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
 import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
+import { WhatsappLink } from '@/modules/shared/ui/WhatsappLink';
 import {
   Users, Search, Trash2, Mail, FileText,
   User, Shield, ChevronDown, ChevronUp, ArrowUpDown,
@@ -51,7 +52,6 @@ interface UserCardProps {
   requestCount: number;
   onToggle: (id: number) => void;
   onDelete: (id: number, name: string) => void;
-  whatsappUrl: (phone: string) => string;
   gmailUrl: (email: string, name: string) => string;
 }
 
@@ -77,7 +77,7 @@ function Dato({ label, value, truncate }: { label: string; value: string; trunca
   );
 }
 
-function UserCard({ u, isExpanded, isDeleting, requestCount, onToggle, onDelete, whatsappUrl, gmailUrl }: UserCardProps) {
+function UserCard({ u, isExpanded, isDeleting, requestCount, onToggle, onDelete, gmailUrl }: UserCardProps) {
   return (
     <div
       className={`bg-white rounded-xl mb-2 border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-sm hover:border-gray-200 ${
@@ -136,17 +136,14 @@ function UserCard({ u, isExpanded, isDeleting, requestCount, onToggle, onDelete,
         {/* Acciones rápidas — fila propia en mobile, con 44px de alto y
             separadas entre sí; antes iban pegadas al costado de la foto. */}
         <div className="flex shrink-0 items-center gap-2 border-t border-gray-100 pt-3 lg:gap-3 lg:border-0 lg:pt-0">
-          <a
-            href={whatsappUrl(u.phone)}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={`WhatsApp: ${u.phone}`}
+          <WhatsappLink
+            phone={u.phone}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-all active:scale-95 hover:opacity-90"
             style={{ background: 'linear-gradient(135deg, #25d366, #1ebe5d)' }}
           >
             <WhatsappIcon size={13} />
-            <span className="hidden sm:inline">{u.phone}</span>
-          </a>
+            <span className="hidden sm:inline">{u.phone || 'Sin teléfono'}</span>
+          </WhatsappLink>
           <a
             href={gmailUrl(u.email, u.name)}
             target="_blank"
@@ -219,16 +216,14 @@ function UserCard({ u, isExpanded, isDeleting, requestCount, onToggle, onDelete,
             {/* `grid` de 1 columna en mobile: los 4 botones tienen textos largos
                 ("Contactar por WhatsApp") y en `flex-wrap` quedaban cortados. */}
             <div className="grid grid-cols-1 gap-2.5 sm:flex sm:flex-wrap sm:gap-3">
-              <a
-                href={whatsappUrl(u.phone)}
-                target="_blank"
-                rel="noopener noreferrer"
+              <WhatsappLink
+                phone={u.phone}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all active:scale-95 hover:opacity-90 shadow-sm"
                 style={{ background: 'linear-gradient(135deg, #25d366, #1ebe5d)' }}
               >
                 <WhatsappIcon size={15} />
                 Contactar por WhatsApp
-              </a>
+              </WhatsappLink>
               <a
                 href={gmailUrl(u.email, u.name)}
                 target="_blank"
@@ -305,7 +300,6 @@ export default function UsuariosAdminPage() {
       message: `Se eliminarán todos los datos de ${name}, incluidos sus favoritos y solicitudes. Esta acción no se puede deshacer.`,
       confirmLabel: 'Eliminar',
       variant: 'danger',
-      icon: Trash2,
       onConfirm: async () => {
         setDeletingId(id);
         try {
@@ -342,9 +336,6 @@ export default function UsuariosAdminPage() {
 
   const regularUsers = sortUsers(filtered.filter(u => u.role === 'user'));
   const adminUsers   = sortUsers(filtered.filter(u => u.role === 'admin'));
-
-  const whatsappUrl = (phone: string) =>
-    `https://wa.me/${phone.replace(/\D/g, '')}`;
 
   const gmailUrl = (email: string, name: string) => {
     const subject = encodeURIComponent(`Cerca Trova Inmobiliaria — Consulta para ${name}`);
@@ -446,8 +437,8 @@ export default function UsuariosAdminPage() {
       {/* Empty state */}
       {!loading && filtered.length === 0 && (
         <div className="bg-white rounded-xl p-12 border  border-gray-100 flex flex-col items-center gap-4 text-center">
-          <div className="w-14 h-14 rounded-xl bg-[#0b7a4b]/8 flex items-center justify-center">
-            <Users size={24} className="text-[#0b7a4b]" />
+          <div className="w-14 h-14 rounded-xl bg-white ring-1 ring-ink-100 shadow-sm flex items-center justify-center">
+            <Users size={24} className="text-indigo-600 " />
           </div>
           <p className="font-bold text-gray-600 text-sm">
             {search ? 'Sin resultados para esa búsqueda' : 'No hay usuarios todavía'}
@@ -473,7 +464,6 @@ export default function UsuariosAdminPage() {
               requestCount={requestCounts[u.id] ?? 0}
               onToggle={handleToggle}
               onDelete={handleDelete}
-              whatsappUrl={whatsappUrl}
               gmailUrl={gmailUrl}
             />
           ))}
@@ -498,7 +488,6 @@ export default function UsuariosAdminPage() {
               requestCount={requestCounts[u.id] ?? 0}
               onToggle={handleToggle}
               onDelete={handleDelete}
-              whatsappUrl={whatsappUrl}
               gmailUrl={gmailUrl}
             />
           ))}

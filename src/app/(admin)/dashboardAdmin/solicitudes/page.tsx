@@ -9,14 +9,14 @@ import { toast } from 'sonner';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import Image from 'next/image';
 import {
-  FileText, Search, Trash2, ChevronDown, ChevronUp,
-  User, MapPin, Home, Ruler, DollarSign, CheckCircle,
-  XCircle, Clock, RefreshCw, Mail, MessageSquare, ArrowUpDown,
+  FileText, Trash2, ChevronDown, ChevronUp,
+  User, CheckCircle,
+  XCircle, Clock, RefreshCw, Mail, MessageSquare, ArrowUpDown
 } from 'lucide-react';
-import Link from 'next/link';
 
 import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
 import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
+import { WhatsappLink } from '@/modules/shared/ui/WhatsappLink';
 import { ListToolbar, ListSearch, ListSelect } from '@/modules/shared/ui/ListToolbar';
 interface RequestUser {
   id: number;
@@ -58,7 +58,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   enviado:     { label: 'Enviado',      color: 'text-blue-700',   bg: 'bg-blue-200',   icon: Clock },
   en_revision: { label: 'En revisión',  color: 'text-amber-700',  bg: 'bg-amber-200',  icon: RefreshCw },
   aceptado:    { label: 'Aceptado',     color: 'text-green-700',  bg: 'bg-green-200',  icon: CheckCircle },
-  rechazado:   { label: 'Rechazado',    color: 'text-red-700',    bg: 'bg-red-200',    icon: XCircle },
+  rechazado:   { label: 'Rechazado',    color: 'text-red-700',    bg: 'bg-red-200',    icon: XCircle }
 };
 
 // El backend rechaza con 409 las transiciones ilegales — solo ofrecemos las válidas
@@ -124,7 +124,6 @@ export default function SolicitudesAdminPage() {
       message: `Se va a eliminar la solicitud #${id}. Esta acción no se puede deshacer.`,
       confirmLabel: 'Sí, eliminar',
       variant: 'danger',
-      icon: Trash2,
       onConfirm: async () => {
         setDeletingId(id);
         try {
@@ -136,7 +135,7 @@ export default function SolicitudesAdminPage() {
         } finally {
           setDeletingId(null);
         }
-      },
+      }
     });
   };
 
@@ -168,7 +167,7 @@ export default function SolicitudesAdminPage() {
     enviado:     requests.filter(r => r.status === 'enviado').length,
     en_revision: requests.filter(r => r.status === 'en_revision').length,
     aceptado:    requests.filter(r => r.status === 'aceptado').length,
-    rechazado:   requests.filter(r => r.status === 'rechazado').length,
+    rechazado:   requests.filter(r => r.status === 'rechazado').length
   };
 
   return (
@@ -239,8 +238,8 @@ export default function SolicitudesAdminPage() {
       {/* Empty */}
       {!loading && filtered.length === 0 && (
         <div className="bg-white rounded-xl p-12 border border-gray-200 flex flex-col items-center gap-4 text-center">
-          <div className="w-16 h-16 rounded-full bg-[#0b7a4b]/10 flex items-center justify-center">
-            <FileText size={28} className="text-[#0b7a4b]" />
+          <div className="w-16 h-16 rounded-full bg-white ring-1 ring-ink-100 shadow-sm flex items-center justify-center">
+            <FileText size={28} className="text-amber-600 " />
           </div>
           <p className="font-bold text-gray-800">
             {search || filterStatus ? 'Sin resultados para ese filtro' : 'No hay solicitudes todavía'}
@@ -378,12 +377,12 @@ export default function SolicitudesAdminPage() {
                           <p className="text-xs text-gray-500">{r.user?.phone}</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          <a href={`https://wa.me/${r.user?.phone?.replace(/\D/g, '')}`}
-                            target="_blank" rel="noopener noreferrer"
+                          <WhatsappLink phone={r.user?.phone}
+                            message={`Hola ${r.user?.name ?? ''}, te escribimos de Cerca Trova por tu solicitud #${r.id}.`}
                             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:brightness-110 active:scale-95"
                             style={{ background: 'linear-gradient(135deg, #25d366, #1ebe5d)' }}>
                             <WhatsappIcon size={15} /> WhatsApp
-                          </a>
+                          </WhatsappLink>
                           <a href={gmailUrl(r.user?.email, r.user?.name)}
                             target="_blank" rel="noopener noreferrer"
                             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-700 transition-all active:scale-95">

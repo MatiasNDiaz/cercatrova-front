@@ -6,7 +6,9 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import api from '@/modules/shared/lib/axios';
+import { propertiesService } from '@/modules/properties/services/properties.service';
 import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
+import { iconTile, iconColor, type IconTone } from '@/modules/shared/ui/iconTokens';
 import {
   Users, Building2, FileText, ChevronRight,
   TrendingUp, Clock, User, BarChart2, Bell, Megaphone,
@@ -25,7 +27,7 @@ const quickLinks = [
     icon: Building2,
     label: 'Propiedades',
     description: 'Publicar, editar y gestionar propiedades',
-    color: 'bg-[#0b7a4b]/12 text-[#0b7a4b]',
+    tone: 'propiedad' as IconTone,
   },
   {
     // Faltaba: la grilla es de 3 columnas y con 5 tarjetas la segunda fila
@@ -35,35 +37,35 @@ const quickLinks = [
     icon: Megaphone,
     label: 'Publicaciones',
     description: 'Crear publicaciones (Feed)',
-    color: 'bg-sky-100 text-sky-600',
+    tone: 'publicacion' as IconTone,
   },
   {
     href: '/dashboardAdmin/solicitudes',
     icon: FileText,
     label: 'Solicitudes',
     description: 'Revisar y responder solicitudes de usuarios',
-    color: 'bg-amber-100 text-amber-600',
+    tone: 'solicitud' as IconTone,
   },
   {
     href: '/dashboardAdmin/usuarios',
     icon: Users,
     label: 'Usuarios',
     description: 'Ver usuarios, contactarlos o eliminarlos',
-    color: 'bg-blue-100 text-blue-600',
+    tone: 'usuario' as IconTone,
   },
   {
     href: '/dashboardAdmin/notificaciones',
     icon: Bell,
     label: 'Notificaciones',
     description: 'Ver y gestionar notificaciones',
-    color: 'bg-emerald-100 text-emerald-600',
+    tone: 'notificacion' as IconTone,
   },
   {
     href: '/dashboardAdmin/estadisticas',
     icon: BarChart2,
     label: 'Estadísticas',
     description: 'Ver y gestionar estadísticas',
-    color: 'bg-purple-100 text-purple-600',
+    tone: 'neutro' as IconTone,
   },
 ];
 
@@ -84,14 +86,17 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [usersRes, propsRes, reqsRes] = await Promise.all([
+        // `GET /properties` está paginado: el total sale de `meta.totalItems`,
+        // no de contar el array. Antes se descargaba el catálogo entero sólo
+        // para hacerle `.length`; ahora se pide `limit: 1` y se lee el meta.
+        const [usersRes, totalProperties, reqsRes] = await Promise.all([
           api.get('/users'),
-          api.get('/properties'),
+          propertiesService.getTotalCount(),
           api.get('/property-requests'),
         ]);
         setStats({
           totalUsers:      usersRes.data?.length ?? 0,
-          totalProperties: propsRes.data?.properties?.length ?? propsRes.data?.length ?? 0,
+          totalProperties,
           totalRequests:   reqsRes.data?.length ?? 0,
           pendingRequests: reqsRes.data?.filter(
             (r: { status: string }) => r.status === 'enviado' || r.status === 'en_revision'
@@ -104,11 +109,12 @@ export default function AdminDashboardPage() {
     fetchStats();
   }, []);
 
-  const statCards = [
-    { label: 'Usuarios registrados',   value: stats?.totalUsers,       icon: Users,     color: 'text-blue-600',   bg: 'bg-blue-50' },
-    { label: 'Propiedades activas',    value: stats?.totalProperties,  icon: Building2, color: 'text-[#0b7a4b]',  bg: 'bg-[#0b7a4b]/10' },
-    { label: 'Solicitudes totales',    value: stats?.totalRequests,    icon: FileText,  color: 'text-amber-600',  bg: 'bg-amber-100' },
-    { label: 'Pendientes de revisión', value: stats?.pendingRequests,  icon: Clock,     color: 'text-orange-500', bg: 'bg-orange-50' },
+  // El color lo pone el tono semántico, no un par color/bg suelto por tarjeta.
+  const statCards: { label: string; value?: number; icon: React.ElementType; tone: IconTone }[] = [
+    { label: 'Usuarios registrados',   value: stats?.totalUsers,      icon: Users,     tone: 'usuario' },
+    { label: 'Propiedades activas',    value: stats?.totalProperties, icon: Building2, tone: 'propiedad' },
+    { label: 'Solicitudes totales',    value: stats?.totalRequests,   icon: FileText,  tone: 'solicitud' },
+    { label: 'Pendientes de revisión', value: stats?.pendingRequests, icon: Clock,     tone: 'solicitud' },
   ];
 
   return (
@@ -175,7 +181,7 @@ export default function AdminDashboardPage() {
           animate="show"
           className="grid grid-cols-2 gap-3 lg:grid-cols-4"
         >
-          {statCards.map(({ label, value, icon: Icon, color, bg }) => (
+          {statCards.map(({ label, value, icon: Icon, tone }) => (
             <motion.div
               key={label}
               variants={item}
@@ -183,8 +189,8 @@ export default function AdminDashboardPage() {
               transition={{ duration: 0.2 }}
               className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
             >
-              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${bg}`}>
-                <Icon size={20} className={color} />
+              <div className={iconTile(tone, 'sm')}>
+                <Icon size={20} className={iconColor(tone)} />
               </div>
               <div>
                 <p className="text-2xl font-black text-[#0b7a4b]">
@@ -208,14 +214,14 @@ export default function AdminDashboardPage() {
           animate="show"
           className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
         >
-          {quickLinks.map(({ href, icon: Icon, label, description, color }) => (
+          {quickLinks.map(({ href, icon: Icon, label, description, tone }) => (
             <motion.div key={href} variants={item} whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
               <Link
                 href={href}
                 className="group flex items-center gap-4 rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
               >
-                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${color}`}>
-                  <Icon size={22} />
+                <div className={iconTile(tone, 'md')}>
+                  <Icon size={22} className={iconColor(tone)} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-gray-900">{label}</p>

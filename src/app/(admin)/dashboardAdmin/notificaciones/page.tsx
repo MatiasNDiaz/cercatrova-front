@@ -4,18 +4,15 @@ import { useState, useEffect } from 'react';
 import api from '@/modules/shared/lib/axios';
 import { toast } from 'sonner';
 import {
-  BellOff, Check, CheckCheck, TrendingDown,
-  TrendingUp, Clock, ChevronDown, ChevronUp, Eye, UserPlus, ClipboardList,
+  BellOff, CheckCheck, ChevronDown, ChevronUp, UserPlus, ClipboardList,
   MessageSquare, Star, AlertTriangle, Bell,
-  Heart,
+  Heart
 } from 'lucide-react';
-import Link from 'next/link';
 import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
 import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 import {
   NotifItem, getNotifType, getConfig,
-  type AdminNotification as Notification, type NotifType,
-} from './notifShared';
+  type AdminNotification as Notification, } from './notifShared';
 
 const INITIAL_VISIBLE = 10;
 
@@ -42,7 +39,7 @@ const FILTER_COLOR: Record<FilterTab, string> = {
   solicitudes:  'bg-blue-500 text-white',
   comentarios:  'bg-purple-500 text-white',
   valoraciones: 'bg-amber-500 text-white',
-  favoritos:    'bg-pink-500 text-white',
+  favoritos:    'bg-pink-500 text-white'
 };
 
 // ── SUMMARY CARDS CONFIG ──────────────────────────────────────────────────────
@@ -67,7 +64,7 @@ export default function AdminNotificacionesPage() {
   const unreadCount    = notifications.filter(n => !n.read).length;
   const importantelUnread = notifications.filter(n => {
     if (n.read) return false;
-    const type = getNotifType(n.title, n.message);
+    const type = getNotifType(n);
     return getConfig(type).priority === 'importante';
   }).length;
 
@@ -79,8 +76,8 @@ export default function AdminNotificacionesPage() {
         const sorted = [...data].sort((a: Notification, b: Notification) => {
           if (a.read !== b.read) return a.read ? 1 : -1;
           const prioOrder = { importante: 0, negocio: 1, info: 2 };
-          const aPrio = getConfig(getNotifType(a.title, a.message)).priority;
-          const bPrio = getConfig(getNotifType(b.title, b.message)).priority;
+          const aPrio = getConfig(getNotifType(a)).priority;
+          const bPrio = getConfig(getNotifType(b)).priority;
           if (aPrio !== bPrio) return prioOrder[aPrio] - prioOrder[bPrio];
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
@@ -99,11 +96,11 @@ export default function AdminNotificacionesPage() {
   // ── Filtrado ────────────────────────────────────────────────────────────────
   const filtered = notifications.filter(n => {
     if (filter === 'sin_leer')     return !n.read;
-    if (filter === 'usuarios')     return getNotifType(n.title, n.message) === 'nuevo_usuario';
-    if (filter === 'solicitudes')  return getNotifType(n.title, n.message) === 'nueva_solicitud';
-    if (filter === 'comentarios')  return getNotifType(n.title, n.message) === 'comentario';
-    if (filter === 'valoraciones') return getNotifType(n.title, n.message) === 'valoracion';
-    if (filter === 'favoritos')    return getNotifType(n.title, n.message) === 'favorito';
+    if (filter === 'usuarios')     return getNotifType(n) === 'nuevo_usuario';
+    if (filter === 'solicitudes')  return getNotifType(n) === 'nueva_solicitud';
+    if (filter === 'comentarios')  return getNotifType(n) === 'comentario';
+    if (filter === 'valoraciones') return getNotifType(n) === 'valoracion';
+    if (filter === 'favoritos')    return getNotifType(n) === 'favorito';
     return true;
   });
 
@@ -141,7 +138,7 @@ const handleMarkAllAsRead = async () => {
   const getCount = (card: typeof SUMMARY_CARDS[0]) => {
     if (card.isUnread) return unreadCount;
     if (!card.type)    return notifications.length;
-    return notifications.filter(n => getNotifType(n.title, n.message) === card.type).length;
+    return notifications.filter(n => getNotifType(n) === card.type).length;
   };
 
   return (
@@ -216,11 +213,11 @@ const handleMarkAllAsRead = async () => {
         {FILTER_TABS.map(({ key, label, icon }) => {
           const isActive = filter === key;
           const count = key === 'sin_leer' ? unreadCount
-            : key === 'usuarios'     ? notifications.filter(n => getNotifType(n.title, n.message) === 'nuevo_usuario').length
-            : key === 'solicitudes'  ? notifications.filter(n => getNotifType(n.title, n.message) === 'nueva_solicitud').length
-            : key === 'comentarios'  ? notifications.filter(n => getNotifType(n.title, n.message) === 'comentario').length
-            : key === 'valoraciones' ? notifications.filter(n => getNotifType(n.title, n.message) === 'valoracion').length
-            : key === 'favoritos'    ? notifications.filter(n => getNotifType(n.title, n.message) === 'favorito').length
+            : key === 'usuarios'     ? notifications.filter(n => getNotifType(n) === 'nuevo_usuario').length
+            : key === 'solicitudes'  ? notifications.filter(n => getNotifType(n) === 'nueva_solicitud').length
+            : key === 'comentarios'  ? notifications.filter(n => getNotifType(n) === 'comentario').length
+            : key === 'valoraciones' ? notifications.filter(n => getNotifType(n) === 'valoracion').length
+            : key === 'favoritos'    ? notifications.filter(n => getNotifType(n) === 'favorito').length
             : null;
 
           return (

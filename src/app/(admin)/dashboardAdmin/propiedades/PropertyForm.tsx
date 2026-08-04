@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { DashboardPage, DashboardHeader } from '@/modules/shared/ui/DashboardPage';
 import {
   Save, ArrowLeft, Upload, X, Star, ImagePlus, Building2,
-  Home, MapPin, Ruler, DollarSign, Tag, Info,
+  MapPin, Ruler, DollarSign, Info
 } from 'lucide-react';
 
 // ── TIPOS ─────────────────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
     tractoAbreviado: false,
     boleto:          false,
     garage:          false,
-    patio:           false,
+    patio:           false
   });
 
   const set = (k: string, v: string | boolean) => setForm(p => ({ ...p, [k]: v }));
@@ -136,7 +136,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
           tractoAbreviado:  data.tractoAbreviado ?? false,
           boleto:           data.boleto ?? false,
           garage:           data.garage ?? false,
-          patio:            data.patio ?? false,
+          patio:            data.patio ?? false
         });
         setExistingImages(data.images ?? []);
       } catch {
@@ -148,15 +148,20 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
     fetch();
   }, [isEdit, propertyId]);
 
-  // ── Drag & Drop ──
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-    addFiles(files);
-  }, []);
-
-  const addFiles = (files: File[]) => {
+  /**
+   * Agrega archivos validados a la lista de imágenes nuevas.
+   *
+   * ⚠️ Va en `useCallback` con dependencias reales — no es cosmético. Antes era
+   * una función suelta que se redefinía en cada render, y `handleDrop` la
+   * capturaba en un `useCallback` con `[]`: el drag & drop quedaba usando para
+   * siempre la versión del PRIMER render, con `existingImages`,
+   * `deletedImageIds` y `newImages` vacíos. Resultado: el cálculo de
+   * `available` (el tope de 10) se hacía contra el estado inicial, así que
+   * arrastrando imágenes se podía pasar del límite o marcar portada de más.
+   * Soltar archivos con el explorador nunca tuvo el bug, porque ese camino
+   * llamaba a `addFiles` directo desde el render actual.
+   */
+  const addFiles = useCallback((files: File[]) => {
     // Validación client-side (tipo image/* y ≤ 5MB, límites del backend)
     const validFiles: File[] = [];
     for (const file of files) {
@@ -177,10 +182,20 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
     const mapped: NewImage[] = toAdd.map((file, idx) => ({
       file,
       preview: URL.createObjectURL(file),
-      isCover: totalExisting === 0 && totalNew === 0 && idx === 0,
+      isCover: totalExisting === 0 && totalNew === 0 && idx === 0
     }));
     setNewImages(prev => [...prev, ...mapped]);
-  };
+  }, [existingImages, deletedImageIds, newImages]);
+
+  // ── Drag & Drop ──
+  // Definido DESPUÉS de `addFiles` y con él en las dependencias, para que
+  // siempre use la versión actual (ver la nota de arriba).
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    addFiles(files);
+  }, [addFiles]);
 
   // ── Portada — imágenes existentes ──
   const setExistingCover = async (id: number) => {
@@ -264,7 +279,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
         ...(isEdit && (() => {
           const cover = existingImages.find(i => i.isCover && !deletedImageIds.includes(i.id));
           return cover ? { setCoverImageId: cover.id } : {};
-        })()),
+        })())
       };
 
       const formData = new FormData();
@@ -334,6 +349,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
         // desde el detalle de una propiedad.
         back={{ onClick: () => router.back(), label: 'Volver' }}
         icon={Building2}
+        iconTone="propiedad"
         title={isEdit ? 'Editar propiedad' : 'Nueva propiedad'}
         subtitle={isEdit
           ? 'Modificá los datos y guardá los cambios'

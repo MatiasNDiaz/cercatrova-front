@@ -73,8 +73,20 @@ export function GoogleAuthButton({
     <div className="relative w-full">
       {/* `colorScheme: 'light'` evita que el iframe de Google herede un tema
           oscuro del sistema y quede ilegible sobre la tarjeta blanca. */}
+      {/* El botón en sí es un iframe de Google: su interior no se puede
+          estilar. Lo que sí se puede es el marco. Este contenedor le da el
+          mismo lenguaje que el resto del formulario — esquinas `rounded-xl`,
+          elevación y halo verde al pasar por encima, hundido al presionar —
+          para que no parezca un widget pegado de otra página.
+          Solo CSS: no envuelve ni intercepta el click, el iframe sigue
+          recibiéndolo igual. */}
       <div
-        className="flex w-full justify-center [&>div]:w-full [&_iframe]:mx-auto"
+        className="group flex w-full cursor-pointer justify-center overflow-hidden rounded-xl
+                   ring-1 ring-brand-200 transition-all duration-200
+                   hover:-translate-y-0.5 hover:ring-2 hover:ring-brand-500
+                   hover:shadow-[0_10px_24px_-10px_rgba(11,122,75,0.45)]
+                   active:translate-y-0 active:shadow-none
+                   [&>div]:w-full [&_iframe]:mx-auto"
         style={{ colorScheme: 'light' }}
       >
         {/* Nota: esta versión de la librería no expone `locale`; el botón toma

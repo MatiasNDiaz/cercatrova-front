@@ -1,4 +1,5 @@
 import api from './axios';
+import { API_URL } from './env';
 
 /**
  * Cliente de telemetría (Fase 0 de Estadísticas).
@@ -8,7 +9,8 @@ import api from './axios';
  * lee ni lo genera.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+// `sendBeacon` necesita URL absoluta (no pasa por la instancia de axios).
+const API_BASE = API_URL;
 
 /** Registra una visita y devuelve el id con el que después se cierra. */
 export async function recordVisit(path: string): Promise<number | null> {

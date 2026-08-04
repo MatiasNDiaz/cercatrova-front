@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Heart, MessageCircle, Send, Loader2, Shield, LogIn, ChevronDown,
-  CornerDownRight, X, Share2, Check,
+  CornerDownRight, X, Share2, Check, EyeOff,
 } from 'lucide-react';
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import { postsService } from '@/modules/posts/services/posts.service';
@@ -354,8 +354,27 @@ function CommentBubble({
 }) {
   const isAdmin = comment.user?.role === 'admin';
 
+  /**
+   * Un comentario oculto sólo llega hasta acá si quien mira es ADMIN: el
+   * backend los filtra para todos los demás (`OptionalJwtAuthGuard` en
+   * `GET /posts/:id/comments` puebla `req.user` y decide según el rol).
+   *
+   * Antes ese guard no estaba y esta rama era inalcanzable. Ahora que sí llega,
+   * hay que marcarlo: sin esto, un admin que oculta un comentario lo sigue
+   * viendo idéntico en el feed público y parece que la moderación no funcionó.
+   */
+  const isHidden = comment.isHidden === true;
+
   return (
-    <div className={`rounded-2xl border p-3.5 ${isAdmin ? 'border-brand-700/25 bg-brand-50' : 'border-ink-100 bg-white'}`}>
+    <div
+      className={`rounded-2xl border p-3.5 ${
+        isHidden
+          ? 'border-amber-300 bg-amber-50/70'
+          : isAdmin
+            ? 'border-brand-700/25 bg-brand-50'
+            : 'border-ink-100 bg-white'
+      }`}
+    >
       <div className="flex flex-wrap items-center gap-2">
         {comment.user?.photo ? (
           <Image
@@ -378,11 +397,24 @@ function CommentBubble({
             <Shield size={8} />{isReply ? 'Respuesta del equipo' : 'Admin'}
           </span>
         )}
+        {isHidden && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-black tracking-wider text-white uppercase">
+            <EyeOff size={8} />Oculto
+          </span>
+        )}
         <span className="text-xs text-ink-500">
           {fechaCortaConHora(comment.createdAt)}
         </span>
       </div>
-      <p className="mt-1.5 text-sm leading-relaxed text-ink-700">{comment.content}</p>
+      <p className={`mt-1.5 text-sm leading-relaxed ${isHidden ? 'text-ink-500 italic' : 'text-ink-700'}`}>
+        {comment.content}
+      </p>
+      {isHidden && (
+        <p className="mt-1.5 text-[11px] font-semibold text-amber-700">
+          Sólo vos ves este comentario. Para el resto está oculto — podés volver a mostrarlo desde
+          Publicaciones, en el panel.
+        </p>
+      )}
 
       {/* Responder está disponible para cualquier usuario logueado (si no hay
           sesión, el handler del padre redirige a /login). */}

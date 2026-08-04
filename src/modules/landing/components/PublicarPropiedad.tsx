@@ -1,5 +1,8 @@
-'use client';
-
+// Server Component: esta sección no tiene estado, ni efectos, ni handlers — es
+// markup con dos hijos que sí son cliente (`Reveal`, por framer-motion). Un
+// Server Component puede renderizar componentes cliente sin problema, así que
+// el `'use client'` que tenía sólo servía para mandar este JSX al bundle sin
+// necesidad. La landing la monta directo, así que el ahorro es real.
 import Image from 'next/image';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Reveal } from './Reveal';

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { toast } from 'sonner';
 import { CheckCheck, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '@/modules/shared/lib/axios';
@@ -9,7 +8,7 @@ import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { DashboardPage, DashboardHeader } from '@/modules/shared/ui/DashboardPage';
 import { ListChips } from '@/modules/shared/ui/ListToolbar';
 import {
-  NotifItem, getNotifType, type AdminNotification, type NotifType,
+  NotifItem, getNotifType, type AdminNotification, type NotifType
 } from './notifShared';
 
 type ReadFilter = 'todas' | 'sin_leer' | 'leidas';
@@ -28,7 +27,7 @@ const INITIAL_VISIBLE = 10;
  * se hace en el cliente, igual que en la vista general.
  */
 export function CategoriaNotificaciones({
-  tipo, titulo, descripcion, icono, colorFondo,
+  tipo, titulo, descripcion, icono, colorFondo
 }: {
   tipo: NotifType;
   titulo: string;
@@ -52,7 +51,7 @@ export function CategoriaNotificaciones({
       .then(({ data }) => {
         if (!alive) return;
         const propias = (data as AdminNotification[])
-          .filter((n) => getNotifType(n.title, n.message) === tipo)
+          .filter((n) => getNotifType(n) === tipo)
           // Sin leer primero, y dentro de cada grupo las más recientes arriba.
           .sort((a, b) => {
             if (a.read !== b.read) return a.read ? 1 : -1;

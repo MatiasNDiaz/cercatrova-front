@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { Inter, Playfair_Display } from "next/font/google";
 import { AuthProvider } from "@/modules/shared/context/AuthContext";
 import { FooterSelector } from "@/modules/shared/ui/FooterSelector";
-import { Toaster } from 'sonner';
+import { AppToaster } from '@/modules/shared/ui/AppToaster';
 import { NavbarSelector } from '@/modules/shared/ui/NavbarSelector';
 import { VisitTracker } from '@/modules/shared/ui/VisitTracker';
 import { PendingNotificationsToast } from '@/modules/shared/ui/PendingNotificationsToast';
@@ -46,28 +46,7 @@ export default function RootLayout({
               {children}
               <FooterSelector/>
           </AuthProvider>
-          <Toaster
-  position="bottom-right"
-  offset={40}
-  duration={3000}
-  toastOptions={{
-    style: {
-      
-      fontSize: '0.875rem',
-      fontWeight: '400',
-      padding: '14px 18px',
-      borderRadius: '10px',
-      boxShadow: '0 4px 24px rgba(0,0,0,0.09)',
-      border: '1px solid #e5e7eb',
-      minWidth: '340px',
-      backgroundColor: '#ffffff',
-    },
-    classNames: {
-      error: '!border-l-4 !border-l-red-500 !text-red-700',
-      success: '!border-l-4 !border-l-green-600 !text-green-800',
-    },
-  }}
-/>
+          <AppToaster />
       </body>
     </html>
   );

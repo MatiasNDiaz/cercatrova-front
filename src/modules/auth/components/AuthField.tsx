@@ -36,7 +36,7 @@ export function AuthField({ label, icon: Icon, error, action, children, htmlFor 
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
-        <label htmlFor={htmlFor} className="text-sm font-semibold text-ink-800">
+        <label htmlFor={htmlFor} className="text-sm font-semibold text-brand-800">
           {label}
         </label>
         {action}
@@ -45,7 +45,7 @@ export function AuthField({ label, icon: Icon, error, action, children, htmlFor 
       <div className="relative">
         <span
           className={`pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 transition-colors ${
-            error ? 'text-red-400' : 'text-ink-400'
+            error ? 'text-red-400' : 'text-brand-700'
           }`}
         >
           <Icon size={17} />
@@ -73,9 +73,10 @@ export function AuthField({ label, icon: Icon, error, action, children, htmlFor 
 
 /** Clases del input de auth. Incluye `pl-10` para dejar lugar al ícono. */
 export const authInputClasses =
-  'w-full rounded-xl border bg-ink-50/60 py-3 pl-10 pr-4 text-sm text-ink-900 outline-none transition-all duration-200 placeholder:text-ink-400 focus:bg-white';
+  'w-full rounded-xl border bg-brand-50/40 py-3 pl-10 pr-4 text-sm text-ink-900 outline-none transition-all duration-200 placeholder:text-ink-400 focus:bg-white';
 
-export const authInputNormal = 'border-ink-200 focus:border-brand-700 focus:ring-4 focus:ring-brand-700/10';
+export const authInputNormal =
+  'border-brand-200 hover:border-brand-400 focus:border-brand-700 focus:ring-4 focus:ring-brand-700/10';
 export const authInputError = 'border-red-300 bg-red-50/60 focus:border-red-400 focus:ring-4 focus:ring-red-500/10';
 
 /** Helper para armar el className del input según el estado de error. */

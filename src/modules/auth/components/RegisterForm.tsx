@@ -64,7 +64,7 @@ export function RegisterForm() {
       // Empujando el foco hacia abajo se los ve enteros y arriba queda la pared
       // libre, que es justo donde cae el texto centrado.
       imagePosition="center 85%"
-      panelTitle={<>Tu próximo hogar <span className="whitespace-nowrap text-brand-400">empieza acá</span></>}
+      panelTitle={<>Tu próximo hogar <span className="whitespace-nowrap text-brand-500">empieza acá</span></>}
       panelText="Creá tu cuenta para guardar propiedades favoritas, enviar solicitudes de publicación y recibir avisos cuando entre lo que buscás."
       title="Crear cuenta"
       subtitle="Completá tus datos para comenzar"
@@ -129,7 +129,7 @@ export function RegisterForm() {
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            className="absolute top-1/2 right-3.5 -translate-y-1/2 cursor-pointer text-ink-400 transition-colors hover:text-ink-700"
+            className="absolute top-1/2 right-3.5 -translate-y-1/2 cursor-pointer text-brand-600 transition-colors hover:text-brand-800"
           >
             {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
           </button>

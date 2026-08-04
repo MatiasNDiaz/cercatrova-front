@@ -5,6 +5,7 @@ import {
   Check, Clock, Eye, UserPlus, ClipboardList,
   MessageSquare, Star, Bell, Heart,
 } from 'lucide-react';
+import { NotificationType } from '@/modules/shared/types/api';
 
 /**
  * Piezas compartidas de las notificaciones del admin.
@@ -21,9 +22,17 @@ export interface AdminNotification {
   message: string;
   read: boolean;
   propertyId?: number;
+  /** Campo real del backend. Ver `NotificationType` en shared/types/api. */
+  type?: NotificationType;
   createdAt: string;
 }
 
+/**
+ * Categoría de la UI del panel. NO es el enum del backend: el panel agrupa en
+ * cinco secciones (que son las cinco páginas del sidebar) y el backend tiene
+ * seis tipos de admin — `admin_nuevo_comentario` y
+ * `admin_comentario_publicacion` caen los dos en "comentario".
+ */
 export type NotifType =
   | 'nuevo_usuario'
   | 'nueva_solicitud'
@@ -32,11 +41,29 @@ export type NotifType =
   | 'favorito'
   | 'generica';
 
+/** Mapeo directo backend → categoría de la UI. Sin adivinar nada. */
+const TYPE_TO_CATEGORY: Partial<Record<NotificationType, NotifType>> = {
+  [NotificationType.ADMIN_NUEVO_USUARIO]: 'nuevo_usuario',
+  [NotificationType.ADMIN_NUEVA_SOLICITUD]: 'nueva_solicitud',
+  [NotificationType.ADMIN_NUEVA_VALORACION]: 'valoracion',
+  [NotificationType.ADMIN_NUEVO_COMENTARIO]: 'comentario',
+  [NotificationType.ADMIN_COMENTARIO_PUBLICACION]: 'comentario',
+  [NotificationType.ADMIN_NUEVO_FAVORITO]: 'favorito',
+};
+
 /**
- * Infiere el tipo a partir del texto: el backend no manda un campo `type`.
- * Los títulos los arma `NotificationService`, así que son estables.
+ * Heurística por texto — **sólo para filas anteriores a la migración**.
+ *
+ * El backend agregó `type` con default `generica`, así que las notificaciones
+ * viejas que el backfill no haya podido clasificar llegan sin categoría real.
+ * Sin este fallback, todo el historial previo aparecería como "General" y los
+ * contadores del sidebar arrancarían en cero.
+ *
+ * ⚠️ TRANSITORIO: una vez confirmado que el backfill clasificó el histórico,
+ * borrar esta función y dejar sólo `TYPE_TO_CATEGORY`. Es exactamente el
+ * mecanismo frágil que `type` vino a reemplazar — vive acá acotado a un caso.
  */
-export function getNotifType(title: string, message: string): NotifType {
+function inferCategoryFromText(title: string, message: string): NotifType {
   const t = (title + ' ' + message).toLowerCase();
   if (t.includes('usuario registrado') || t.includes('se registró'))                 return 'nuevo_usuario';
   if (t.includes('solicitud de publicación') || t.includes('solicitud para'))        return 'nueva_solicitud';
@@ -44,6 +71,18 @@ export function getNotifType(title: string, message: string): NotifType {
   if (t.includes('comentó') || t.includes('comentario'))                             return 'comentario';
   if (t.includes('favorito') || t.includes('guardó'))                                return 'favorito';
   return 'generica';
+}
+
+/**
+ * Categoría de una notificación del panel.
+ *
+ * Prioridad: el campo `type` del backend; si no vino o es `generica` (fila
+ * vieja), se cae a la heurística de texto.
+ */
+export function getNotifType(n: Pick<AdminNotification, 'type' | 'title' | 'message'>): NotifType {
+  const mapped = n.type ? TYPE_TO_CATEGORY[n.type] : undefined;
+  if (mapped) return mapped;
+  return inferCategoryFromText(n.title, n.message);
 }
 
 export interface NotifConfig {
@@ -144,7 +183,7 @@ export function NotifItem({
   n: AdminNotification;
   onRead: (id: number) => void;
 }) {
-  const type = getNotifType(n.title, n.message);
+  const type = getNotifType(n);
   const cfg  = getConfig(type);
   const prio = PRIORITY_CONFIG[cfg.priority];
 

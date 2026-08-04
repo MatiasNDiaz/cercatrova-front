@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import api from '@/modules/shared/lib/axios';
+import { propertiesService } from '@/modules/properties/services/properties.service';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -69,10 +70,14 @@ export default function PropiedadesAdminPage() {
     fetchProperties();
   }, []);
 
+  // `GET /properties` ahora está paginado (`{ data, meta }`, default 10 por
+  // página): con un `api.get('/properties')` pelado el panel mostraba sólo las
+  // 10 más recientes y parecía que faltaban propiedades. Esta pantalla filtra y
+  // ordena en cliente sobre el catálogo entero, así que se recorren todas las
+  // páginas (de a 100, el máximo del backend).
   const fetchProperties = async () => {
     try {
-      const { data } = await api.get('/properties');
-      setProperties(Array.isArray(data) ? data : data?.properties ?? []);
+      setProperties(await propertiesService.getEveryProperty());
     } catch {
       toast.error('No se pudieron cargar las propiedades');
     } finally {
@@ -86,7 +91,6 @@ export default function PropiedadesAdminPage() {
       message: `Se va a eliminar "${title}", incluidas todas sus imágenes de Cloudinary. Esta acción no se puede deshacer.`,
       confirmLabel: 'Sí, eliminar',
       variant: 'danger',
-      icon: Trash2,
       onConfirm: async () => {
         setDeletingId(id);
         try {
@@ -199,8 +203,8 @@ export default function PropiedadesAdminPage() {
       {/* Empty */}
       {!loading && visible.length === 0 && (
         <div className="flex flex-col items-center gap-4 rounded-xl border border-gray-100 bg-white p-12 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#0b7a4b]/10">
-            <Building2 size={28} className="text-[#0b7a4b]" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white ring-1 ring-ink-100 shadow-sm">
+            <Building2 size={28} className="text-brand-700 " />
           </div>
           <div>
             <p className="font-bold text-gray-800">

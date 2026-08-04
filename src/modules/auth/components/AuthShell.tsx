@@ -97,13 +97,17 @@ export function AuthShell({
             transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}
             className="max-w-xl text-center"
           >
-            {/* Filete de marca: aporta el verde sin teñir la foto. */}
+            {/* Filete de marca: aporta el verde sin teñir la foto.
+
+                `bg-brand-700` y NO `var(--gradient-brand)`: ese gradiente va de
+                #0f8b57 a #14a366, dos verdes más claros que el de marca. Al
+                lado del título de la landing (`text-brand-700`, #0b7a4b) se
+                notaba que era otro verde. Ahora es el mismo token exacto. */}
             <span
               aria-hidden
-              className="mx-auto mb-7 block h-1.5 w-16 rounded-full"
-              style={{ background: 'var(--gradient-brand)' }}
+              className="mx-auto mb-7 block h-1.5 w-16 rounded-full bg-brand-700"
             />
-            <h2 className="text-[2.75rem] leading-[1.1] font-bold t text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.65)]">
+            <h2 className="text-[2.75rem] leading-[1.1] font-bold tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.65)]">
               {panelTitle}
             </h2>
             <p className="mx-auto mt-5 max-w-lg text-[17px] leading-relaxed text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.65)]">
@@ -131,8 +135,10 @@ export function AuthShell({
           </Link>
 
           <div className="rounded-2xl border border-ink-200/70 bg-white p-7 shadow-[0_10px_40px_-16px_rgba(10,12,11,0.2)] sm:p-9">
-            <div className="mb-7">
-              <h1 className="text-2xl font-bold tracking-tight text-ink-900">{title}</h1>
+            {/* Centrado: antes iba alineado a la izquierda y quedaba
+                descolgado respecto del resto de la tarjeta, que es simétrica. */}
+            <div className="mb-7 text-center">
+              <h1 className="text-2xl font-bold tracking-tight text-brand-800">{title}</h1>
               <p className="mt-1.5 text-sm text-ink-500">{subtitle}</p>
             </div>
 

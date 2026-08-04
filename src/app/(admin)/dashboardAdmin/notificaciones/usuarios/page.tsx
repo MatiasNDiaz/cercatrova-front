@@ -10,7 +10,7 @@ export default function Page() {
       titulo="Usuarios registrados"
       descripcion="Cada vez que alguien crea una cuenta en el sitio, el aviso aparece acá."
       icono={<UserPlus size={20} />}
-      colorFondo="bg-[#0b7a4b]/10 text-[#0b7a4b]"
+      colorFondo="bg-white text-[#0b7a4b]"
     />
   );
 }

@@ -76,7 +76,6 @@ export default function PublicacionesAdminPage() {
       confirmLabel: 'Sí, eliminar',
       cancelLabel: 'Cancelar',
       variant: 'danger',
-      icon: Trash2,
       onConfirm: async () => {
         try {
           await postsService.remove(post.id);
@@ -97,6 +96,7 @@ export default function PublicacionesAdminPage() {
       <DashboardHeader
         back={{ href: '/dashboardAdmin' }}
         icon={Megaphone}
+        iconTone="publicacion"
         title="Publicaciones"
         subtitle={
           loading

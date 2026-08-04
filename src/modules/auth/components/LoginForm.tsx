@@ -53,7 +53,7 @@ export function LoginForm() {
     <AuthShell
       image="/imagenLogin.jpg"
       imageAlt="Una mano sosteniendo la llave de una casa con un llavero con forma de hogar"
-      panelTitle={<>Bienvenido de nuevo a <span className="whitespace-nowrap text-brand-400">Cerca Trova</span></>}
+      panelTitle={<>Bienvenido de nuevo a <span className="whitespace-nowrap text-brand-500">Cerca Trova</span></>}
       panelText="¿Te gusta estar actualizado sobre las nuevas propiedades y el mercado inmobiliario?"
       title="Iniciar sesión"
       subtitle="Ingresá tus datos para continuar"
@@ -97,7 +97,7 @@ export function LoginForm() {
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            className="absolute top-1/2 right-3.5 -translate-y-1/2 cursor-pointer text-ink-400 transition-colors hover:text-ink-700"
+            className="absolute top-1/2 right-3.5 -translate-y-1/2 cursor-pointer text-brand-600 transition-colors hover:text-brand-800"
           >
             {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
           </button>

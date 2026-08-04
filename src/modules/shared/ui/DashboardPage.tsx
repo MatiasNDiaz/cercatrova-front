@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
 import { DashboardBackLink } from './DashboardBackLink';
+import { iconTile, iconColor, type IconTone } from './iconTokens';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -65,7 +66,8 @@ export function DashboardHeader({
   back,
   icon: Icon,
   iconNode,
-  iconClassName = 'bg-brand-700/10 text-brand-700',
+  iconTone,
+  iconClassName,
   title,
   subtitle,
   actions,
@@ -80,7 +82,12 @@ export function DashboardHeader({
    * reciben `icono: React.ReactNode` desde cada ruta.
    */
   iconNode?: ReactNode;
-  /** Color de la pastilla del ícono, si la pantalla usa uno propio. */
+  /**
+   * Tono semántico del ícono (ver `iconTokens`). Es la forma preferida:
+   * pastilla blanca + color según lo que representa.
+   */
+  iconTone?: IconTone;
+  /** Escape para casos con color propio (las categorías de notificaciones). */
   iconClassName?: string;
   title: string;
   subtitle?: ReactNode;
@@ -93,8 +100,18 @@ export function DashboardHeader({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           {(Icon || iconNode) && (
-            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconClassName}`}>
-              {Icon ? <Icon size={20} /> : iconNode}
+            /* Prioridad: `iconClassName` (escape puntual) > `iconTone`
+               (sistema) > verde de marca (comportamiento anterior). */
+            <span
+              className={
+                iconClassName
+                  ? `flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconClassName}`
+                  : iconTone
+                    ? iconTile(iconTone)
+                    : 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-700/10 text-brand-700'
+              }
+            >
+              {Icon ? <Icon size={20} className={iconTone ? iconColor(iconTone) : undefined} /> : iconNode}
             </span>
           )}
           <div className="min-w-0">

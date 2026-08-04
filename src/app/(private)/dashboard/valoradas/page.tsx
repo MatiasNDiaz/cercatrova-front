@@ -60,6 +60,7 @@ export default function ValoradasPage() {
     <DashboardPage>
       <DashboardHeader
         icon={Star}
+        iconTone="valoracion"
         title="Propiedades que valoré"
         subtitle={
           loading

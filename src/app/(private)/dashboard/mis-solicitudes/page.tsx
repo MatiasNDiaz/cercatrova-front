@@ -213,8 +213,8 @@ export default function MisSolicitudesPage() {
       {/* Empty */}
       {!loading && requests.length === 0 && (
         <div className="bg-white rounded-xl p-12 border border-gray-100 shadow-sm flex flex-col items-center gap-4 text-center">
-          <div className="w-16 h-16 rounded-full bg-[#0b7a4b]/10 flex items-center justify-center">
-            <ClipboardList size={28} className="text-[#0b7a4b]" />
+          <div className="w-16 h-16 rounded-full bg-white ring-1 ring-ink-100 shadow-sm flex items-center justify-center">
+            <ClipboardList size={28} className="text-amber-600 " />
           </div>
           <div>
             <p className="font-bold text-gray-700">Todavía no enviaste solicitudes</p>
@@ -266,8 +266,8 @@ export default function MisSolicitudesPage() {
                   className="w-full flex items-center gap-4 p-5 text-left hover:bg-green-50 transition-colors">
 
                   {/* Ícono tipo propiedad */}
-                  <div className="w-11 h-11 rounded-xl bg-[#0b7a4b]/10 flex items-center justify-center shrink-0">
-                    <ClipboardList size={18} className="text-[#0b7a4b]" />
+                  <div className="w-11 h-11 rounded-xl bg-white ring-1 ring-ink-100 shadow-sm flex items-center justify-center shrink-0">
+                    <ClipboardList size={18} className="text-amber-600 " />
                   </div>
 
                   {/* Info principal */}

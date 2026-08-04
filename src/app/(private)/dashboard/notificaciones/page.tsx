@@ -13,12 +13,16 @@ import { useUrlFilter } from '@/modules/shared/hooks/useUrlFilter';
 
 import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
 import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
+import { NotificationType } from '@/modules/shared/types/api';
+
 interface Notification {
   id: number;
   title: string;
   message: string;
   read: boolean;
   propertyId?: number;
+  /** Campo real del backend; opcional por las filas previas a la migración. */
+  type?: NotificationType;
   createdAt: string;
 }
 
@@ -37,27 +41,50 @@ type NotifType =
   | 'respuesta_comentario'
   | 'generica';
 
+/** Mapeo directo backend → categoría de la UI, para los casos 1 a 1. */
+const TYPE_TO_UI: Partial<Record<NotificationType, NotifType>> = {
+  [NotificationType.CAMBIO_PRECIO]: 'precio',
+  [NotificationType.PROPIEDAD_MATCH]: 'coincidencia',
+  [NotificationType.NUEVA_PROPIEDAD]: 'propiedad_nueva',
+  [NotificationType.NUEVA_PUBLICACION]: 'publicacion_nueva',
+  [NotificationType.RESPUESTA_COMENTARIO]: 'respuesta_comentario',
+};
+
 /**
- * Clasifica una notificación por su texto.
+ * Sub-estado de una notificación de solicitud.
  *
- * ⚠️ El backend no manda un campo `type`, así que hay que inferirlo del título
- * y el mensaje. El orden IMPORTA: los casos más específicos van primero, y los
- * que pueden contener texto libre del usuario (respuestas a comentarios) van
- * arriba de todo — si no, una respuesta que mencione "precio" o "publicación"
- * se clasificaría mal.
+ * ⚠️ Acá el campo `type` del backend NO alcanza: las cuatro variantes
+ * (recibida / en revisión / aceptada / rechazada) comparten un único
+ * `estado_solicitud`, porque el backend no expone el estado resultante como
+ * dato aparte. Esta pantalla sí las distingue (ícono y color distintos por
+ * estado), así que para ESE caso —y sólo para ese— se sigue mirando el texto.
  *
- * Se matchea contra el TÍTULO cuando el título es fijo (lo arma el backend), y
- * recién después contra el cuerpo.
+ * Es un matcheo mucho más seguro que el anterior: ya sabemos que la
+ * notificación es de una solicitud, así que no hay riesgo de que una respuesta
+ * a un comentario que mencione "aceptado" se clasifique mal.
+ *
+ * Si en el futuro el backend agrega el estado al payload, esto se reemplaza por
+ * un mapeo directo.
  */
-function getNotifType(title: string, message: string): NotifType {
+function solicitudSubtype(title: string, message: string): NotifType {
+  const t = (title + ' ' + message).toLowerCase();
+  if (t.includes('aceptad')) return 'solicitud_aceptada';
+  if (t.includes('rechazad')) return 'solicitud_rechazada';
+  if (t.includes('revisión') || t.includes('revision')) return 'solicitud_revision';
+  return 'solicitud_recibida';
+}
+
+/**
+ * Heurística por texto — **sólo para filas anteriores a la migración** que
+ * llegan sin `type` o con `generica`. Ver la nota equivalente en
+ * `dashboardAdmin/notificaciones/notifShared.tsx`: es transitorio.
+ */
+function inferFromText(title: string, message: string): NotifType {
   const titulo = title.toLowerCase();
   const t = (title + ' ' + message).toLowerCase();
 
-  // 1. Títulos exactos que arma el backend — inmunes al texto libre del cuerpo
   if (titulo.includes('respondieron tu comentario'))                            return 'respuesta_comentario';
   if (titulo.includes('nueva publicación') || titulo.includes('nueva publicacion')) return 'publicacion_nueva';
-
-  // 2. Resto, por contenido
   if (t.includes('precio') || t.includes('bajó'))                              return 'precio';
   if (t.includes('interesa') || t.includes('coincid') || t.includes('cumple')) return 'coincidencia';
   if (t.includes('aceptad'))                                                    return 'solicitud_aceptada';
@@ -68,8 +95,24 @@ function getNotifType(title: string, message: string): NotifType {
   return 'generica';
 }
 
-function getConfig(title: string, message: string) {
-  const type = getNotifType(title, message);
+/**
+ * Categoría de la notificación, priorizando el campo `type` del backend.
+ *
+ * Antes esto se infería enteramente del texto en español, con el orden de los
+ * `if` como única defensa: una respuesta a un comentario que mencionara
+ * "precio" o "publicación" terminaba con el ícono equivocado.
+ */
+function getNotifType(n: Pick<Notification, 'type' | 'title' | 'message'>): NotifType {
+  if (n.type === NotificationType.ESTADO_SOLICITUD) {
+    return solicitudSubtype(n.title, n.message);
+  }
+  const mapped = n.type ? TYPE_TO_UI[n.type] : undefined;
+  if (mapped) return mapped;
+  return inferFromText(n.title, n.message);
+}
+
+function getConfig(n: Pick<Notification, 'type' | 'title' | 'message'>) {
+  const type = getNotifType(n);
   switch (type) {
     case 'precio':
       return { icon: <TrendingDown size={16} className="text-amber-600" />, bg: 'bg-amber-50',        border: 'border-amber-100',        dot: 'bg-amber-500',    label: 'Bajó el precio' };
@@ -108,7 +151,7 @@ function timeAgo(dateStr: string): string {
 
 // ── ITEM ──────────────────────────────────────────────────────────────────────
 function NotifItem({ n, onRead }: { n: Notification; onRead: (id: number) => void }) {
-  const cfg = getConfig(n.title, n.message);
+  const cfg = getConfig(n);
   return (
     <div className={`group flex items-start gap-4 px-5 py-4 rounded-xl border transition-all duration-200 ${
       n.read ? 'bg-white border-gray-100' : 'bg-white border-[#0b7a4b]/20 shadow-sm'
@@ -215,7 +258,7 @@ export default function NotificacionesPage() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const filtered = notifications.filter(n => {
-    const type = getNotifType(n.title, n.message);
+    const type = getNotifType(n);
     switch (filter) {
       case 'sin_leer':               return !n.read;
       case 'leidas':                 return n.read;
@@ -285,13 +328,13 @@ export default function NotificacionesPage() {
   const getCount = (card: typeof SUMMARY_CARDS[0]) => {
     if (card.isUnread)     return unreadCount;
     if (card.isSolicitudes) return notifications.filter(n => {
-      const t = getNotifType(n.title, n.message);
+      const t = getNotifType(n);
       return t === 'solicitud_aceptada' || t === 'solicitud_rechazada' || t === 'solicitud_revision' || t === 'solicitud_recibida';
     }).length;
     if (card.filter === 'todas')            return notifications.length;
-    if (card.filter === 'propiedades_nuevas') return notifications.filter(n => getNotifType(n.title, n.message) === 'propiedad_nueva').length;
-    if (card.filter === 'coincidencias')    return notifications.filter(n => getNotifType(n.title, n.message) === 'coincidencia').length;
-    if (card.filter === 'precios')          return notifications.filter(n => getNotifType(n.title, n.message) === 'precio').length;
+    if (card.filter === 'propiedades_nuevas') return notifications.filter(n => getNotifType(n) === 'propiedad_nueva').length;
+    if (card.filter === 'coincidencias')    return notifications.filter(n => getNotifType(n) === 'coincidencia').length;
+    if (card.filter === 'precios')          return notifications.filter(n => getNotifType(n) === 'precio').length;
     return 0;
   };
 
@@ -345,12 +388,12 @@ export default function NotificacionesPage() {
           const isActive = filter === key;
           const count =
             key === 'sin_leer'               ? unreadCount :
-            key === 'propiedades_nuevas'      ? notifications.filter(n => getNotifType(n.title, n.message) === 'propiedad_nueva').length :
-            key === 'coincidencias'           ? notifications.filter(n => getNotifType(n.title, n.message) === 'coincidencia').length :
-            key === 'precios'                 ? notifications.filter(n => getNotifType(n.title, n.message) === 'precio').length :
-            key === 'solicitudes_aceptadas'   ? notifications.filter(n => getNotifType(n.title, n.message) === 'solicitud_aceptada').length :
-            key === 'solicitudes_rechazadas'  ? notifications.filter(n => getNotifType(n.title, n.message) === 'solicitud_rechazada').length :
-            key === 'solicitudes_revision'    ? notifications.filter(n => { const t = getNotifType(n.title, n.message); return t === 'solicitud_revision' || t === 'solicitud_recibida'; }).length :
+            key === 'propiedades_nuevas'      ? notifications.filter(n => getNotifType(n) === 'propiedad_nueva').length :
+            key === 'coincidencias'           ? notifications.filter(n => getNotifType(n) === 'coincidencia').length :
+            key === 'precios'                 ? notifications.filter(n => getNotifType(n) === 'precio').length :
+            key === 'solicitudes_aceptadas'   ? notifications.filter(n => getNotifType(n) === 'solicitud_aceptada').length :
+            key === 'solicitudes_rechazadas'  ? notifications.filter(n => getNotifType(n) === 'solicitud_rechazada').length :
+            key === 'solicitudes_revision'    ? notifications.filter(n => { const t = getNotifType(n); return t === 'solicitud_revision' || t === 'solicitud_recibida'; }).length :
             null;
 
           return (

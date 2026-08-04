@@ -1,6 +1,7 @@
 import { isAxiosError } from 'axios';
 
 const NETWORK_ERROR_MESSAGE = 'No pudimos conectar con el servidor, intentá de nuevo.';
+const TIMEOUT_MESSAGE = 'El servidor tardó demasiado en responder. Intentá de nuevo en un momento.';
 const GENERIC_ERROR_MESSAGE = 'Ocurrió un error inesperado. Intentá de nuevo.';
 const THROTTLE_MESSAGE = 'Demasiados intentos, esperá un momento e intentá de nuevo.';
 
@@ -13,6 +14,10 @@ const THROTTLE_MESSAGE = 'Demasiados intentos, esperá un momento e intentá de 
  */
 export function getErrorMessage(error: unknown): string {
   if (!isAxiosError(error)) return GENERIC_ERROR_MESSAGE;
+  // La instancia tiene `timeout: 15s`. Un corte por tiempo llega sin `response`,
+  // igual que una red caída, pero no es lo mismo para el usuario: el servidor
+  // está ahí, sólo tardó de más. Se distingue por el código de axios.
+  if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') return TIMEOUT_MESSAGE;
   if (!error.response) return NETWORK_ERROR_MESSAGE;
 
   if (error.response.status === 429) return THROTTLE_MESSAGE;

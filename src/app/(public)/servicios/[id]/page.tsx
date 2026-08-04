@@ -80,6 +80,10 @@ Desde ahí armamos la estrategia: fotografía profesional, publicación en los p
       { p: "¿La tasación tiene costo?", r: "No. La tasación previa a una venta es sin cargo y no te obliga a firmar nada con nosotros." },
       { p: "¿Cuánto tarda en venderse una propiedad?", r: "Depende de la zona, el tipo de inmueble y el precio de salida. Con un precio bien puesto, la mayoría de las operaciones se cierran dentro de los primeros tres meses." },
       { p: "¿Qué gastos tengo que afrontar como vendedor?", r: "Además de la comisión, se suelen contemplar el certificado de dominio, el libre deuda de impuestos y servicios y, según el caso, el impuesto a la transferencia. Te lo detallamos todo antes de empezar." },
+      { p: "¿Las fotos y el recorrido virtual tienen costo aparte?", r: "No. La sesión de fotos profesional y el recorrido virtual están incluidos en el servicio de venta, sin cargo adicional." },
+      { p: "¿Tengo que estar presente en las visitas?", r: "No hace falta. Coordinamos y acompañamos presencialmente cada visita, y después te pasamos el feedback de cada una." },
+      { p: "¿Me van a llegar todas las consultas?", r: "No. Filtramos las consultas y solo te llegan los interesados reales; no tenés que atender a desconocidos por teléfono." },
+      { p: "¿Puedo ajustar el precio después de publicar?", r: "Sí. Con el informe de cómo viene la venta —consultas, visitas y feedback— revisamos juntos si conviene sostener o corregir el precio." },
     ],
     galeria: [
       { src: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?q=80&w=800&auto=format&fit=crop", alt: "Casa iluminada al atardecer" },
@@ -135,6 +139,10 @@ Después de la firma seguimos nosotros: cobranza mensual con rendición detallad
       { p: "¿Qué tipo de garantía aceptan?", r: "Trabajamos con garantía propietaria en Córdoba, seguro de caución y, según el caso, recibo de sueldo con relación de dependencia. Evaluamos cada situación puntualmente." },
       { p: "¿Quién se ocupa si el inquilino deja de pagar?", r: "Nosotros. Iniciamos la gestión de cobro apenas se registra el atraso y te mantenemos informado en cada paso, sin que tengas que enfrentar la situación vos." },
       { p: "¿Puedo alquilar si la propiedad necesita arreglos?", r: "Sí. Te decimos qué conviene resolver antes de publicar y qué se puede dejar como está: no todo arreglo se recupera en el precio del alquiler." },
+      { p: "¿Cómo evalúan a los candidatos?", r: "Verificamos situación laboral, ingresos declarados y antecedentes crediticios de cada interesado antes de aprobarlo." },
+      { p: "¿Se deja registro del estado del inmueble?", r: "Sí. Hacemos un inventario del estado del inmueble al entregarlo y otro al recibirlo, para que no queden discusiones al final del contrato." },
+      { p: "¿Cómo y cuándo recibo el alquiler?", r: "La cobranza es mensual y te llega con una rendición detallada de los gastos descontados." },
+      { p: "¿Quién se ocupa de las renovaciones?", r: "Nosotros. Gestionamos todo el ciclo del contrato, incluidas renovaciones, ajustes según lo pactado y rescisiones." },
     ],
     galeria: [
       { src: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=800&auto=format&fit=crop", alt: "Llaves de un departamento en alquiler" },
@@ -190,6 +198,10 @@ El informe final incluye la descripción del inmueble, las operaciones comparabl
       { p: "¿En cuánto tiempo tengo el informe?", r: "Entre 48 y 72 horas hábiles desde la visita al inmueble, según la complejidad del caso." },
       { p: "¿Sirve para presentar en un banco o en una sucesión?", r: "Sí. El informe lo firma un martillero matriculado y es válido ante entidades bancarias, escribanías y en instancias judiciales o sucesorias." },
       { p: "¿Tasan terrenos y locales, o solo viviendas?", r: "Tasamos viviendas, departamentos, locales, oficinas, galpones y terrenos. Cada tipo se valúa con los comparables que le corresponden." },
+      { p: "¿Tengo que estar presente en la inspección?", r: "La visita se coordina en el horario que te quede cómodo. Alguien tiene que abrirnos el inmueble, pero no hace falta que sea el propietario." },
+      { p: "¿Qué incluye el informe?", r: "La metodología usada, los comparables tomados y los fundamentos del valor, además del relevamiento de superficies, estado de conservación y terminaciones." },
+      { p: "¿Me explican el resultado o solo me lo envían?", r: "Incluye una reunión de devolución donde repasamos el informe y sus alcances, con recomendaciones según lo que quieras hacer." },
+      { p: "¿La situación documental afecta la tasación?", r: "Sí. Revisamos la situación documental del inmueble y su impacto en el valor: no se tasa igual una propiedad con la documentación en regla que una con temas pendientes." },
     ],
     galeria: [
       { src: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=800&auto=format&fit=crop", alt: "Cálculo del valor de mercado de una propiedad" },
@@ -245,6 +257,10 @@ No cobramos por conversar. La primera reunión es para entender tu situación y 
       { p: "¿El asesoramiento tiene costo?", r: "La reunión inicial de diagnóstico es sin cargo. Si el caso requiere un trabajo más extenso, te pasamos el presupuesto antes de empezar." },
       { p: "¿Me asesoran aunque compre una propiedad que no es de ustedes?", r: "Sí. Podemos revisar la documentación y acompañarte en la negociación de una propiedad publicada por otra inmobiliaria o por un particular." },
       { p: "¿Ayudan con créditos hipotecarios?", r: "Te orientamos sobre las líneas vigentes, los requisitos y los gastos que no siempre se ven al principio. La aprobación la resuelve el banco, pero llegás preparado." },
+      { p: "¿Me ayudan a saber cuánto puedo comprar realmente?", r: "Sí. Analizamos tu capacidad real de compra contemplando anticipo, gastos de escrituración y mudanza, no solo el precio de publicación." },
+      { p: "¿Revisan la documentación antes de que firme?", r: "Sí, es parte del servicio: revisamos la documentación antes de que firmes nada." },
+      { p: "¿Me acompañan en la negociación?", r: "Sí. Te acompañamos en la negociación y en cada etapa clave de la operación." },
+      { p: "¿El asesoramiento termina cuando cierro la operación?", r: "No. Seguimos disponibles después de concretada la operación, para lo que surja." },
     ],
     galeria: [
       { src: "https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=800&auto=format&fit=crop", alt: "Acuerdo cerrado entre las partes" },
@@ -300,6 +316,10 @@ Una vez publicada, tu propiedad aparece en nuestro catálogo web, se difunde en 
       { p: "¿Publicar tiene costo?", r: "No. La publicación en nuestro catálogo no tiene costo: la comisión se cobra recién cuando la operación se concreta." },
       { p: "¿Qué pasa si rechazan mi solicitud?", r: "Te explicamos el motivo. Casi siempre es algo corregible —falta documentación o el precio está fuera de mercado— y podés volver a enviarla." },
       { p: "¿Puedo publicar si ya está en otra inmobiliaria?", r: "Sí, salvo que hayas firmado una exclusividad vigente. Avisanos y lo revisamos antes de publicar." },
+      { p: "¿Necesito tener las fotos listas para publicar?", r: "No. Con los datos básicos alcanza para que un agente revise la propiedad; si se aprueba, coordinamos la visita y la sesión de fotos profesional." },
+      { p: "¿Dónde se publica mi propiedad?", r: "En nuestro catálogo web, en los principales portales inmobiliarios y en redes sociales." },
+      { p: "¿Quién escribe el aviso?", r: "Nosotros. Redactamos el aviso con la descripción y las fotos de calidad, para que no tengas que ocuparte de eso." },
+      { p: "¿Le llega a alguien que esté buscando algo así?", r: "Sí. Al publicarse, avisamos automáticamente a los usuarios cuya búsqueda guardada coincide con las características de tu propiedad." },
     ],
     galeria: [
       { src: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=800&auto=format&fit=crop", alt: "Ambiente preparado para la sesión de fotos" },
@@ -356,6 +376,10 @@ A partir de ahí redactamos o revisamos el boleto de compraventa —qué se entr
       { p: "¿Puedo contratarlos si compro sin inmobiliaria?", r: "Sí. Es uno de los casos donde más sentido tiene: en una operación entre particulares nadie revisa la documentación por vos." },
       { p: "¿Qué pasa si aparece una deuda o un gravamen?", r: "Te informamos qué es, cuánto representa y quién debería hacerse cargo, para que puedas negociarlo o desistir de la operación a tiempo." },
       { p: "¿Trabajan con mi escribano?", r: "Sí. Coordinamos con la escribanía que elijas; si no tenés una, te acercamos profesionales con los que trabajamos habitualmente." },
+      { p: "¿Qué informes solicitan?", r: "Informe de dominio e inhibiciones en el Registro General, además del control de deudas de impuestos, servicios y expensas." },
+      { p: "¿Verifican quién firma la operación?", r: "Sí. Verificamos la titularidad y la capacidad de quien firma antes de avanzar." },
+      { p: "¿Revisan el boleto de compraventa?", r: "Lo redactamos o lo revisamos, según el caso, antes de que se firme." },
+      { p: "¿Hasta qué momento acompañan la operación?", r: "Coordinamos con la escribanía hasta la inscripción final del inmueble a tu nombre." },
     ],
     galeria: [
       { src: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=800&auto=format&fit=crop", alt: "Respaldo jurídico de la operación" },
@@ -419,6 +443,7 @@ interface ServicioBloques {
 
   /** Se inserta después del timeline de pasos. */
   destacado?: BloqueDestacado;
+
 }
 
 const BLOQUES: Record<string, ServicioBloques> = {
@@ -795,7 +820,7 @@ const BLOQUES: Record<string, ServicioBloques> = {
       eyebrow: 'De tu casa al catálogo, en 48 horas.',
       title: 'Publicamos tu Propiedad en Cerca Trova.',
       paragraphs: [
-        'Cargá los datos de tu inmueble, lo revisamos y sale publicado en nuestro catálogo y en los portales.',
+        'Cargá los datos de tu inmueble, lo revisamos y si cumple con nuestros criterios, se publica en nuestro catálogo y en los portales.',
       ],
       image: {
         src: '/servicePublicacionPropiedad/publicar.jpg',
@@ -960,7 +985,7 @@ function ServicioTemplate({
       />
 
       {/* 6 - FAQ */}
-      <ServiceFaq tone="white" title={b.faqTitle} items={faq} />
+      <ServiceFaq tone="soft" title={b.faqTitle} items={faq} />
 
       {/* 7 - CTA final, sobre verde profundo */}
       <ServiceCta
@@ -976,6 +1001,25 @@ function ServicioTemplate({
     </main>
   );
 }
+
+/**
+ * Prerenderiza las 6 páginas de servicio en tiempo de build.
+ *
+ * `serviciosData` está enteramente hardcodeado en este archivo: estas páginas no
+ * consultan la API ni dependen de la request. Sin `generateStaticParams`, Next
+ * las marcaba como dinámicas (`ƒ`) y las renderizaba en el servidor en CADA
+ * visita — trabajo repetido para devolver siempre exactamente el mismo HTML.
+ *
+ * `dynamicParams = false` hace que cualquier slug fuera de la lista responda 404
+ * directamente, sin invocar el componente. Es el mismo resultado que el
+ * `notFound()` de abajo, que se conserva como red de seguridad y para que
+ * TypeScript siga estrechando el tipo de `s`.
+ */
+export function generateStaticParams() {
+  return Object.keys(serviciosData).map((id) => ({ id }));
+}
+
+export const dynamicParams = false;
 
 export default async function ServicioDetallePage({ params }: { params: Promise<{ id: string }> }) {
   // Next 15: `params` es una promesa y hay que esperarla antes de leerla.
@@ -1316,25 +1360,24 @@ export default async function ServicioDetallePage({ params }: { params: Promise<
         </div>
       </section>
 
-      {/* ══ FRANJA VERDE 2 — cierre ═════════════════════════════════
-          Segundo bloque a fondo verde, esta vez en la variante más oscura
-          (`surface-brand-deepest`, la del footer). Cierra la página antes del
-          footer y evita que el último bloque claro muera contra el verde del
-          footer sin transición. */}
-      <section className="surface-brand-deepest relative overflow-hidden py-16 md:py-20">
+      {/* ══ CIERRE ══════════════════════════════════════════
+          Fondo CLARO, no verde profundo: pegado al footer (que también es
+          verde oscuro) los dos bloques se fundían en una sola mancha al
+          final de la página. */}
+      <section className="relative overflow-hidden bg-surface-mint py-16 md:py-20">
         <div className="relative z-10 mx-auto max-w-3xl px-4 text-center">
           <Reveal>
-            <span className="inline-block rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-[11px] font-bold tracking-[0.22em] text-white uppercase backdrop-blur-sm">
+            <span className="inline-block rounded-full bg-brand-700 px-4 py-1.5 text-[11px] font-bold tracking-[0.22em] text-white uppercase">
               {s.titulo}
             </span>
           </Reveal>
           <Reveal delay={0.08}>
-            <h2 className="mt-5 text-3xl font-bold tracking-tight text-white md:text-4xl">
+            <h2 className="mt-5 text-3xl font-bold tracking-tight text-ink-900 md:text-4xl">
               ¿Empezamos?
             </h2>
           </Reveal>
           <Reveal delay={0.14}>
-            <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-white/75">
+            <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-ink-600">
               Contanos tu caso y un agente de Cerca Trova te responde a la brevedad,
               sin compromiso.
             </p>
@@ -1345,14 +1388,14 @@ export default async function ServicioDetallePage({ params }: { params: Promise<
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 text-sm font-bold text-brand-800 shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-8 py-4 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-xl active:scale-[0.98] sm:w-auto"
               >
                 <MessageCircle size={16} />
                 Consultar por WhatsApp
               </a>
               <Link
                 href="/properties"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-white/30 px-8 py-4 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-brand-800 active:scale-[0.98] sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-brand-700 px-8 py-4 text-sm font-bold text-brand-700 transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-700 hover:text-white active:scale-[0.98] sm:w-auto"
               >
                 Ver propiedades <ArrowRight size={15} />
               </Link>

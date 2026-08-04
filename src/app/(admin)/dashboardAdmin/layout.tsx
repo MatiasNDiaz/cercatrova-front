@@ -4,35 +4,23 @@ import { useAuth } from '@/modules/shared/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import {
   User, Home, FileText, LogOut, ChevronDown,
-  ArrowLeft, Users, Building2, BarChart2, Bell, Eye, Megaphone,
+  ArrowLeft, Users, Building2, BarChart2, Bell, Eye, Megaphone
 } from 'lucide-react';
 import api from '@/modules/shared/lib/axios';
 import { DashboardShell } from '@/modules/shared/ui/DashboardShell';
 
 // ── Tipos ─────────────────────────────────────────────
-interface AdminNotif {
-  id: number;
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: string;
-}
-
-type NotifType = 'nuevo_usuario' | 'nueva_solicitud' | 'valoracion' | 'comentario' | 'favorito' | 'generica';
-
-function getNotifType(title: string, message: string): NotifType {
-  const t = (title + ' ' + message).toLowerCase();
-  if (t.includes('usuario registrado') || t.includes('se registró'))          return 'nuevo_usuario';
-  if (t.includes('solicitud de publicación') || t.includes('solicitó'))       return 'nueva_solicitud';
-  if (t.includes('valoración') || t.includes('estrella'))                     return 'valoracion';
-  if (t.includes('comentó') || t.includes('comentario'))                      return 'comentario';
-  if (t.includes('favorito') || t.includes('guardó'))                         return 'favorito';
-  return 'generica';
-}
+// `AdminNotification` y `getNotifType` viven en `notificaciones/notifShared`:
+// antes este archivo tenía SU PROPIA copia de la clasificación, con reglas
+// levemente distintas a la de las pantallas de notificaciones ('solicitó' acá
+// vs. 'solicitud para' allá). Eran dos heurísticas divergentes para lo mismo,
+// así que los badges del sidebar podían no coincidir con lo que después
+// mostraba la pantalla. Ahora clasifican con el campo `type` del backend, en un
+// único lugar.
+import { getNotifType, type AdminNotification } from './notificaciones/notifShared';
 
 
 
@@ -67,7 +55,7 @@ export function NavAccent({ active }: { active: boolean }) {
 
 // ── NavLink con badge ─────────────────────────────────
 function NavLink({
-  href, label, icon: Icon, isActive, badge = 0,
+  href, label, icon: Icon, isActive, badge = 0
 }: {
   href: string; label: string; icon: React.ElementType; isActive: boolean; badge?: number;
 }) {
@@ -98,7 +86,7 @@ function NavLink({
  * estás parado.
  */
 function NavGroup({
-  label, icon: Icon, items, badge = 0,
+  label, icon: Icon, items, badge = 0
 }: {
   label: string;
   icon: React.ElementType;
@@ -172,7 +160,7 @@ function NavGroup({
 function Sidebar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
-  const [notifs, setNotifs] = useState<AdminNotif[]>([]);
+  const [notifs, setNotifs] = useState<AdminNotification[]>([]);
 
   const fetchNotifs = useCallback(async () => {
     try {
@@ -196,12 +184,12 @@ function Sidebar() {
   // Conteos por tipo — solo no leídas
   const unread = notifs.filter(n => !n.read);
   const counts = {
-    usuarios:     unread.filter(n => getNotifType(n.title, n.message) === 'nuevo_usuario').length,
-    solicitudes:  unread.filter(n => getNotifType(n.title, n.message) === 'nueva_solicitud').length,
-    comentarios:  unread.filter(n => getNotifType(n.title, n.message) === 'comentario').length,
-    valoraciones: unread.filter(n => getNotifType(n.title, n.message) === 'valoracion').length,
-    favoritos:    unread.filter(n => getNotifType(n.title, n.message) === 'favorito').length,
-    notificaciones: unread.length,
+    usuarios:     unread.filter(n => getNotifType(n) === 'nuevo_usuario').length,
+    solicitudes:  unread.filter(n => getNotifType(n) === 'nueva_solicitud').length,
+    comentarios:  unread.filter(n => getNotifType(n) === 'comentario').length,
+    valoraciones: unread.filter(n => getNotifType(n) === 'valoracion').length,
+    favoritos:    unread.filter(n => getNotifType(n) === 'favorito').length,
+    notificaciones: unread.length
   };
 
   // La navegación principal ahora se arma con `NavGroup` directamente en el
@@ -221,11 +209,10 @@ function Sidebar() {
         : '¿Confirmás que querés cerrar sesión?',
       confirmLabel: 'Sí, salir',
       cancelLabel: 'No, me quedo',
-      variant: 'default',
-      icon: LogOut,
+      variant: 'logout',
       onConfirm: async () => {
         await logout();
-      },
+      }
     });
   };
 

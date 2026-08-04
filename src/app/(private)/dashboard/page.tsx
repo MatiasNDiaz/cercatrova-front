@@ -3,6 +3,7 @@
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import Link from 'next/link';
 import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
+import { iconTile, iconColor, type IconTone } from '@/modules/shared/ui/iconTokens';
 import {
   User, Heart, Settings, Bell, FileText, ChevronRight,
 } from 'lucide-react';
@@ -13,35 +14,35 @@ const sections = [
     icon: User,
     label: 'Mi Perfil',
     description: 'Editá tus datos personales y foto de perfil',
-    color: 'bg-blue-100 text-blue-600',
+    tone: 'usuario' as IconTone,
   },
   {
     href: '/dashboard/favoritos',
     icon: Heart,
     label: 'Favoritos',
     description: 'Las propiedades que guardaste',
-    color: 'bg-red-100 text-red-500',
+    tone: 'favorito' as IconTone,
   },
   {
     href: '/dashboard/preferencias',
     icon: Settings,
     label: 'Preferencias',
     description: 'Configurá tus preferencias de búsqueda',
-    color: 'bg-purple-200 text-purple-600',
+    tone: 'neutro' as IconTone,
   },
   {
     href: '/dashboard/mis-solicitudes',
     icon: FileText,
     label: 'Mis Solicitudes',
     description: 'Seguí el estado de tus propiedades publicadas',
-    color: 'bg-amber-100 text-amber-600',
+    tone: 'solicitud' as IconTone,
   },
   {
     href: '/dashboard/notificaciones',
     icon: Bell,
     label: 'Notificaciones',
     description: 'Tus notificaciones y alertas recientes',
-    color: 'bg-[#0b7a4b]/20 text-[#0b7a4b]',
+    tone: 'notificacion' as IconTone,
   },
 ];
 
@@ -111,11 +112,11 @@ export default function DashboardHomePage() {
 
       {/* Cards de secciones */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {sections.map(({ href, icon: Icon, label, description, color }) => (
+        {sections.map(({ href, icon: Icon, label, description, tone }) => (
           <Link key={href} href={href}
             className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-5 group">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
-              <Icon size={22} />
+            <div className={iconTile(tone, 'md')}>
+              <Icon size={22} className={iconColor(tone)} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-gray-900">{label}</p>

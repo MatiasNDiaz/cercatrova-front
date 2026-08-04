@@ -62,6 +62,7 @@ export default function ComentadasPage() {
     <DashboardPage>
       <DashboardHeader
         icon={MessageCircle}
+        iconTone="comentario"
         title="Propiedades que comenté"
         subtitle={
           loading

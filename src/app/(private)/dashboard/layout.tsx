@@ -128,8 +128,7 @@ function Sidebar() {
         : '¿Confirmás que querés cerrar tu sesión?',
       confirmLabel: 'Sí, salir',
       cancelLabel: 'No, me quedo',
-      variant: 'default',
-      icon: LogOut,
+      variant: 'logout',
       onConfirm: async () => {
         await logout();
       },

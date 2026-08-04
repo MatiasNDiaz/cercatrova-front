@@ -13,8 +13,17 @@
 # testing
 /coverage
 
+
+.next/
+.next-build/
+.next-verify/ 
+
 # next.js
-/.next/
+# El glob cubre `.next` y también los directorios alternativos que habilita
+# NEXT_DIST_DIR en `next.config.ts` (`.next-build`, `.next-verify`). Con el
+# patrón viejo `/.next/` esos dos quedaban FUERA del ignore y se versionaban:
+# había 1113 archivos de build (24 MB) commiteados en el repo.
+/.next*/
 /out/
 
 # production
@@ -32,6 +41,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...pero .env.example SÍ se versiona: es la lista de variables que hay que
+# setear para desplegar (sin valores). Sin esta excepción, el patrón `.env*`
+# de arriba también lo ignoraba.
+!.env.example
 
 # vercel
 .vercel
