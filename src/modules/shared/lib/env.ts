@@ -43,11 +43,10 @@ function requirePublicEnv(name: string, value: string | undefined, devFallback: 
 }
 
 /** URL base del backend NestJS. Obligatoria en producción. */
-export const API_URL: string = requirePublicEnv(
-  'NEXT_PUBLIC_API_URL',
-  process.env.NEXT_PUBLIC_API_URL,
-  DEV_API_FALLBACK,
-);
+export const API_URL: string =
+  process.env.NODE_ENV === 'production'
+    ? '/api'
+    : requirePublicEnv('NEXT_PUBLIC_API_URL', process.env.NEXT_PUBLIC_API_URL, DEV_API_FALLBACK);
 
 /**
  * Client ID de Google Identity Services.

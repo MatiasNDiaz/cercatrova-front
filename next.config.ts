@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Permite construir a un directorio alternativo (NEXT_DIST_DIR=.next-build npm run build)
-  // para no pelear con el `.next` que bloquea el dev server en Windows.
-  // Sin la variable, el comportamiento es exactamente el de siempre.
   distDir: process.env.NEXT_DIST_DIR || '.next',
   images: {
     remotePatterns: [
@@ -49,9 +46,6 @@ const nextConfig = {
         pathname: '/**',
       },
       {
-        // Fotos de perfil de las cuentas de Google (login con Google, Bloque H).
-        // Sin esto, `next/image` tira "hostname not configured under images"
-        // apenas un usuario de Google entra al dashboard.
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
         port: '',
@@ -59,7 +53,17 @@ const nextConfig = {
       },
     ],
   },
+  // Proxy: el navegador le pega a /api/* (mismo dominio que el frontend),
+  // Vercel reenvía por detrás al backend real en Railway. Así la cookie de
+  // sesión queda en el dominio del front y el middleware puede leerla.
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${process.env.BACKEND_URL}/:path*`,
+      },
+    ];
+  },
 };
-
 
 export default nextConfig;
