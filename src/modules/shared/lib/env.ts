@@ -42,10 +42,24 @@ function requirePublicEnv(name: string, value: string | undefined, devFallback: 
   return devFallback;
 }
 
-/** URL base del backend NestJS. Obligatoria en producción. */
+/**
+ * URL base del backend NestJS.
+ *
+ * - Cliente (navegador) en producción: '/api', ruta relativa proxeada por
+ *   Vercel hacia Railway (ver rewrites en next.config.js). Necesario para
+ *   que la cookie de sesión quede en el mismo dominio que el frontend.
+ * - Servidor (SSR, corriendo en Vercel) en producción: URL absoluta directa
+ *   a Railway, porque fetch() en Node no puede resolver rutas relativas.
+ * - Desarrollo: siempre NEXT_PUBLIC_API_URL / localhost, sin distinción
+ *   cliente/servidor (front y back comparten dominio en local).
+ */
+const isServer = typeof window === 'undefined';
+
 export const API_URL: string =
   process.env.NODE_ENV === 'production'
-    ? '/api'
+    ? isServer
+      ? (process.env.BACKEND_URL ?? '')
+      : '/api'
     : requirePublicEnv('NEXT_PUBLIC_API_URL', process.env.NEXT_PUBLIC_API_URL, DEV_API_FALLBACK);
 
 /**
