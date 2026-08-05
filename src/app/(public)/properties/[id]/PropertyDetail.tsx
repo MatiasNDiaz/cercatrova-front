@@ -10,6 +10,7 @@ import {
   Building2, Navigation, MessageCircle, Send, Pencil,
   Trash2, LogIn, MessageCircleMore, ShieldCheck, Landmark, Eye, EyeOff,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { BsWhatsapp } from 'react-icons/bs';
 import { toast } from 'sonner';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
@@ -24,8 +25,9 @@ import { propertiesService } from '@/modules/properties/services/properties.serv
 import { Property } from '@/modules/properties/interfaces/propertyInterface';
 import { OperationType } from '@/modules/properties/interfaces/operation-type';
 import {
-  BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor, statusBadgeColor, statusDotColor,
+  BADGE_BASE, operationBadgeSoft, propertyTypeBadgeSoft, statusBadgeColor, statusDotColor,
 } from '@/modules/properties/lib/badgeStyles';
+import { Reveal } from '@/modules/landing/components/Reveal';
 
 // ── INTERFACES ────────────────────────────────────────────────────────────────
 interface PropertyImage { id: number; url: string; isCover?: boolean; }
@@ -75,12 +77,23 @@ export type PropertyFull = Omit<
 };
 
 // ── ESTILOS DE LA BARRA DE ACCESOS RÁPIDOS ────────────────────────────────────
-// Cada acceso se comporta como un chip: en hover se rellena de verde de marca
-// con el texto y el ícono en blanco (`text-white` alcanza porque los íconos
-// usan `currentColor`). Se sacó el subrayado animado que había antes: sobre un
-// fondo lleno quedaba como un renglón suelto debajo del texto.
+// Cada acceso es un chip que en hover se tiñe MUY suave.
+//
+// Antes el hover rellenaba el chip con un sólido saturado (`bg-brand-700`,
+// `bg-red-600`, `bg-blue-600`, `bg-amber-500`) e invertía el texto a blanco:
+// cuatro rectángulos de color fuerte apareciendo y desapareciendo en la primera
+// fila de la página, que es justo donde el ojo aterriza. Ahora se usa el mismo
+// criterio que el resto del sitio —fondo muy claro + borde/texto más oscuro—
+// así el hover se nota sin gritar. El color propio de cada acceso lo sigue
+// dando su ícono, que no cambia.
 const QUICK_LINK_BASE =
-  'group inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all duration-300 ease-out hover:bg-brand-700 hover:text-white hover:shadow-[0_6px_16px_-8px_rgba(6,57,35,0.7)]';
+  'group inline-flex items-center gap-2 rounded-lg border border-transparent px-3 py-1.5 text-sm font-semibold transition-all duration-300 ease-out';
+
+/** Entrada de cada acceso rápido: fade + slide corto, escalonado por el padre. */
+const QUICK_LINK_ITEM = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' as const } },
+};
 
 // ── TARJETA DE SECCIÓN ────────────────────────────────────────────────────────
 // El fondo de la página es el verde de sección (`bg-surface-mint`) — el mismo
@@ -750,48 +763,84 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
     <main className="min-h-screen bg-surface-mint">
       <div className="mx-auto max-w-6xl px-4 pt-32 pb-20">
 
-        {/* ── BARRA DE ACCESOS RÁPIDOS ── */}
-        <div className={`mb-8 flex flex-wrap items-center justify-between gap-4 px-5 py-3 ${CARD} rounded-2xl`}>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <Link href="/properties" className={`${QUICK_LINK_BASE} text-brand-700`}>
-              <ArrowLeft size={16} className="shrink-0 transition-transform duration-300 ease-out group-hover:-translate-x-1" />
-              Volver al catálogo
-            </Link>
-            <span className="text-ink-400">|</span>
-            <a href="#mapa-ubicacion" onClick={scrollTo('mapa-ubicacion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:!bg-red-600`}>
-              <MapPin size={16} className="shrink-0 text-red-600 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:text-white" />
-              Ver dirección exacta
-            </a>
-            <span className="text-ink-400">|</span>
-            <a href="#comentarios" onClick={scrollTo('comentarios')} className={`${QUICK_LINK_BASE} text-ink-600 hover:!bg-blue-600`}>
-              <MessageCircleMore size={16} className="shrink-0 text-blue-600 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:text-white" />
-              Ver Comentarios
-            </a>
-            <span className="text-ink-400">|</span>
-            <a href="#valoracion" onClick={scrollTo('valoracion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:!bg-amber-500`}>
-              <Star size={16} className="shrink-0 fill-amber-400 text-amber-500 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:fill-white group-hover:text-white" />
-              Ver Valoraciones
-            </a>
-          </div>
+        {/* ── BARRA DE ACCESOS RÁPIDOS ──
+            `motion.div` directo y no `<Reveal>`: esta barra ya está dentro del
+            viewport al cargar, así que un `whileInView` dispararía igual pero
+            dependiendo del margen de detección. Con `animate` entra siempre, y
+            el `staggerChildren` hace que los cuatro accesos aparezcan uno detrás
+            de otro en vez de todos de golpe. */}
+        <motion.div
+          initial="hidden"
+          animate="show"
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } } }}
+          className={`mb-8 flex flex-wrap items-center justify-between gap-4 px-5 py-3 ${CARD} rounded-2xl`}
+        >
+          {/* Contenedor intermedio también `motion`: las variantes de framer
+              se propagan por el árbol de componentes `motion`, y un `<div>`
+              común en el medio cortaría la cadena y el stagger no llegaría a
+              los accesos. */}
+          <motion.div
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
+            className="flex flex-wrap items-center gap-x-4 gap-y-2"
+          >
+            <motion.div variants={QUICK_LINK_ITEM}>
+              <Link href="/properties" className={`${QUICK_LINK_BASE} text-brand-700 hover:border-brand-200 hover:bg-brand-50`}>
+                <ArrowLeft size={16} className="shrink-0 transition-transform duration-300 ease-out group-hover:-translate-x-1" />
+                Volver al catálogo
+              </Link>
+            </motion.div>
+
+            <motion.span variants={QUICK_LINK_ITEM} className="text-ink-400" aria-hidden>|</motion.span>
+
+            <motion.div variants={QUICK_LINK_ITEM}>
+              <a href="#mapa-ubicacion" onClick={scrollTo('mapa-ubicacion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700`}>
+                <MapPin size={16} className="shrink-0 text-red-600 transition-transform duration-300 ease-out group-hover:scale-110" />
+                Ver dirección exacta
+              </a>
+            </motion.div>
+
+            <motion.span variants={QUICK_LINK_ITEM} className="text-ink-400" aria-hidden>|</motion.span>
+
+            <motion.div variants={QUICK_LINK_ITEM}>
+              <a href="#comentarios" onClick={scrollTo('comentarios')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700`}>
+                <MessageCircleMore size={16} className="shrink-0 text-blue-600 transition-transform duration-300 ease-out group-hover:scale-110" />
+                Ver Comentarios
+              </a>
+            </motion.div>
+
+            <motion.span variants={QUICK_LINK_ITEM} className="text-ink-400" aria-hidden>|</motion.span>
+
+            <motion.div variants={QUICK_LINK_ITEM}>
+              <a href="#valoracion" onClick={scrollTo('valoracion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700`}>
+                <Star size={16} className="shrink-0 fill-amber-400 text-amber-500 transition-transform duration-300 ease-out group-hover:scale-110" />
+                Ver Valoraciones
+              </a>
+            </motion.div>
+          </motion.div>
 
           {/* ── FAVORITOS (reusa el componente compartido) ── */}
-          <FavoriteButton propertyId={property.id} />
-        </div>
+          <motion.div variants={QUICK_LINK_ITEM}>
+            <FavoriteButton propertyId={property.id} />
+          </motion.div>
+        </motion.div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
 
           {/* ── COLUMNA IZQUIERDA (2/3) ── */}
           <div className="flex flex-col gap-8 lg:col-span-2">
-            <ImageSlider images={sortedImages} title={title} />
+            <Reveal y={18}>
+              <ImageSlider images={sortedImages} title={title} />
+            </Reveal>
 
             {/* ── ENCABEZADO ──
                 Va en su propia tarjeta blanca (antes flotaba suelto sobre el
                 gris y se leía como un bloque plano), con bastante más aire
                 interno para que el título respire. */}
-            <div className={`${CARD} px-8 py-9`}>
+            <Reveal y={18}>
+             <div className={`${CARD} px-8 py-9`}>
               <div className="mb-5 flex flex-wrap items-center gap-2.5">
-                <span className={`${BADGE_BASE} ${operationBadgeColor(operationType)}`}>{operationType}</span>
-                <span className={`${BADGE_BASE} ${propertyTypeBadgeColor(typeOfProperty?.name)}`}>
+                <span className={`${BADGE_BASE} ${operationBadgeSoft(operationType)}`}>{operationType}</span>
+                <span className={`${BADGE_BASE} ${propertyTypeBadgeSoft(typeOfProperty?.name)}`}>
                   {typeOfProperty?.name || 'Propiedad'}
                 </span>
                 <span className={`${BADGE_BASE} gap-1.5 ${statusBadgeColor(status)}`}>
@@ -846,16 +895,20 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                   <span className="text-sm text-ink-500">({liveRatingsCount} {liveRatingsCount === 1 ? 'valoración' : 'valoraciones'})</span>
                 </div>
               )}
-            </div>
+             </div>
+            </Reveal>
 
             {/* Descripción */}
-            <div className={`${CARD} p-8`}>
-              <SectionHeader icon={Home} title="Descripción" className="mb-5" />
-              <p className="leading-relaxed whitespace-pre-line text-ink-600">{description}</p>
-            </div>
+            <Reveal y={18}>
+              <div className={`${CARD} p-8`}>
+                <SectionHeader icon={Home} title="Descripción" className="mb-5" />
+                <p className="leading-relaxed whitespace-pre-line text-ink-600">{description}</p>
+              </div>
+            </Reveal>
 
             {/* Características */}
-            <div className={`${CARD} p-8`}>
+            <Reveal y={18}>
+             <div className={`${CARD} p-8`}>
               <SectionHeader icon={Building2} title="Características" />
 
               {/* Specs numéricas: tarjetas propias con el ícono en un círculo
@@ -933,18 +986,23 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                   <span>Publicada el: <strong className="text-ink-800">{formatDate(created_at)}</strong></span>
                 </div>
               </div>
-            </div>
+             </div>
+            </Reveal>
 
             {/* ── COMENTARIOS + RATINGS ── */}
-            <CommentsAndRatings
+            <Reveal y={18}>
+              <CommentsAndRatings
               propertyId={property.id}
               initialComments={comments}
               initialRatings={ratings}
               initialAverage={ratingAverage}
-              onRatingsChange={handleRatingsChange}
-            />
+                onRatingsChange={handleRatingsChange}
+              />
+            </Reveal>
 
-            <GoogleMapSection address={mapAddress} />
+            <Reveal y={18}>
+              <GoogleMapSection address={mapAddress} />
+            </Reveal>
           </div>
 
           {/* ── COLUMNA DERECHA (1/3) - STICKY ── */}

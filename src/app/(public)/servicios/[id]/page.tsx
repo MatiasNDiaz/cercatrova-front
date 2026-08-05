@@ -871,13 +871,13 @@ const BLOQUES: Record<string, ServicioBloques> = {
       ],
     },
 
-    destacado: {
-      tipo: 'cta',
-      title: '¿Empezamos?',
-      text: 'Completá el formulario online y un agente evalúa tu propiedad en 24 a 48hs hábiles.',
-      label: 'Publicar mi Propiedad',
-      href: '/publicar',
-    },
+    /* Sin bloque `destacado`.
+       Tenía un `ServiceInlineCta` "¿Empezamos?" → /publicar, y el bloque
+       `compromiso` de abajo repetía el MISMO botón al mismo destino, uno
+       pegado al otro. Eran dos llamados a la acción idénticos separados por
+       un párrafo, y con el CTA final después de las FAQ la página pedía
+       "publicá tu propiedad" tres veces en la mitad inferior.
+       Queda un único CTA de cierre, al final, después de las preguntas. */
 
     compromiso: {
       title: 'Empezá ahora y en 48 horas tenés una respuesta',
@@ -885,13 +885,14 @@ const BLOQUES: Record<string, ServicioBloques> = {
         'Si tu solicitud no avanza, te explicamos el motivo. Casi siempre es algo corregible: falta documentación o el precio está fuera de mercado.',
       ],
       highlight: 'Podés publicar aunque ya esté en otra inmobiliaria, salvo que tengas una exclusividad vigente.',
+      /* La imagen anterior (`/servicePublicacionPropiedad/publicar-desde-casa.png`)
+         era una generación de IA con la marca de agua de Gemini visible en una
+         esquina. Se reemplazó por una foto de stock real. */
       image: {
-        src: '/servicePublicacionPropiedad/publicar-desde-casa.png',
-        alt: 'Propietaria enviando su solicitud desde el living de su casa',
+        src: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=1200&auto=format&fit=crop',
+        alt: 'Llaves de una vivienda junto a la maqueta de una casa sobre un escritorio',
       },
-      actions: () => [
-        { label: 'Publicar mi Propiedad', href: '/publicar' },
-      ],
+      // Sin `actions`: el único CTA de la página va al final, tras las FAQ.
     },
 
     faqTitle: 'Antes de publicar',
@@ -899,6 +900,93 @@ const BLOQUES: Record<string, ServicioBloques> = {
     cta: {
       title: '¿Querés publicar tu propiedad?',
       text: 'Consultanos sin compromiso. Un agente te responderá a la brevedad.',
+      label: 'Consultar por WhatsApp',
+    },
+  },
+
+  /* ── GESTIÓN LEGAL Y DOCUMENTAL ──
+     Era la última página que quedaba con el layout viejo: hero con foto de
+     fondo, un bloque de texto corrido y dos botones. Al lado de las otras
+     cinco se notaba de entrada que era otra plantilla — sin bloques
+     alternados, sin animaciones de entrada y con un solo tono de fondo.
+     Migrada a la estructura común, con el MISMO contenido de
+     `serviciosData.legal` redistribuido en los bloques del patrón.
+     Patrón de columnas propio (imagen izquierda en presentación y compromiso)
+     y entrada `fade`, para que no quede calcada de las anteriores. */
+  legal: {
+    invertir: { presentacion: true, compromiso: true },
+    reveal: 'fade',
+
+    presentacion: {
+      eyebrow: 'Que no aparezcan sorpresas después.',
+      title: 'Gestión Legal y Documental.',
+      paragraphs: [
+        'La mayoría de las operaciones que se caen no se caen por el precio: se caen por un problema documental que aparece tarde. Una sucesión sin terminar, una hipoteca que figura cancelada pero nunca se levantó del registro, o una inhibición sobre el titular pueden frenar una escritura que ya estaba acordada.',
+        'Nuestro trabajo es detectar todo eso antes de que firmes.',
+      ],
+      image: {
+        src: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?q=80&w=1600&auto=format&fit=crop',
+        alt: 'Firma de la documentación de una operación inmobiliaria',
+      },
+      actions: (wa) => [
+        { label: 'Consultar por WhatsApp', href: wa, external: true },
+        { label: 'Ver Propiedades', href: '/properties', variant: 'outline' },
+      ],
+    },
+
+    beneficios: {
+      title: '¿Qué te asegura una revisión legal?',
+      variant: 'grid4',
+      items: [
+        { icon: Shield,        title: 'Operaciones 100% seguras y legales' },
+        { icon: FileText,      title: 'Documentación revisada por expertos' },
+        { icon: CheckCircle2,  title: 'Sin sorpresas al momento de escriturar' },
+        { icon: Star,          title: 'Red de escribanos y asesores de confianza' },
+      ],
+    },
+
+    tasacion: {
+      title: 'Qué revisamos, exactamente',
+      paragraphs: [
+        'Pedimos el informe de dominio y el de inhibiciones en el Registro General de la Provincia, verificamos que quien firma sea efectivamente quien puede hacerlo, y revisamos que la descripción del título coincida con la realidad física del inmueble.',
+        'También confirmamos que impuestos, servicios y expensas estén al día. Cada punto que aparece se informa por escrito, con lo que implica y cómo se resuelve.',
+      ],
+      highlight: 'Trabajamos con el escribano de tu confianza, o te sugerimos uno si no tenés.',
+      image: {
+        src: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=1200&auto=format&fit=crop',
+        alt: 'Respaldo jurídico de la operación',
+      },
+    },
+
+    pasos: {
+      title: 'Del título a la inscripción registral',
+      items: [
+        { titulo: 'Verificación de títulos',      desc: 'Revisión y verificación de los títulos de propiedad.' },
+        { titulo: 'Consulta registral',           desc: 'Verificación de inhibiciones, gravámenes e hipotecas.' },
+        { titulo: 'Redacción del boleto',         desc: 'Boleto de compraventa revisado y ajustado a la operación.' },
+        { titulo: 'Coordinación con escribanía',  desc: 'Trabajamos con el escribano de tu confianza.' },
+        { titulo: 'Preparación del legajo',       desc: 'Toda la documentación lista para la escritura.' },
+        { titulo: 'Escrituración e inscripción',  desc: 'Acompañamiento hasta la inscripción registral final.' },
+      ],
+    },
+
+    compromiso: {
+      title: 'Revisalo antes de dar la seña, no después',
+      paragraphs: [
+        'La seña es el momento en que el dinero deja de ser tuyo y empieza a ser difícil recuperarlo. Si estás por comprar y tenés dudas sobre la documentación, mandanos lo que tengas y lo revisamos: media hora de lectura puede ahorrarte meses de trámite.',
+      ],
+      highlight: 'También trabajamos con propiedades que se compran a particulares, sin inmobiliaria de por medio.',
+      image: {
+        src: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=1200&auto=format&fit=crop',
+        alt: 'Operación cerrada con la documentación en regla',
+      },
+    },
+
+    faqTitle: 'Antes de firmar',
+
+    cta: {
+      title: '¿Tenés dudas sobre la documentación?',
+      text: 'Mandanos lo que tengas y lo revisamos. Un agente te responderá a la brevedad.',
       label: 'Consultar por WhatsApp',
     },
   },

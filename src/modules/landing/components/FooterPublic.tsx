@@ -227,13 +227,13 @@ export const FooterPublic = () => {
             Matrícula N° 04 4838
           </p>
 
-          <p className="text-center text-[11px] font-medium text-white/40">
+          <p className="text-center text-[12px] font-medium text-white/80">
             Desarrollado por{' '}
             <a
               href="mailto:matidiazargentino21@gmail.com"
               className="text-white/55 underline decoration-white/20 underline-offset-2 transition-colors hover:text-white/85"
             >
-              Matías Diaz
+              Matías Diaz ~ matidiazargentino21@gmail.com
             </a>
           </p>
 

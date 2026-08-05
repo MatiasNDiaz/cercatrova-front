@@ -295,7 +295,7 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
               <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2">
 
               {/* Ubicación */}
-              <FilterGroup icon={MapPin} label="Ubaicación">
+              <FilterGroup icon={MapPin} label="Ubicación">
                 <div className="grid grid-cols-1 gap-3">
                   <Dropdown
                     label="Localidad" placeholder="Todas las localidades"

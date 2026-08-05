@@ -101,6 +101,59 @@ export function statusDotColor(status?: string): string {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   VARIANTES SUAVES — para el DETALLE de propiedad
+   ───────────────────────────────────────────────────────────────────────────
+   Las funciones de arriba están pensadas para las tarjetas del catálogo, donde
+   el badge va SOBRE LA FOTO: ahí un relleno sólido y saturado no es decoración,
+   es lo único que garantiza que el texto se lea contra cualquier imagen.
+
+   En el detalle el contexto es el opuesto: los tres badges van juntos sobre una
+   tarjeta BLANCA, en una fila, arriba del título. Con los rellenos del catálogo
+   esa fila quedaba como tres semáforos compitiendo entre sí y contra el `h1`,
+   que es lo que de verdad tiene que leerse primero.
+
+   Estas variantes usan el mismo criterio que `statusBadgeColor` —el único de
+   los tres que ya era suave—: fondo `-50`, borde `-200/-300`, texto `-700`.
+   Así los tres badges pasan a ser una familia coherente, conservan su gama
+   (venta ≠ alquiler sigue distinguiéndose por color) y bajan el ruido.
+
+   No reemplazan a las de arriba: sobre foto se sigue usando el sólido.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Operación en tono suave. Misma gama que `operationBadgeColor`, sin gradiente. */
+export function operationBadgeSoft(operationType?: string): string {
+  switch ((operationType ?? '').toLowerCase()) {
+    case 'venta':
+      return 'border-rose-200 bg-rose-50 text-rose-700';
+    case 'alquiler':
+      return 'border-blue-200 bg-blue-50 text-blue-700';
+    case 'temporal':
+      return 'border-violet-200 bg-violet-50 text-violet-700';
+    default:
+      return 'border-rose-200 bg-rose-50 text-rose-700';
+  }
+}
+
+/** Tipo de propiedad en tono suave. Misma gama que `propertyTypeBadgeColor`. */
+export function propertyTypeBadgeSoft(typeName?: string): string {
+  const n = (typeName ?? '').toLowerCase();
+
+  if (n.includes('terreno') || n.includes('lote') || n.includes('baldio') || n.includes('baldío'))
+    return 'border-orange-200 bg-orange-50 text-orange-700';
+
+  if (n.includes('emprendimiento') || n.includes('pozo') || n.includes('duplex'))
+    return 'border-violet-200 bg-violet-50 text-violet-700';
+
+  if (n.includes('local') || n.includes('comercial') || n.includes('oficina') || n.includes('galpon') || n.includes('galpón'))
+    return 'border-red-200 bg-red-50 text-red-700';
+
+  if (n.includes('departamento') || n.includes('depto'))
+    return 'border-sky-200 bg-sky-50 text-sky-700';
+
+  return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+}
+
 /**
  * Color según la categoría/tipo de propiedad. Se matchea por palabra clave porque
  * `typeOfProperty.name` es texto libre cargado por el admin (no un enum fijo).

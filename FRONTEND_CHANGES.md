@@ -1871,3 +1871,105 @@ el resto de la iconografía de la Landing. El componente `ChessKing` se eliminó
   0 warnings). Verificado contra el HTML servido en producción (`next start`): el
   texto "Desarrollado por" y el `href="mailto:matidiazargentino21@gmail.com"`
   aparecen en la respuesta.
+
+# PARTE 9 — Últimos ajustes visuales antes del deploy
+
+## 1. "Publicamos tu propiedad" — un solo CTA + imagen nueva
+
+**Archivo:** `(public)/servicios/[id]/page.tsx`, entrada `comercializacion` de `BLOQUES`.
+
+- **Se eliminó el bloque `destacado`** (`ServiceInlineCta` "¿Empezamos?" → `/publicar`) **y las
+  `actions` del bloque `compromiso`** (botón "Publicar mi Propiedad" → `/publicar`). Eran dos
+  llamados a la acción **idénticos, al mismo destino, separados por un párrafo**; sumados al CTA
+  final de después de las FAQ, la mitad inferior de la página pedía "publicá tu propiedad" tres
+  veces. Ahora queda **un único CTA de cierre**, al final, debajo de las preguntas frecuentes.
+  El acceso a `/publicar` sigue disponible arriba, en los botones del bloque de presentación.
+- **Imagen reemplazada.** `/servicePublicacionPropiedad/publicar-desde-casa.png` era una
+  generación de IA con **la marca de agua de Gemini visible**. Se cambió por
+  `photo-1560518883-ce09059eeffa` de Unsplash (llaves de vivienda junto a la maqueta de una casa
+  sobre un escritorio de madera).
+  **Verificación:** se descargaron 11 candidatas y se inspeccionaron una por una antes de elegir
+  — varias que parecían encajar por el nombre resultaron ser rascacielos, una caja de cartón, un
+  chanchito de alcancía y un mostrador de local. La elegida está confirmada visualmente y
+  responde HTTP 200. Se descartó `photo-1521791055366-0d553872125f` (firma de contrato, también
+  buena) porque el servicio *Gestión Legal* ya usa una foto de firma y se habrían pisado.
+
+## 2. "Gestión Legal y Documental" — migrado al patrón común
+
+**Archivo:** `(public)/servicios/[id]/page.tsx`, entrada nueva `legal` en `BLOQUES`.
+
+- Era **la última página de servicio con el layout viejo**: hero con foto de fondo, un bloque de
+  texto corrido y dos botones. Al lado de las otras cinco se notaba que era otra plantilla — sin
+  bloques alternados, sin animaciones de entrada y con un solo tono de fondo.
+- Migrada a `ServicioTemplate`, la misma estructura de 7 bloques que usan Venta, Alquiler,
+  Tasaciones, Asesoramiento y Comercialización: presentación → beneficios → detalle → pasos →
+  compromiso → FAQ → CTA. Hereda automáticamente los `Reveal`/framer-motion, la alternancia de
+  fondos y los componentes compartidos de `ServiceBlocks`.
+- **El contenido es el real, redistribuido** — no se inventó nada: los párrafos salen de
+  `serviciosData.legal.descripcion`, los 6 pasos de `pasos`, los 4 beneficios de `beneficios`, y
+  el bloque de compromiso de `persuasion`. Se conservan los **2 botones pedidos** (WhatsApp +
+  Ver Propiedades) en el bloque de presentación.
+- **Patrón de columnas propio** (`invertir: { presentacion: true, compromiso: true }`) y entrada
+  `fade` en vez de `slide`, para que no quede calcada de las anteriores — mismo criterio que ya
+  seguían las otras cinco.
+
+## 3. Detalle de propiedad — animaciones + paleta menos saturada
+
+**Archivos:** `(public)/properties/[id]/PropertyDetail.tsx`, `properties/lib/badgeStyles.ts`.
+
+### Animaciones
+
+- **Accesos rápidos** (Volver al catálogo / Ver dirección exacta / Ver Comentarios / Ver
+  Valoraciones + Guardar): entran escalonados con fade + slide corto (`y: 8`, 0.35 s, stagger
+  0.07 s). Se usa `motion` con `animate` y **no** `<Reveal>` porque la barra ya está dentro del
+  viewport al cargar: un `whileInView` dependería del margen de detección.
+  ⚠️ El contenedor intermedio también es `motion.div`: las variantes de framer se propagan por el
+  árbol de componentes `motion`, y un `<div>` común en el medio cortaba la cadena y el stagger no
+  llegaba a los accesos.
+- **Bloques principales** envueltos en `<Reveal y={18}>` — el mismo componente de la landing:
+  galería, encabezado, descripción, características, comentarios/valoraciones y mapa. La página
+  no tenía ninguna animación de entrada, a diferencia del resto del sitio.
+
+### Paleta
+
+- **Badges de la cabecera** (operación / tipo / estado): pasaron del relleno sólido saturado al
+  criterio suave que ya usaba el badge de estado — **fondo `-50`, borde `-200`, texto `-700`**.
+  Antes la fila eran tres semáforos (gradiente naranja→rosa, sólido `-400` con texto blanco, chip
+  suave) compitiendo entre sí y contra el `h1`.
+  Se agregaron `operationBadgeSoft()` y `propertyTypeBadgeSoft()` en `badgeStyles.ts`, que
+  **conviven** con las sólidas: en las tarjetas del catálogo el badge va SOBRE LA FOTO, donde el
+  relleno fuerte no es decoración sino lo único que garantiza legibilidad contra cualquier imagen.
+  El tratamiento suave se aplica solo donde el fondo es una tarjeta blanca.
+- **Hovers de los accesos rápidos:** eran rellenos sólidos (`bg-brand-700`, `bg-red-600`,
+  `bg-blue-600`, `bg-amber-500`) que invertían el texto a blanco — cuatro rectángulos de color
+  fuerte prendiéndose y apagándose en la primera fila de la página. Ahora usan fondo `-50` +
+  borde `-200` + texto `-700`. El color propio de cada acceso lo sigue dando su ícono.
+
+### Verificación
+
+Se levantó el build de producción y se **capturó la página completa en Chrome headless** para
+confirmar que el layout quedó idéntico: galería con miniaturas, encabezado con los 3 badges,
+píldoras de ubicación, descripción, características (specs + comodidades), valoraciones,
+comentarios, mapa y sidebar sticky (precio, WhatsApp, agente, resumen) — todo en su lugar, sin
+elementos faltantes ni desplazados. Lo único que cambió es la intensidad del color de los badges.
+
+## 4. Carrusel de reseñas — autoplay más rápido
+
+**Archivo:** `landing/components/Reseñas.tsx`.
+
+- `autoplay.delay` de **4200 → 2600 ms**. Avanzaba tan lento que en una pasada por la landing se
+  alcanzaban a ver dos reseñas y la sección parecía estática. 2600 ms es lo más corto que todavía
+  deja leer completo un testimonio de 2-3 líneas antes de que se corra; por debajo de ~2200 ms hay
+  que apurarse y se siente nervioso. `pauseOnMouseEnter` sigue activo: si alguien se detiene a leer
+  una en particular, el carrusel la espera.
+
+## Estado
+
+✅ `npx tsc --noEmit` sin errores · `npm run lint` **0 problemas** · `npm run build` exit 0,
+**39/39 rutas**. Detalle de propiedad verificado con captura real del build de producción.
+
+⚠️ **Nota de entorno (no es un cambio de código):** durante esta sesión se detectó que la base de
+datos de desarrollo quedó **reseteada** — 0 propiedades, 0 posts, y la tabla de usuarios
+recreada (un alta nueva recibe `id: 2`). También cambiaron `ADMIN_EMAIL`/`ADMIN_PASSWORD` en el
+`.env` del backend. Para la verificación visual se creó una propiedad temporal y se eliminó al
+terminar; el catálogo quedó como estaba (0 propiedades).

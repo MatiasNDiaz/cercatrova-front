@@ -142,7 +142,18 @@ export default function Resenas() {
         loop
         slidesPerView="auto"
         spaceBetween={44}
-        autoplay={{ delay: 4200, disableOnInteraction: false, pauseOnMouseEnter: true }}
+        autoplay={{
+          // 4200 → 2600 ms. Antes avanzaba tan lento que en una pasada por la
+          // landing se alcanzaban a ver dos reseñas y la sección parecía
+          // estática. 2600 ms es lo más corto que todavía deja leer completo un
+          // testimonio de 2-3 líneas antes de que se corra; por debajo de
+          // ~2200 ms hay que apurarse y se siente nervioso.
+          // `pauseOnMouseEnter` sigue activo: si alguien se detiene a leer una
+          // en particular, el carrusel la espera.
+          delay: 2600,
+          disableOnInteraction: false,
+          pauseOnMouseEnter: true,
+        }}
         coverflowEffect={{ rotate: 0, stretch: 0, depth: 90, modifier: 1.5, slideShadows: false }}
         pagination={{
           el: '.reviews-dots',
