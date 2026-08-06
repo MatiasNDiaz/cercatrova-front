@@ -12,6 +12,7 @@ import {
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import { postsService } from '@/modules/posts/services/posts.service';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { loginUrlWithReturn, currentPathWithQuery } from '@/modules/shared/lib/returnTo';
 import type { Post, PostComment } from '@/modules/shared/types/api';
 import { fechaConHora, fechaCortaConHora } from '@/modules/shared/lib/fecha';
 
@@ -78,7 +79,7 @@ export function PostCard({ post }: { post: Post }) {
 
   const requireLogin = (accion: string) => {
     toast.info(`Iniciá sesión para ${accion}.`);
-    router.push('/login');
+    router.push(loginUrlWithReturn(currentPathWithQuery() ?? '/publicaciones'));
   };
 
   const handleLike = async () => {

@@ -19,11 +19,18 @@ import { FooterPublic } from '@/modules/landing/components/FooterPublic';
 
 const HIDDEN_ON = ['/login', '/register'];
 
+/**
+ * Rutas standalone que se comparten fuera del sitio: la ficha de propiedad no
+ * lleva footer porque no debe identificar a la inmobiliaria de origen.
+ */
+const STANDALONE_PREFIXES = ['/ficha'];
+
 export function FooterSelector() {
   const pathname = usePathname();
 
   if (HIDDEN_ON.includes(pathname)) return null;
   if (pathname.startsWith('/dashboard')) return null;
+  if (STANDALONE_PREFIXES.some((p) => pathname.startsWith(p))) return null;
 
   return <FooterPublic />;
 }

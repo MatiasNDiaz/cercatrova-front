@@ -111,29 +111,43 @@ function getNotifType(n: Pick<Notification, 'type' | 'title' | 'message'>): Noti
   return inferFromText(n.title, n.message);
 }
 
+/**
+ * Paleta por tipo de notificación.
+ *
+ * ── Qué cambió ──────────────────────────────────────────────────────────────
+ * Antes cada tipo tenía su color en el ícono y en el punto, pero la etiqueta
+ * salía siempre en `text-gray-600` y el borde de la tarjeta era verde de marca
+ * para TODAS las no leídas. Resultado: en una lista con seis tipos distintos
+ * todo se veía igual de verde-gris y el color no ayudaba a barrer con la vista.
+ *
+ * Ahora cada tipo aporta también el color del texto de su etiqueta y el de la
+ * barra de acento lateral de las no leídas, así el tipo se reconoce de un
+ * vistazo sin leer. Se subió un paso la saturación de los `-600` a `-700` en
+ * los textos para que pasen contraste AA sobre el fondo `-50`.
+ */
 function getConfig(n: Pick<Notification, 'type' | 'title' | 'message'>) {
   const type = getNotifType(n);
   switch (type) {
     case 'precio':
-      return { icon: <TrendingDown size={16} className="text-amber-600" />, bg: 'bg-amber-50',        border: 'border-amber-100',        dot: 'bg-amber-500',    label: 'Bajó el precio' };
+      return { icon: <TrendingDown size={16} className="text-amber-700" />, bg: 'bg-amber-50', border: 'border-amber-200', dot: 'bg-amber-500', text: 'text-amber-800', accent: 'bg-amber-400', label: 'Bajó el precio' };
     case 'coincidencia':
-      return { icon: <Sparkles size={16} className="text-purple-600" />,    bg: 'bg-purple-50',       border: 'border-purple-100',       dot: 'bg-purple-500',   label: 'Coincidencia' };
+      return { icon: <Sparkles size={16} className="text-purple-700" />, bg: 'bg-purple-50', border: 'border-purple-200', dot: 'bg-purple-500', text: 'text-purple-800', accent: 'bg-purple-400', label: 'Según tus preferencias' };
     case 'solicitud_aceptada':
-      return { icon: <ClipboardList size={16} className="text-[#0b7a4b]" />,bg: 'bg-[#0b7a4b]/8',    border: 'border-[#0b7a4b]/15',     dot: 'bg-[#0b7a4b]',   label: 'Solicitud aceptada' };
+      return { icon: <ClipboardList size={16} className="text-emerald-700" />, bg: 'bg-emerald-50', border: 'border-emerald-200', dot: 'bg-emerald-500', text: 'text-emerald-800', accent: 'bg-emerald-400', label: 'Solicitud aceptada' };
     case 'solicitud_rechazada':
-      return { icon: <ClipboardList size={16} className="text-red-500" />,  bg: 'bg-red-50',          border: 'border-red-100',          dot: 'bg-red-500',      label: 'Solicitud rechazada' };
+      return { icon: <ClipboardList size={16} className="text-red-700" />, bg: 'bg-red-50', border: 'border-red-200', dot: 'bg-red-500', text: 'text-red-800', accent: 'bg-red-400', label: 'Solicitud rechazada' };
     case 'solicitud_revision':
-      return { icon: <ClipboardList size={16} className="text-amber-600" />,bg: 'bg-amber-50',        border: 'border-amber-100',        dot: 'bg-amber-500',    label: 'En revisión' };
+      return { icon: <ClipboardList size={16} className="text-amber-700" />, bg: 'bg-amber-50', border: 'border-amber-200', dot: 'bg-amber-500', text: 'text-amber-800', accent: 'bg-amber-400', label: 'En revisión' };
     case 'solicitud_recibida':
-      return { icon: <ClipboardList size={16} className="text-blue-600" />, bg: 'bg-blue-50',         border: 'border-blue-100',         dot: 'bg-blue-500',     label: 'Solicitud recibida' };
+      return { icon: <ClipboardList size={16} className="text-blue-700" />, bg: 'bg-blue-50', border: 'border-blue-200', dot: 'bg-blue-500', text: 'text-blue-800', accent: 'bg-blue-400', label: 'Solicitud recibida' };
     case 'propiedad_nueva':
-      return { icon: <Home size={16} className="text-[#0b7a4b]" />,         bg: 'bg-[#0b7a4b]/8',    border: 'border-[#0b7a4b]/15',     dot: 'bg-[#0b7a4b]',   label: 'Nueva propiedad' };
+      return { icon: <Home size={16} className="text-brand-700" />, bg: 'bg-brand-50', border: 'border-brand-200', dot: 'bg-brand-600', text: 'text-brand-800', accent: 'bg-brand-500', label: 'Nueva propiedad' };
     case 'publicacion_nueva':
-      return { icon: <Megaphone size={16} className="text-sky-600" />,      bg: 'bg-sky-50',          border: 'border-sky-100',          dot: 'bg-sky-500',      label: 'Nueva publicación' };
+      return { icon: <Megaphone size={16} className="text-sky-700" />, bg: 'bg-sky-50', border: 'border-sky-200', dot: 'bg-sky-500', text: 'text-sky-800', accent: 'bg-sky-400', label: 'Nueva publicación' };
     case 'respuesta_comentario':
-      return { icon: <MessageCircle size={16} className="text-violet-600" />, bg: 'bg-violet-50',     border: 'border-violet-100',       dot: 'bg-violet-500',   label: 'Respondieron tu comentario' };
+      return { icon: <MessageCircle size={16} className="text-violet-700" />, bg: 'bg-violet-50', border: 'border-violet-200', dot: 'bg-violet-500', text: 'text-violet-800', accent: 'bg-violet-400', label: 'Respondieron tu comentario' };
     default:
-      return { icon: <Bell size={16} className="text-gray-500" />,           bg: 'bg-gray-50',         border: 'border-gray-100',         dot: 'bg-gray-400',     label: 'Notificación' };
+      return { icon: <Bell size={16} className="text-ink-500" />, bg: 'bg-ink-50', border: 'border-ink-200', dot: 'bg-ink-400', text: 'text-ink-600', accent: 'bg-ink-300', label: 'Notificación' };
   }
 }
 
@@ -153,9 +167,15 @@ function timeAgo(dateStr: string): string {
 function NotifItem({ n, onRead }: { n: Notification; onRead: (id: number) => void }) {
   const cfg = getConfig(n);
   return (
-    <div className={`group flex items-start gap-4 px-5 py-4 rounded-xl border transition-all duration-200 ${
-      n.read ? 'bg-white border-gray-100' : 'bg-white border-[#0b7a4b]/20 shadow-sm'
+    /* `relative` + `overflow-hidden` por la barra de acento lateral: es la
+       señal de "sin leer" que además dice DE QUÉ TIPO es, sin tener que leer.
+       Las leídas no la llevan y bajan a fondo/borde neutro. */
+    <div className={`group relative flex items-start gap-4 overflow-hidden rounded-xl border px-5 py-4 pl-6 transition-all duration-200 ${
+      n.read
+        ? 'border-ink-100 bg-white'
+        : `bg-white ${cfg.border} shadow-[0_1px_2px_rgba(10,12,11,0.04),0_8px_20px_-14px_rgba(10,12,11,0.18)]`
     }`}>
+      {!n.read && <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${cfg.accent}`} />}
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${cfg.bg} ${cfg.border}`}>
         {cfg.icon}
       </div>
@@ -163,7 +183,11 @@ function NotifItem({ n, onRead }: { n: Notification; onRead: (id: number) => voi
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 flex-wrap">
             <p className={`text-sm font-semibold ${n.read ? 'text-gray-600' : 'text-gray-900'}`}>{n.title}</p>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${cfg.bg} ${cfg.border} ${n.read ? 'text-gray-400' : 'text-gray-600'}`}>
+            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+              n.read
+                ? 'border-ink-200 bg-ink-50 text-ink-400'
+                : `${cfg.bg} ${cfg.border} ${cfg.text}`
+            }`}>
               {cfg.label}
             </span>
           </div>
@@ -206,18 +230,33 @@ type FilterTab =
   | 'publicaciones' | 'respuestas'
   | 'solicitudes_aceptadas' | 'solicitudes_rechazadas' | 'solicitudes_revision';
 
+/**
+ * Orden de la fila de filtros.
+ *
+ * Espeja el desplegable "Notificaciones" del sidebar, para que la misma
+ * categoría no aparezca en dos lugares con dos órdenes distintos:
+ *   1. Estado de lectura — Todas / Sin leer / Leídas. Es otro eje (no una
+ *      categoría) y por eso va agrupado adelante.
+ *   2. Categorías, en el orden del sidebar: lo que se publica primero
+ *      (propiedades, publicaciones), después lo personalizado (preferencias),
+ *      después los avisos de cambio (precio) y las respuestas.
+ *   3. Solicitudes al final — Aceptadas / Rechazadas / En revisión.
+ *
+ * Los colores activos ahora salen del mismo mapa que usa cada notificación
+ * (`getConfig`), así el chip del filtro y el ícono de la lista comparten gama.
+ */
 const FILTER_TABS: { key: FilterTab; label: string; color: string }[] = [
-  { key: 'todas',                  label: 'Todas',              color: 'bg-[#0b7a4b] text-white' },
-  { key: 'sin_leer',               label: 'Sin leer',           color: 'bg-[#0b7a4b] text-white' },
-  { key: 'leidas',                 label: 'Leídas',             color: 'bg-gray-500 text-white' },
-  { key: 'propiedades_nuevas',     label: 'Propiedades nuevas', color: 'bg-[#0b7a4b] text-white' },
-  { key: 'coincidencias',          label: 'Mis preferencias',   color: 'bg-purple-500 text-white' },
-  { key: 'precios',                label: 'Bajaron de precio',  color: 'bg-amber-500 text-white' },
-  { key: 'publicaciones',          label: 'Publicaciones',      color: 'bg-sky-500 text-white' },
-  { key: 'respuestas',             label: 'Respuestas',         color: 'bg-violet-500 text-white' },
-  { key: 'solicitudes_aceptadas',  label: 'Aceptadas',          color: 'bg-[#0b7a4b] text-white' },
-  { key: 'solicitudes_rechazadas', label: 'Rechazadas',         color: 'bg-red-500 text-white' },
-  { key: 'solicitudes_revision',   label: 'En revisión',        color: 'bg-amber-500 text-white' },
+  { key: 'todas',                  label: 'Todas',              color: 'bg-brand-700 text-white' },
+  { key: 'sin_leer',               label: 'Sin leer',           color: 'bg-brand-700 text-white' },
+  { key: 'leidas',                 label: 'Leídas',             color: 'bg-ink-500 text-white' },
+  { key: 'propiedades_nuevas',     label: 'Propiedades nuevas', color: 'bg-brand-700 text-white' },
+  { key: 'publicaciones',          label: 'Publicaciones',      color: 'bg-sky-600 text-white' },
+  { key: 'coincidencias',          label: 'Mis preferencias',   color: 'bg-purple-600 text-white' },
+  { key: 'precios',                label: 'Bajaron de precio',  color: 'bg-amber-600 text-white' },
+  { key: 'respuestas',             label: 'Respuestas',         color: 'bg-violet-600 text-white' },
+  { key: 'solicitudes_aceptadas',  label: 'Aceptadas',          color: 'bg-emerald-600 text-white' },
+  { key: 'solicitudes_rechazadas', label: 'Rechazadas',         color: 'bg-red-600 text-white' },
+  { key: 'solicitudes_revision',   label: 'En revisión',        color: 'bg-amber-600 text-white' },
 ];
 
 const EMPTY_MESSAGES: Record<FilterTab, string> = {

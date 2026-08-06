@@ -7,6 +7,7 @@ import { authService } from '@/modules/auth/services/auth.service';
 import { setOnUnauthorized } from '@/modules/shared/lib/authEvents';
 import { clearPendingNotifMarks } from '@/modules/shared/lib/pendingNotifSession';
 import { getErrorStatus } from '@/modules/shared/lib/apiError';
+import { RETURN_PARAM, isSafeReturnPath } from '@/modules/shared/lib/returnTo';
 import type { AuthUser, LoginFormData, RegisterFormData } from '@/modules/auth/interface/auth.interfaces';
 
 // 1. DEFINIMOS QUÉ TIENE EL CONTEXTO
@@ -69,8 +70,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleAuthSuccess = (authUser: AuthUser) => {
     setUser(authUser);
 
+    /**
+     * Si el usuario llegó al login porque quiso hacer algo que requiere sesión
+     * (dar favorito, valorar, comentar, publicar…), vuelve EXACTAMENTE ahí en
+     * vez de aterrizar en el dashboard.
+     *
+     * El destino se lee de la URL en el momento de resolver el login —no del
+     * `useSearchParams` del render— para que valga igual en el flujo de email +
+     * contraseña y en el de Google, sin duplicar la lógica en cada uno.
+     *
+     * `isSafeReturnPath` es lo que evita que esto sea un open redirect: sólo se
+     * aceptan rutas internas. Ver la nota en `returnTo.ts`.
+     *
+     * Los admins quedan afuera a propósito: su lugar natural post-login es el
+     * panel, y las acciones de usuario común (favoritos, valorar) el backend se
+     * las rechaza con 403 de todos modos.
+     */
+    const returnTo = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get(RETURN_PARAM)
+      : null;
+
     if (authUser.role === 'admin') {
       router.push('/dashboardAdmin/');
+    } else if (isSafeReturnPath(returnTo)) {
+      router.push(returnTo);
     } else {
       router.push('/dashboard');
     }

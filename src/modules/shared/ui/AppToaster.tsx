@@ -69,24 +69,32 @@ function ToastIcon({
  * Por eso toda la piel vive en `default` y no hay claves por tipo.
  */
 const PIEL =
-  '!rounded-xl !border !p-4 ' +
-  '!shadow-[0_2px_6px_rgba(10,12,11,0.06),0_18px_44px_-16px_rgba(10,12,11,0.35)] ' +
+  // `pr-10` reserva el lugar del botón de cerrar: sin eso, un título largo le
+  // pasaba por debajo y al hacer hover la X aparecía encima del texto.
+  // `pl-5` compensa la barra de acento de la izquierda, para que el ícono no
+  // quede pegado a ella.
+  '!w-full !rounded-xl !border !py-3.5 !pr-10 !pl-5 ' +
+  '!shadow-[0_1px_3px_rgba(10,12,11,0.05),0_14px_36px_-14px_rgba(10,12,11,0.28)] ' +
   'before:absolute before:inset-y-0 before:left-0 before:w-1 before:rounded-l-xl before:content-[""]';
 
 /**
- * Color por tipo: borde intenso (400) + fondo apenas teñido (50).
- * El fondo tiene que ser casi blanco — el toast lleva texto oscuro encima y
- * un tinte fuerte le come contraste; la señal de color la da el borde.
+ * Color por tipo: borde suave (200) + fondo apenas teñido (50), y la señal
+ * fuerte concentrada en la barra de acento de la izquierda (500).
+ *
+ * Antes el borde iba en `-400`: cuatro toasts encadenados dibujaban cuatro
+ * rectángulos de contorno saturado en la esquina y competían con el contenido
+ * de la página. Bajarlo a `-200` y dejar que el color lo cargue la barra
+ * lateral mantiene la lectura del tipo de un vistazo, con mucho menos ruido.
  */
 // Se escriben literales (y no armadas con un `.map()`) a propósito: Tailwind
 // escanea el archivo como texto plano, no lo ejecuta — una clase construida por
 // concatenación nunca se generaría.
 const COLOR_POR_TIPO =
-  'data-[type=success]:!border-emerald-400 data-[type=success]:!bg-emerald-50 data-[type=success]:before:!bg-emerald-500 ' +
-  'data-[type=error]:!border-red-400 data-[type=error]:!bg-red-50 data-[type=error]:before:!bg-red-500 ' +
-  'data-[type=warning]:!border-amber-400 data-[type=warning]:!bg-amber-50 data-[type=warning]:before:!bg-amber-500 ' +
-  'data-[type=info]:!border-blue-400 data-[type=info]:!bg-blue-50 data-[type=info]:before:!bg-blue-500 ' +
-  'data-[type=loading]:!border-brand-400 data-[type=loading]:!bg-brand-50 data-[type=loading]:before:!bg-brand-500';
+  'data-[type=success]:!border-emerald-200 data-[type=success]:!bg-emerald-50 data-[type=success]:before:!bg-emerald-500 ' +
+  'data-[type=error]:!border-red-200 data-[type=error]:!bg-red-50 data-[type=error]:before:!bg-red-500 ' +
+  'data-[type=warning]:!border-amber-200 data-[type=warning]:!bg-amber-50 data-[type=warning]:before:!bg-amber-500 ' +
+  'data-[type=info]:!border-blue-200 data-[type=info]:!bg-blue-50 data-[type=info]:before:!bg-blue-500 ' +
+  'data-[type=loading]:!border-brand-200 data-[type=loading]:!bg-brand-50 data-[type=loading]:before:!bg-brand-500';
 
 export function AppToaster() {
   return (
@@ -95,6 +103,10 @@ export function AppToaster() {
       offset={20}
       duration={4000}
       closeButton
+      // Ancho fijo: sonner por defecto ajusta al contenido, así que un toast de
+      // una línea y otro de tres quedaban de anchos distintos y la pila se veía
+      // dentada contra el borde de la pantalla.
+      style={{ width: 380 }}
       // `gap` un poco mayor que el default: con la pastilla del ícono, los
       // toasts apilados quedaban muy pegados entre sí.
       gap={12}

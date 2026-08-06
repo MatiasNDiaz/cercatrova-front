@@ -7,6 +7,7 @@ import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { toast } from 'sonner';
 import { Heart } from 'lucide-react';
+import { loginUrlWithReturn, currentPathWithQuery } from '@/modules/shared/lib/returnTo';
 
 interface FavoriteButtonProps {
   propertyId: number;
@@ -41,7 +42,12 @@ export function FavoriteButton({ propertyId, variant = 'default' }: FavoriteButt
   if (isAdmin) return null;
 
   const handleToggle = async () => {
-    if (!user) { router.push('/login'); return; }
+    if (!user) {
+      // Vuelve a ESTA propiedad después de loguearse, en vez de aterrizar en
+      // el dashboard y tener que buscarla de nuevo.
+      router.push(loginUrlWithReturn(currentPathWithQuery() ?? '/'));
+      return;
+    }
     setLoading(true);
     try {
       if (isFavorite) {

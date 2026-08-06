@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Bell, X, ArrowRight, UserPlus, ClipboardList,
-  Star, MessageSquare, Heart, TrendingDown, Megaphone,
+  Star, MessageSquare, Heart, TrendingDown, Megaphone, Home, Sparkles,
 } from 'lucide-react';
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import api from '@/modules/shared/lib/axios';
@@ -50,21 +50,31 @@ const TICK_MS = 16;
 /** Tope de notificaciones que se encolan. Más que esto es spam, no aviso. */
 const MAX_EN_COLA = 6;
 
-/** Ícono y color por `NotificationType` del backend. */
+/**
+ * Ícono y color por `NotificationType` del backend.
+ *
+ * ⚠️ Esta tabla tiene que quedar en sintonía con `getConfig()` de
+ * `dashboard/notificaciones/page.tsx`: el toast es la primera vista de una
+ * notificación y el panel es la segunda. Si el mismo aviso aparece con
+ * megáfono violeta en el toast y con casita verde en la lista, el usuario no
+ * los asocia. Los tres tipos que llegan al usuario común —nueva propiedad,
+ * nueva publicación, bajó el precio— usan hoy el mismo ícono y la misma
+ * familia de color en los dos lados.
+ */
 const ESTILO_POR_TIPO: Record<NotificationType, { icon: React.ElementType; tono: string }> = {
   [NotificationType.ADMIN_NUEVO_USUARIO]:          { icon: UserPlus,      tono: 'bg-blue-50 text-blue-600' },
-  [NotificationType.ADMIN_NUEVA_SOLICITUD]:        { icon: ClipboardList, tono: 'bg-amber-50 text-amber-600' },
-  [NotificationType.ESTADO_SOLICITUD]:             { icon: ClipboardList, tono: 'bg-amber-50 text-amber-600' },
+  [NotificationType.ADMIN_NUEVA_SOLICITUD]:        { icon: ClipboardList, tono: 'bg-blue-50 text-blue-600' },
+  [NotificationType.ESTADO_SOLICITUD]:             { icon: ClipboardList, tono: 'bg-amber-50 text-amber-700' },
   [NotificationType.ADMIN_NUEVA_VALORACION]:       { icon: Star,          tono: 'bg-amber-50 text-amber-500' },
   [NotificationType.ADMIN_NUEVO_COMENTARIO]:       { icon: MessageSquare, tono: 'bg-sky-50 text-sky-600' },
   [NotificationType.ADMIN_COMENTARIO_PUBLICACION]: { icon: MessageSquare, tono: 'bg-sky-50 text-sky-600' },
-  [NotificationType.RESPUESTA_COMENTARIO]:         { icon: MessageSquare, tono: 'bg-sky-50 text-sky-600' },
+  [NotificationType.RESPUESTA_COMENTARIO]:         { icon: MessageSquare, tono: 'bg-violet-50 text-violet-700' },
   [NotificationType.ADMIN_NUEVO_FAVORITO]:         { icon: Heart,         tono: 'bg-rose-50 text-rose-500' },
-  [NotificationType.CAMBIO_PRECIO]:                { icon: TrendingDown,  tono: 'bg-emerald-50 text-emerald-600' },
-  [NotificationType.NUEVA_PUBLICACION]:            { icon: Megaphone,     tono: 'bg-violet-50 text-violet-600' },
-  [NotificationType.NUEVA_PROPIEDAD]:              { icon: Megaphone,     tono: 'bg-violet-50 text-violet-600' },
-  [NotificationType.PROPIEDAD_MATCH]:              { icon: Star,          tono: 'bg-brand-50 text-brand-700' },
-  [NotificationType.GENERICA]:                     { icon: Bell,          tono: 'bg-brand-50 text-brand-700' },
+  [NotificationType.CAMBIO_PRECIO]:                { icon: TrendingDown,  tono: 'bg-amber-50 text-amber-700' },
+  [NotificationType.NUEVA_PUBLICACION]:            { icon: Megaphone,     tono: 'bg-sky-50 text-sky-700' },
+  [NotificationType.NUEVA_PROPIEDAD]:              { icon: Home,          tono: 'bg-brand-50 text-brand-700' },
+  [NotificationType.PROPIEDAD_MATCH]:              { icon: Sparkles,      tono: 'bg-purple-50 text-purple-700' },
+  [NotificationType.GENERICA]:                     { icon: Bell,          tono: 'bg-ink-50 text-ink-500' },
 };
 
 /**
@@ -89,10 +99,12 @@ function estiloDe(title: string, message: string, type?: NotificationType) {
   if (t.includes('favorito') || t.includes('guardó'))
     return { icon: Heart, tono: 'bg-rose-50 text-rose-500' };
   if (t.includes('bajó') || t.includes('precio'))
-    return { icon: TrendingDown, tono: 'bg-emerald-50 text-emerald-600' };
+    return { icon: TrendingDown, tono: 'bg-amber-50 text-amber-700' };
   if (t.includes('publicación') || t.includes('publicacion'))
-    return { icon: Megaphone, tono: 'bg-violet-50 text-violet-600' };
-  return { icon: Bell, tono: 'bg-brand-50 text-brand-700' };
+    return { icon: Megaphone, tono: 'bg-sky-50 text-sky-700' };
+  if (t.includes('propiedad'))
+    return { icon: Home, tono: 'bg-brand-50 text-brand-700' };
+  return { icon: Bell, tono: 'bg-ink-50 text-ink-500' };
 }
 
 export function PendingNotificationsToast() {

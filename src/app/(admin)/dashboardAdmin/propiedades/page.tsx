@@ -12,8 +12,10 @@ import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 import {
   Plus, Pencil, Trash2, Building2, Search,
   Home, DollarSign, Tag, ImageOff,
-  ArrowUpDown, SlidersHorizontal, ChevronDown,
+  ArrowUpDown, SlidersHorizontal, ChevronDown, Link2, Check,
 } from 'lucide-react';
+import { BsWhatsapp } from 'react-icons/bs';
+import { whatsappShareLink } from '@/modules/shared/lib/contact';
 
 interface PropertyImage {
   id: number;
@@ -65,6 +67,8 @@ export default function PropiedadesAdminPage() {
   const [sortBy, setSortBy] = useState<SortBy>('recent');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  /** Id de la propiedad cuyo link se acaba de copiar — para el tilde efímero. */
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchProperties();
@@ -82,6 +86,31 @@ export default function PropiedadesAdminPage() {
       toast.error('No se pudieron cargar las propiedades');
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * URL absoluta de la ficha.
+   *
+   * Se arma con `window.location.origin` y no con una variable de entorno para
+   * que funcione igual en local, en preview de Vercel y en producción, sin
+   * depender de que alguien recuerde configurar el dominio en otro lado.
+   */
+  const fichaUrl = (id: number) => `${window.location.origin}/ficha/${id}`;
+
+  /** Copia el link de la ficha al portapapeles. */
+  const handleCopyLink = async (id: number) => {
+    try {
+      await navigator.clipboard.writeText(fichaUrl(id));
+      setCopiedId(id);
+      toast.success('Link copiado');
+      // El tilde vuelve a ser ícono de link a los 2s: es confirmación, no estado.
+      setTimeout(() => setCopiedId(c => (c === id ? null : c)), 2000);
+    } catch {
+      // `navigator.clipboard` exige contexto seguro (HTTPS o localhost) y
+      // permiso del navegador. Si falla, se muestra la URL para copiar a mano
+      // en vez de dejar al admin sin saber qué pasó.
+      toast.error(`No se pudo copiar. El link es: ${fichaUrl(id)}`);
     }
   };
 
@@ -297,7 +326,33 @@ export default function PropiedadesAdminPage() {
                     En mobile ocupan su propia fila, cada botón a mitad de
                     ancho y con 44px de alto; antes flotaban al costado del
                     texto y quedaban encimadas con la ubicación. */}
-                <div className="flex shrink-0 items-center gap-2 border-t border-gray-100 pt-3 sm:border-0 sm:pt-0">
+                <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-gray-100 pt-3 sm:border-0 sm:pt-0">
+                  {/* ── ENVIAR: copia el link de la ficha compartible ── */}
+                  <button
+                    onClick={() => handleCopyLink(p.id)}
+                    title="Copiar el link de la ficha para compartir"
+                    className="flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-blue-50 px-4 text-xs font-bold text-blue-700 transition-all hover:bg-blue-100 sm:min-h-0 sm:flex-none sm:py-2"
+                  >
+                    {copiedId === p.id
+                      ? <><Check size={13} /> Copiado</>
+                      : <><Link2 size={13} /> Enviar</>}
+                  </button>
+
+                  {/* Compartir por WhatsApp: `wa.me/` sin número abre la app con
+                      el mensaje cargado y deja elegir el destinatario. */}
+                  <a
+                    href={typeof window !== 'undefined'
+                      ? whatsappShareLink(`${p.title}\n${fichaUrl(p.id)}`)
+                      : '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Compartir la ficha por WhatsApp"
+                    aria-label="Compartir por WhatsApp"
+                    className="flex min-h-11 w-11 cursor-pointer items-center justify-center rounded-xl bg-[#25d366]/10 text-[#128c4a] transition-all hover:bg-[#25d366]/20 sm:min-h-0 sm:w-auto sm:px-3 sm:py-2"
+                  >
+                    <BsWhatsapp size={14} />
+                  </a>
+
                   <Link href={`/dashboardAdmin/propiedades/${p.id}`}
                     className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#0b7a4b]/10 px-4 text-xs font-bold text-[#0b7a4b] transition-all hover:bg-[#0b7a4b]/20 sm:min-h-0 sm:flex-none sm:py-2">
                     <Pencil size={13} /> Editar

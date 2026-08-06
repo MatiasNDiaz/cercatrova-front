@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import { DashboardShell } from '@/modules/shared/ui/DashboardShell';
+import api from '@/modules/shared/lib/axios';
 import {
   Home, Settings, Bell, FileText, Building2,
   LogOut, ChevronDown, Pencil, ArrowLeft, Shield,
@@ -57,11 +58,13 @@ function NavLink({ href, label, icon: Icon, isActive }: { href: string, label: s
  * estás parado al recargar en una subpágina.
  */
 function NavGroup({
-  label, icon: Icon, items,
+  label, icon: Icon, items, badge = 0,
 }: {
   label: string;
   icon: React.ElementType;
   items: { href: string; label: string }[];
+  /** Contador de no leídas. Mismo tratamiento que el badge del panel admin. */
+  badge?: number;
 }) {
   const pathname = usePathname();
   const isChildActive = items.some((i) => pathname === i.href.split('?')[0]);
@@ -80,6 +83,11 @@ function NavGroup({
         <NavAccent active={isChildActive} />
         <Icon size={18} className={`shrink-0 transition-colors duration-200 ${isChildActive ? 'text-[#0b7a4b]' : 'text-gray-400 group-hover:text-[#0b7a4b]'}`} />
         <span className="flex-1 truncate text-left">{label}</span>
+        {badge > 0 && (
+          <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-black text-white">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
         <ChevronDown size={15} className={`shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -115,6 +123,40 @@ function NavGroup({
 function Sidebar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+
+  /**
+   * Contador de notificaciones sin leer.
+   *
+   * ── El problema que resuelve ──────────────────────────────────────────────
+   * El badge rojo vivía SOLO en `NavbarPrivate`, y `NavbarSelector` devuelve
+   * `null` para todo lo que empiece con `/dashboard`. O sea: el usuario veía el
+   * contador en el sitio público, entraba a su panel y desaparecía — justo en
+   * la pantalla donde más lo necesita. El panel de admin sí lo tenía.
+   *
+   * Usa `GET /notifications/unread-count`, que devuelve `{ count }` y resuelve
+   * el feed según el rol del token — no hace falta traerse la lista entera.
+   * Mismo par de disparadores que el resto del sitio: polling de 60s + el
+   * evento `notif-updated` que emiten las acciones de "marcar como leída",
+   * para que el número baje al instante y no al minuto.
+   */
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnread = async () => {
+      try {
+        const { data } = await api.get<{ count: number }>('/notifications/unread-count');
+        setUnreadCount(data.count);
+      } catch { /* silencioso: el badge es informativo, no puede romper el panel */ }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 60000);
+    window.addEventListener('notif-updated', fetchUnread);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notif-updated', fetchUnread);
+    };
+  }, [user]);
 
   const handleLogoutConfirm = () => {
     // El saludo se arma acá (no en el componente compartido) porque el nombre
@@ -177,15 +219,20 @@ function Sidebar() {
           ]}
         />
 
+        {/* Orden pedido: lo que se publica primero (propiedades, publicaciones),
+            después lo personalizado (preferencias) y por último los avisos de
+            cambio (precio). Mismo orden que las tarjetas de acceso rápido de la
+            pantalla, para que el sidebar y el contenido no se contradigan. */}
         <NavGroup
           label="Notificaciones"
           icon={Bell}
+          badge={unreadCount}
           items={[
             { href: '/dashboard/notificaciones', label: 'Todas' },
-            { href: '/dashboard/notificaciones?tipo=precios', label: 'Bajaron de precio' },
-            { href: '/dashboard/notificaciones?tipo=coincidencias', label: 'Según mis preferencias' },
             { href: '/dashboard/notificaciones?tipo=propiedades_nuevas', label: 'Propiedades nuevas' },
             { href: '/dashboard/notificaciones?tipo=publicaciones', label: 'Publicaciones nuevas' },
+            { href: '/dashboard/notificaciones?tipo=coincidencias', label: 'Según mis preferencias' },
+            { href: '/dashboard/notificaciones?tipo=precios', label: 'Bajaron de precio' },
             { href: '/dashboard/notificaciones?tipo=respuestas', label: 'Respuestas a mis comentarios' },
           ]}
         />

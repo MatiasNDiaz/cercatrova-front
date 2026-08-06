@@ -1973,3 +1973,314 @@ datos de desarrollo quedó **reseteada** — 0 propiedades, 0 posts, y la tabla 
 recreada (un alta nueva recibe `id: 2`). También cambiaron `ADMIN_EMAIL`/`ADMIN_PASSWORD` en el
 `.env` del backend. Para la verificación visual se creó una propiedad temporal y se eliminó al
 terminar; el catálogo quedó como estaba (0 propiedades).
+
+# PARTE 10 — Borrador automático + Ficha compartible
+
+## 1. Persistencia de formularios en el dashboard admin
+
+**Archivos:** `shared/hooks/useFormDraft.ts` (nuevo), `dashboardAdmin/propiedades/PropertyForm.tsx`.
+
+**Caso que lo motivó:** un admin perdió las 10 imágenes y los 21 campos cargados al navegar
+fuera del formulario por un error que después resultó no ser culpa suya. Antes no existía
+**ningún** mecanismo de borrador en todo el panel — verificado por grep: los únicos usos de
+`sessionStorage`/`localStorage` del proyecto son la marca del toast de notificaciones pendientes,
+sin relación con formularios.
+
+- **`useFormDraft`** — hook genérico y reutilizable, listo para los demás formularios del panel.
+  Guarda con debounce de 400 ms, restaura al montar, y expone `restored` + `discard()`.
+- **`sessionStorage`, no `localStorage`** (como se pidió): se limpia solo al cerrar la pestaña.
+  Un borrador a medio cargar no debe sobrevivir semanas ni reaparecer meses después pisando un
+  formulario nuevo.
+- **Clave por formulario Y por modo:** `ct_draft_property_new` para el alta,
+  `ct_draft_property_<id>` para cada edición. Si compartieran clave, empezar una propiedad nueva
+  pisaría el borrador de la que se estaba editando.
+- **En modo edición el guardado espera al fetch** (`disabled: loading`): sin eso, el `useState`
+  inicial vacío se escribiría encima del borrador antes de que llegue la respuesta del backend.
+  Una vez cargado, el borrador (los cambios sin guardar del admin) gana sobre los datos del server
+  — que es el comportamiento deseado.
+- **El borrador se limpia SOLO al guardar con éxito** o desde el botón nuevo
+  **"Descartar borrador"**. Si el `PATCH`/`POST` falla, el `catch` lo deja intacto: es todo el
+  punto de tenerlo.
+- **Aviso visible al recuperar:** banner ámbar "Recuperamos lo que habías cargado". Sin esto, el
+  admin vería el formulario lleno sin saber si son datos reales de la propiedad o restos de una
+  carga anterior.
+- **Nada sensible se guarda.** Sólo el objeto `form` (21 campos de texto/número/booleanos). La
+  sesión vive en una cookie `httpOnly` que el JavaScript ni siquiera puede leer, así que no hay
+  forma de que un token termine acá aunque se quisiera.
+
+### Limitación conocida: las imágenes NO se guardan en el borrador
+
+Los objetos `File` de un `<input type="file">` **no son serializables a JSON** — son referencias a
+un archivo del disco que el navegador sólo mantiene mientras la página vive. Convertirlos a base64
+tampoco es viable: `sessionStorage` tiene un tope de ~5 MB por origen y el backend acepta imágenes
+de hasta **5 MB cada una** (hasta 10) — una sola foto ya puede desbordar la cuota.
+
+**Estado actual:** se preservan los 21 campos de texto y las imágenes hay que volver a
+seleccionarlas. El banner de recuperación lo dice explícitamente cuando no hay ninguna cargada.
+
+**Si esto no alcanza,** la alternativa sería subir las imágenes a un endpoint temporal del backend
+apenas se seleccionan y guardar sólo las URLs en el borrador — requiere trabajo de backend
+(endpoint de staging + limpieza de huérfanas) y queda como decisión pendiente.
+
+## 2. Ficha pública compartible — `/ficha/:id`
+
+**Archivos nuevos:** `app/ficha/layout.tsx`, `app/ficha/[id]/page.tsx`,
+`app/ficha/[id]/FichaContent.tsx`, `app/ficha/[id]/types.ts`.
+**Modificados:** `NavbarSelector.tsx`, `FooterSelector.tsx`, `shared/lib/contact.ts`,
+`dashboardAdmin/propiedades/page.tsx`.
+
+### Decisión de arquitectura: URL con el id real (opción **a**)
+
+Se evaluaron las dos opciones y se eligió `/ficha/42` **porque el token no agregaría privacidad
+real hoy**: `GET /properties/:id` es un endpoint **público** en el backend y **no filtra por
+`status`**, y la ruta `/properties/:id` del sitio ya es igual de enumerable. Cualquiera puede
+recorrer ids y ver las mismas propiedades desde antes de que esta página existiera — sumar un UUID
+sólo del lado del frontend sería seguridad de fachada, con el costo de una columna nueva y una
+migración.
+
+Para que un token sirviera de verdad habría que hacer las **dos** cosas juntas: agregar
+`publicToken` a la entidad **y** cerrar/gatear el endpoint público. Eso es trabajo de backend y una
+decisión de producto aparte; queda anotado en el docstring de `page.tsx` como la vía a seguir si
+más adelante se quieren fichas realmente no enumerables.
+
+### La página
+
+- **Primera ruta "limpia" del proyecto.** No existía ninguna de referencia: `/login` y `/register`
+  se salvan del chrome público pero tienen el suyo propio (`AuthShell`). Hubo que excluir `/ficha`
+  en **tres** lugares: su propio `layout.tsx`, `NavbarSelector` y `FooterSelector` (los dos últimos
+  se montan en el layout raíz y deciden por `pathname`). Se dejó un `STANDALONE_PREFIXES` en ambos
+  para que agregar otra ruta standalone sea un solo string.
+- **Cero marca:** verificado sobre el HTML servido — 0 ocurrencias de "Cerca Trova", "CercaTrova",
+  "Inmobiliaria" y del logo; 0 de navbar/footer. Se usan los tokens `brand-*`/`ink-*` porque son
+  verde/gris/blanco genéricos, pero nada permite reconocer la inmobiliaria.
+
+### Espejo completo de la propiedad — los 21 campos, verificados uno por uno
+
+Contra el HTML realmente renderizado: título, descripción completa (con saltos de línea), precio,
+operación, tipo, estado, **dirección exacta**, barrio, zona, localidad, provincia, ambientes,
+baños, sup. total, sup. cubierta, antigüedad, escritura, tracto abreviado, boleto, cochera, patio,
+número de referencia y fecha de publicación. **Todas las imágenes** (`resto.map()` sin `slice` ni
+tope — se probó con 3, en producción muestra las que haya).
+
+Los booleanos se listan **siempre los cinco**, tengan `true` o `false`: que una propiedad NO tenga
+escritura es un dato tan relevante como que la tenga, y quien recibe la ficha necesita saberlo sin
+ambigüedad (tilde verde / cruz gris).
+
+**Lo que se deja afuera, y por qué:** `agent`, `referredBy`, `comments`, `ratings`, `ratingAverage`
+y `favoritesCount` vienen en la respuesta pero no se muestran. No son datos de la propiedad sino de
+la inmobiliaria y de la actividad de su sitio — mostrar el agente (nombre + teléfono) identificaría
+el origen, que es justo lo que esta página tiene que evitar.
+
+### Metadata de compartición — verificada sobre el HTML servido
+
+```html
+<title>Casa moderna con patio y cochera en Nueva Cordoba</title>
+<meta property="og:title" content="Casa moderna con patio y cochera en Nueva Cordoba">
+<meta property="og:description" content="USD 189.000 · Nueva Cordoba, Cordoba Capital · casa · 3 amb. · 2 baños · 180 m². Excelente casa…">
+<meta property="og:image" content="https://res.cloudinary.com/…/properties/…png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="robots" content="noindex, follow">
+```
+
+La descripción pone **los datos duros primero** (precio, ubicación, tipo, ambientes) porque en la
+previsualización de WhatsApp se ven ~2 renglones: lo concreto tiene que entrar antes que el texto
+libre. `noindex` a propósito: la ficha es para compartir de forma directa, no para competir en el
+buscador con la página real de la propiedad.
+
+**404 real:** `/ficha/99999` devuelve `HTTP/1.1 404 Not Found` en los headers (no un soft 404). Se
+replica el patrón de `properties/[id]`: la búsqueda vive también en `generateMetadata`, y sólo un
+404 del backend se traduce a `notFound()` — un timeout o un 500 se relanzan para que los tome
+`app/error.tsx`, en vez de afirmar que la propiedad no existe durante una caída.
+
+### Botones en la lista del admin
+
+Cada fila suma dos acciones antes de Editar/Eliminar (los cuatro entran en la fila sin romper el
+layout, verificado con captura):
+
+- **"Enviar"** — copia el link completo de la ficha al portapapeles, con toast "Link copiado" y un
+  tilde efímero de 2 s en el botón. Si `navigator.clipboard` falla (exige contexto seguro), el
+  toast muestra la URL para copiarla a mano en vez de dejar al admin sin saber qué pasó.
+- **WhatsApp** — abre WhatsApp con el título y el link ya cargados. Usa `whatsappShareLink()`, un
+  helper nuevo en `contact.ts`: `wa.me/` **sin número**, para que la persona elija el destinatario
+  (distinto de `whatsappLink()`, que escribe a la inmobiliaria, y de `whatsappLinkTo()`, que
+  escribe a un teléfono concreto).
+
+La URL se arma con `window.location.origin`, así funciona igual en local, en preview de Vercel y en
+producción sin depender de configurar un dominio en otro lado.
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npm run lint` **0 problemas** · `npm run build` exit 0,
+**39 rutas** (`/ficha/[id]` como dinámica).
+
+Probado en el navegador contra una propiedad real creada para la prueba (y eliminada después):
+ficha renderizada y capturada, meta tags verificadas sobre el HTML servido, 404 real confirmado con
+`curl -I`, y botones del panel verificados con sesión de admin real vía CDP.
+
+---
+
+# PARTE 11 — Notificaciones, detalle de propiedad y vuelta al origen tras el login
+
+Tanda pedida con dos capturas de `cercatrova-front.vercel.app/properties/5`. Nueve cambios en
+tres frentes: el sistema de notificaciones del usuario, la página de detalle de una propiedad, y
+el destino al que se llega después de iniciar sesión.
+
+## 1. Notificaciones — un solo orden en los tres lugares
+
+El dropdown del sidebar, la fila de filtros del panel y los tipos de aviso mostraban las mismas
+categorías en **tres órdenes distintos**. Ahora hay un único orden canónico, el del sidebar:
+
+```
+Todas · Propiedades nuevas · Publicaciones nuevas · Según mis preferencias ·
+Bajaron de precio · Respuestas a mis comentarios
+```
+
+- **`dashboard/layout.tsx`** — el grupo "Notificaciones" del sidebar sigue ese orden.
+- **`dashboard/notificaciones/page.tsx`** — `FILTER_TABS` lo replica y después suma los filtros
+  que sólo existen en el panel (`Sin leer`, `Leídas`, y los tres de solicitudes:
+  `Aceptadas`, `Rechazadas`, `En revisión`).
+
+⚠️ **Las tarjetas de acceso rápido (`SUMMARY_CARDS`) quedaron como estaban.** Son contadores
+agregados —Total, Sin leer, Propiedades, Preferencias, Precios, Solicitudes—, no filtros por tipo;
+reordenarlas para que "calcen" con el dropdown mezclaba dos cosas distintas. Fue una decisión
+explícita, no un olvido.
+
+## 2. Badge de no leídas en el sidebar del dashboard
+
+La campanita de la navbar ya mostraba el conteo; el sidebar del dashboard, no — con lo cual el
+usuario que entraba directo a `/dashboard` no tenía ninguna señal de que había algo pendiente.
+
+`NavGroup` (componente local de `dashboard/layout.tsx`) suma una prop `badge = 0` y, cuando es
+mayor a cero, dibuja la misma pastilla roja de la navbar: `bg-red-500`, número blanco,
+`99+` como tope.
+
+El conteo sale de **`GET /notifications/unread-count`** —el endpoint que resuelve el rol desde el
+token— y no de traer la lista entera para contarla en JS. Se refresca por dos vías, igual que la
+campanita:
+
+- polling cada 60 s
+- listener del evento DOM `notif-updated`, que emiten las acciones de "marcar como leído"
+
+Así, marcar todas como leídas apaga el badge al instante en vez de esperar hasta un minuto.
+
+## 3. Colores de las notificaciones
+
+`getConfig()` pasó de devolver `{ icon, bg, border, dot, label }` a incluir también `text` y
+`accent`. Cada tipo tiene ahora una familia de color completa y coherente:
+
+| Tipo | Color | Ícono |
+|---|---|---|
+| Nueva propiedad | `brand` (verde de marca) | `Home` |
+| Nueva publicación | `sky` | `Megaphone` |
+| Según tus preferencias | `purple` | `Sparkles` |
+| Bajó el precio | `amber` | `TrendingDown` |
+| Respondieron tu comentario | `violet` | `MessageCircle` |
+| Solicitud aceptada / rechazada / en revisión / recibida | `emerald` / `red` / `amber` / `blue` | `ClipboardList` |
+
+Las **no leídas** suman una barra vertical de acento pegada al borde izquierdo de la tarjeta
+(`absolute inset-y-0 left-0 w-1`, con `overflow-hidden` y `pl-6` en el contenedor). Es la misma
+señal que el punto de la derecha pero legible de un vistazo al escanear la lista en vertical: el
+color de la barra ya dice de qué se trata el aviso antes de leer el texto.
+
+## 4. El toast de avisos pendientes, alineado con el panel
+
+`PendingNotificationsToast` tenía su propia tabla de íconos y colores, hecha antes que la del
+panel. El resultado: la misma notificación aparecía con **megáfono violeta** en el toast y con
+**casita verde** en la lista, y "bajó el precio" era esmeralda en un lado y ámbar en el otro.
+Como el toast es la primera vista de un aviso y el panel la segunda, el usuario no los asociaba.
+
+`ESTILO_POR_TIPO` ahora espeja `getConfig()` para los tres tipos que efectivamente le llegan a un
+usuario común (nueva propiedad, nueva publicación, cambio de precio) y para el resto. El fallback
+por texto —el que cubre las filas anteriores a la migración de `type`— se actualizó con los
+mismos colores, más una rama nueva para "propiedad".
+
+Queda anotado en el propio archivo que las dos tablas tienen que moverse juntas.
+
+## 5. Prolijidad de los toasts (esquina inferior derecha)
+
+En `AppToaster.tsx`:
+
+- **Ancho fijo de 380 px** (`style={{ width: 380 }}` en el `<Toaster>`). Antes cada toast se
+  ajustaba a su texto y la pila quedaba con los bordes izquierdos desalineados, en escalera.
+- **Bordes de `400` a `200`** en `COLOR_POR_TIPO`. El borde saturado competía con la barra de
+  acento; ahora el color fuerte vive sólo en la barra y el borde apenas insinúa el tipo.
+- Sombra en dos capas (`0 1px 3px` + `0 14px 36px -14px`) en vez de una sola sombra dura, y
+  `pr-10` para que el texto largo no se meta debajo del botón de cerrar.
+
+## 6. Detalle de propiedad — título más chico
+
+`text-3xl md:text-[2.6rem]` → **`text-2xl leading-tight md:text-3xl`**.
+
+Los títulos reales de esta inmobiliaria son largos (el de la captura ocupaba cuatro renglones y
+empujaba las píldoras de dirección/barrio/zona fuera del primer viewport). Con el tamaño nuevo el
+mismo título entra en tres renglones y las píldoras vuelven a verse sin scrollear. Sigue siendo el
+elemento más grande de la tarjeta.
+
+## 7. Valoraciones y comentarios, separados como el resto
+
+Las dos secciones estaban pegadas entre sí mientras todas las demás tenían `gap-8`.
+
+**Causa:** al envolver el bloque en `<Reveal>` en la Parte 9, `CommentsAndRatings` devolvía un
+fragmento `<>…</>`. El fragmento no genera nodo, así que sus dos hijos quedaron dentro del mismo
+contenedor del `Reveal` y el `gap-8` del padre pasó a aplicarse **al bloque entero**, no entre las
+dos secciones.
+
+**Arreglo:** el fragmento pasó a ser `<div className="flex flex-col gap-8">`. Una línea, y el
+espaciado vuelve a ser el mismo que hay entre Descripción, Características y Ubicación.
+
+## 8. Foto del agente
+
+El círculo mostraba siempre el ícono genérico de persona. El componente leía `agent.avatar`, pero
+**el backend manda el campo `photo`** — `AGENT_PUBLIC_FIELDS = ['id','name','surname','phone','photo']`.
+Nunca había un `avatar` que leer.
+
+Ahora:
+
+- la interfaz `Agent` declara `surname` y `photo`;
+- se renderiza `agent.photo ?? agent.avatar` (el `??` deja pasar cualquier respuesta vieja que
+  todavía traiga `avatar`) con `next/image`, 64×64 y `object-cover`;
+- si no hay ninguna de las dos, se cae al ícono `User` de antes;
+- el nombre muestra `name + surname`, y debajo va **`agent.phone`** en vez de `agent.email` —
+  el email no está en `AGENT_PUBLIC_FIELDS`, así que ese renglón estaba vacío siempre.
+
+## 9. Después del login, volver a lo que estabas haciendo
+
+**El problema:** quien no tenía sesión y tocaba "Guardar" (favorito), valorar o comentar terminaba
+en `/login` a secas, y al autenticarse aterrizaba en `/dashboard` — lejos de la propiedad, que
+tenía que volver a buscar a mano. El middleware ya escribía `?callbackUrl=`, pero **nadie lo
+leía**: se generaba y se descartaba.
+
+Módulo nuevo **`shared/lib/returnTo.ts`**, con el mismo nombre de parámetro que ya usaba el
+middleware (`callbackUrl`):
+
+- `loginUrlWithReturn(path)` — arma `/login?callbackUrl=<path>` con la ruta actual codificada.
+- `currentPathWithQuery()` — `pathname + search` en el cliente, `null` en el servidor.
+- `isSafeReturnPath(path)` — **el chequeo que evita un open redirect**. Exige que el destino
+  empiece con una sola `/` y rechaza `//` y `/\`, que los navegadores leen como URL
+  protocol-relative hacia otro host. Sin esto, `/login?callbackUrl=https://sitio-falso.com` mandaría
+  al usuario a un sitio ajeno justo después de un login legítimo — phishing de manual.
+
+Consumidores: `FavoriteButton`, y los dos `<Link href="/login">` de valoraciones y comentarios en
+`PropertyDetail`. `AuthContext.handleAuthSuccess` lee el parámetro al terminar el login —da igual
+si fue con email + contraseña o con Google, porque ese handler es compartido a propósito— y
+redirige ahí. El admin sigue yendo siempre a `/dashboardAdmin/`: el `callbackUrl` no le aplica.
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npm run lint` **0 problemas** · `npm run build` exit 0, 39 rutas.
+
+Verificado en el navegador contra el backend real, con datos creados para la prueba y **borrados
+después** (2 propiedades, 1 publicación, 1 usuario):
+
+- **Detalle de propiedad** — captura con un título largo igual al de la captura del brief: entra
+  en tres renglones, la foto del agente se ve en el círculo y las secciones quedaron con el mismo
+  espaciado. Los cuatro accesos rápidos de la barra superior se confirmaron en el HTML servido:
+  aparecían de a poco en las capturas sólo porque la animación escalonada quedaba a mitad de
+  camino, no por un problema de layout.
+- **Panel de notificaciones** — sesión de usuario real vía CDP, con tres avisos de tipos distintos
+  generados a propósito (nueva propiedad, nueva publicación, cambio de precio). Se confirmó el
+  orden nuevo de la fila de filtros, el badge rojo con el `3` en el sidebar, y las tres barras de
+  acento con su color correspondiente.
+- **Toast** — capturado ya con el ícono de casa verde en vez del megáfono violeta.

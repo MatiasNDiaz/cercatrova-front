@@ -28,6 +28,7 @@ import {
   BADGE_BASE, operationBadgeSoft, propertyTypeBadgeSoft, statusBadgeColor, statusDotColor,
 } from '@/modules/properties/lib/badgeStyles';
 import { Reveal } from '@/modules/landing/components/Reveal';
+import { loginUrlWithReturn, currentPathWithQuery } from '@/modules/shared/lib/returnTo';
 
 // ── INTERFACES ────────────────────────────────────────────────────────────────
 interface PropertyImage { id: number; url: string; isCover?: boolean; }
@@ -40,7 +41,23 @@ interface PropertyImage { id: number; url: string; isCover?: boolean; }
  * página pasaba la propiedad sin tipar (`getOne` devolvía `any`); al tipar el
  * fetch en `page.tsx` quedó a la vista el desajuste.
  */
-interface Agent { id: number; name: string; email?: string | null; phone?: string | null; avatar?: string | null; }
+interface Agent {
+  id: number;
+  name: string;
+  surname?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  /**
+   * ⚠️ El backend manda la foto en `photo` — así lo declara `AGENT_PUBLIC_FIELDS`
+   * (`['id','name','surname','phone','photo']` en `properties.service.ts`).
+   * El componente leía `avatar`, un nombre que no existe en la respuesta, así
+   * que el círculo del agente SIEMPRE caía al ícono genérico aunque la foto
+   * estuviera cargada. Se lee `photo` y se deja `avatar` como alias por si
+   * alguna respuesta vieja lo trae.
+   */
+  photo?: string | null;
+  avatar?: string | null;
+}
 
 interface Comment {
   id: number;
@@ -445,7 +462,14 @@ function CommentsAndRatings({
   };
 
   return (
-    <>
+    /* `flex flex-col gap-8` — MISMA separación que el resto de las secciones de
+       la columna izquierda.
+       Antes era un fragmento (`<>`) con los dos bloques como hermanos sueltos:
+       funcionaba mientras el padre los recibía directo, porque heredaban su
+       `gap-8`. Al envolver este componente en `<Reveal>` para animarlo, los dos
+       quedaron dentro de un mismo contenedor y el gap del padre dejó de
+       aplicarse entre ellos — Valoraciones y Comentarios se veían pegados. */
+    <div className="flex flex-col gap-8">
       {/* ── VALORACIONES ── */}
       <div id="valoracion" className={`scroll-mt-28 ${CARD} p-8`}>
         <h2 className="mb-6 flex items-center gap-3 text-lg font-bold text-ink-900">
@@ -519,7 +543,7 @@ function CommentsAndRatings({
             </div>
           </div>
         ) : (
-          <Link href="/login"
+          <Link href={loginUrlWithReturn(currentPathWithQuery() ?? `/properties/${propertyId}`)}
             className="group flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink-200 p-4 text-sm text-ink-500 transition-all duration-300 hover:border-brand-700 hover:text-brand-700">
             <LogIn size={16} className="transition-transform group-hover:scale-110" />
             Iniciá sesión para valorar esta propiedad
@@ -566,7 +590,7 @@ function CommentsAndRatings({
             </div>
           </div>
         ) : (
-          <Link href="/login"
+          <Link href={loginUrlWithReturn(currentPathWithQuery() ?? `/properties/${propertyId}`)}
             className="group mb-8 flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink-200 p-4 text-sm text-ink-500 transition-all duration-300 hover:border-brand-700 hover:text-brand-700">
             <LogIn size={16} className="transition-transform group-hover:scale-110" />
             Iniciá sesión para dejar un comentario
@@ -667,7 +691,7 @@ function CommentsAndRatings({
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -849,7 +873,13 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                 </span>
               </div>
 
-              <h1 className="text-3xl leading-[1.15] font-bold tracking-tight text-ink-900 md:text-[2.6rem]">
+              {/* Bajado de `text-3xl / md:2.6rem` (≈42px) a `text-2xl / md:3xl`
+                  (≈30px). Con títulos reales de esta inmobiliaria —largos, con
+                  comillas y aclaraciones entre paréntesis— el tamaño anterior
+                  ocupaba cuatro renglones y empujaba toda la ficha hacia abajo.
+                  Sigue siendo el elemento más grande del bloque, que es lo que
+                  tiene que seguir destacando. */}
+              <h1 className="text-2xl leading-tight font-bold tracking-tight text-ink-900 md:text-3xl">
                 {title}
               </h1>
 
@@ -1060,14 +1090,19 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                         una foto no cuadrada quedaba descentrada dentro de la
                         caja. El aro verde la separa del fondo blanco. */}
                     <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-700/10 ring-2 ring-brand-200 ring-offset-2 ring-offset-white">
-                      {agent.avatar
-                        ? <Image src={agent.avatar} alt={agent.name} width={64} height={64} className="h-full w-full object-cover" />
+                      {(agent.photo ?? agent.avatar)
+                        ? <Image src={(agent.photo ?? agent.avatar)!} alt={agent.name} width={64} height={64} className="h-full w-full object-cover" />
                         : <User size={26} className="text-brand-700" />}
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-base font-bold text-ink-900">{agent.name}</p>
-                      {agent.email && (
-                        <p className="mt-0.5 truncate text-xs text-ink-500" title={agent.email}>{agent.email}</p>
+                      <p className="truncate text-base font-bold text-ink-900">
+                        {agent.name}{agent.surname ? ` ${agent.surname}` : ''}
+                      </p>
+                      {/* `email` NO viene en la respuesta (no está en
+                          `AGENT_PUBLIC_FIELDS`), así que esa línea nunca se
+                          renderizaba. Se usa `phone`, que sí llega. */}
+                      {agent.phone && (
+                        <p className="mt-0.5 truncate text-xs text-ink-500">{agent.phone}</p>
                       )}
                     </div>
                   </div>

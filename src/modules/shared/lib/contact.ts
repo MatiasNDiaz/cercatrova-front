@@ -18,6 +18,18 @@ export function whatsappLink(message: string): string {
 }
 
 /**
+ * Link para COMPARTIR algo por WhatsApp, sin destinatario fijo.
+ *
+ * Distinto de `whatsappLink()` (que escribe al número de la inmobiliaria) y de
+ * `whatsappLinkTo()` (que escribe a un teléfono concreto): `wa.me/` sin número
+ * abre WhatsApp con el mensaje ya cargado y deja que la persona elija a quién
+ * mandárselo. Es lo que corresponde para "compartir esta ficha con un colega".
+ */
+export function whatsappShareLink(message: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(message)}`;
+}
+
+/**
  * Normaliza un teléfono cargado por un usuario al formato que exige `wa.me`:
  * sólo dígitos, con código de país y sin el 0 de área ni el 15 de celular.
  *

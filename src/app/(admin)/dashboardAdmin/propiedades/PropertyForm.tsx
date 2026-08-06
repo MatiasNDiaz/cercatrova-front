@@ -10,9 +10,10 @@ import { Input, inputBaseClasses } from '@/modules/shared/ui/Input';
 import { Select } from '@/modules/shared/ui/Select';
 import { toast } from 'sonner';
 import { DashboardPage, DashboardHeader } from '@/modules/shared/ui/DashboardPage';
+import { useFormDraft, draftKey } from '@/modules/shared/hooks/useFormDraft';
 import {
   Save, ArrowLeft, Upload, X, Star, ImagePlus, Building2,
-  MapPin, Ruler, DollarSign, Info
+  MapPin, Ruler, DollarSign, Info, FileWarning, Trash2
 } from 'lucide-react';
 
 // ── TIPOS ─────────────────────────────────────────────────────────────────────
@@ -103,6 +104,29 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
   });
 
   const set = (k: string, v: string | boolean) => setForm(p => ({ ...p, [k]: v }));
+
+  /**
+   * ── Borrador automático ──
+   *
+   * Clave separada por modo: `..._new` para el alta y `..._<id>` para cada
+   * edición. Si compartieran clave, empezar una propiedad nueva pisaría el
+   * borrador de la que se estaba editando (y al revés).
+   *
+   * En modo edición se espera a que termine el fetch (`disabled: loading`):
+   * sin eso, el `useState` inicial vacío se guardaría encima del borrador
+   * antes de que llegue la respuesta del backend.
+   *
+   * ⚠️ Sólo se guardan los 21 campos de `form`. Las imágenes NO — ver la nota
+   * de limitación en `useFormDraft.ts`: los `File` no son serializables y una
+   * sola foto en base64 desbordaría la cuota de `sessionStorage`.
+   */
+  const storageKey = draftKey('property', isEdit ? propertyId! : 'new');
+  const { restored: draftRestored, discard: discardDraft } = useFormDraft({
+    key: storageKey,
+    value: form,
+    onRestore: setForm,
+    disabled: loading,
+  });
 
   // ── Cargar tipos de propiedad ──
   useEffect(() => {
@@ -309,6 +333,11 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
         toast.success('Propiedad publicada ✓');
       }
 
+      // El borrador se limpia SOLO acá: si el guardado falló, el `catch` de
+      // abajo lo deja intacto para que el admin no pierda lo cargado y pueda
+      // reintentar. Es todo el punto de tener borrador.
+      discardDraft();
+
       router.push('/dashboardAdmin/propiedades');
     } catch (error) {
       // El backend ahora valida el JSON del campo `data`: un 400 puede traer el
@@ -355,6 +384,46 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
           ? 'Modificá los datos y guardá los cambios'
           : 'Completá los datos y subí las imágenes'}
       />
+
+      {/* ── AVISO DE BORRADOR RECUPERADO ──
+          Sólo aparece si al montar había algo guardado. Es importante que sea
+          explícito: si el formulario apareciera lleno sin decir por qué, el
+          admin no sabría si son datos reales de la propiedad o restos de una
+          carga anterior. Y menciona lo de las imágenes, que es la única parte
+          que el borrador no puede recuperar. */}
+      {draftRestored && (
+        <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <FileWarning size={18} className="mt-0.5 shrink-0 text-amber-600" />
+            <div>
+              <p className="text-sm font-bold text-amber-900">
+                Recuperamos lo que habías cargado
+              </p>
+              <p className="mt-0.5 text-xs leading-relaxed text-amber-800">
+                Los campos se restauraron desde un borrador automático.
+                {totalImages === 0 && ' Las imágenes sí tenés que volver a seleccionarlas.'}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              discardDraft();
+              setForm({
+                title: '', description: '', typeOfPropertyId: '', operationType: 'venta',
+                status: 'disponible', provincia: 'Córdoba', localidad: '', barrio: '',
+                direccion: '', zone: '', rooms: '', bathrooms: '', supTotal: '',
+                supCubierta: '', antiquity: '', price: '', property_deed: false,
+                tractoAbreviado: false, boleto: false, garage: false, patio: false
+              });
+              toast.success('Borrador descartado');
+            }}
+            className="flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-xs font-bold text-amber-800 transition-all hover:bg-amber-100 active:scale-95"
+          >
+            <Trash2 size={13} /> Descartar borrador
+          </button>
+        </div>
+      )}
 
       {/* ── IMÁGENES ── */}
       <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
