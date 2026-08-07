@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { decodeJwt } from 'jose';
+// Mismas constantes/validación que usa el cliente: el nombre del parámetro y la
+// definición de "ruta interna segura" tienen que ser UNA sola en todo el
+// proyecto. Son funciones puras, así que corren igual en el runtime del edge.
+import { RETURN_PARAM, isSafeReturnPath } from '@/modules/shared/lib/returnTo';
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('access_token')?.value;
@@ -16,7 +20,11 @@ export function middleware(request: NextRequest) {
   // Si intenta entrar a algo privado o de admin sin token
   if (!token && (isPrivateZone || isAdminZone)) {
     const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
+    // `pathname + search` y no solo `pathname`: hay pantallas cuyo estado vive
+    // en la query (`/dashboard/notificaciones?tipo=favoritos`,
+    // `/dashboardAdmin/solicitudes?estado=...`). Guardando solo el pathname el
+    // usuario volvía a la pantalla pero sin el filtro que estaba mirando.
+    loginUrl.searchParams.set(RETURN_PARAM, pathname + request.nextUrl.search);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -35,9 +43,16 @@ export function middleware(request: NextRequest) {
       }
 
       // --- CAPA 3: UX ---
-      // Si ya está logueado, no tiene sentido que vea el Login
+      // Si ya está logueado, no tiene sentido que vea el Login.
+      // Igual que en `AuthContext.handleAuthSuccess`, el `callbackUrl` manda y
+      // el dashboard por rol es solo el destino por defecto: si abrió el link
+      // de una acción protegida teniendo sesión en otra pestaña, tiene que
+      // terminar en la acción, no en el panel.
       if (isAuthPage) {
-        const dest = userRole === 'admin' ? '/dashboardAdmin' : '/dashboard';
+        const returnTo = request.nextUrl.searchParams.get(RETURN_PARAM);
+        const dest = isSafeReturnPath(returnTo)
+          ? returnTo
+          : userRole === 'admin' ? '/dashboardAdmin' : '/dashboard';
         return NextResponse.redirect(new URL(dest, request.url));
       }
 

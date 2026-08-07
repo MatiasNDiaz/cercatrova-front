@@ -327,8 +327,14 @@ export default function PropiedadesAdminPage() {
                     ancho y con 44px de alto; antes flotaban al costado del
                     texto y quedaban encimadas con la ubicación. */}
                 <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-gray-100 pt-3 sm:border-0 sm:pt-0">
-                  {/* ── ENVIAR: copia el link de la ficha compartible ── */}
+                  {/* ── ENVIAR: copia el link de la ficha compartible ──
+                      `type="button"` explícito: sin él un `<button>` es
+                      `type="submit"` por defecto, y si algún día este listado
+                      queda dentro de un `<form>` el click enviaría el
+                      formulario y navegaría. Esta acción no puede navegar
+                      NUNCA: sólo escribe en el portapapeles. */}
                   <button
+                    type="button"
                     onClick={() => handleCopyLink(p.id)}
                     title="Copiar el link de la ficha para compartir"
                     className="flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-blue-50 px-4 text-xs font-bold text-blue-700 transition-all hover:bg-blue-100 sm:min-h-0 sm:flex-none sm:py-2"

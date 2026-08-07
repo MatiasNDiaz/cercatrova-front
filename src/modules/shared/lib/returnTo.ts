@@ -52,3 +52,45 @@ export function currentPathWithQuery(): string | null {
   if (typeof window === 'undefined') return null;
   return window.location.pathname + window.location.search;
 }
+
+/**
+ * Link al login que conserva la ubicación actual. **Es la única forma correcta
+ * de mandar a alguien a `/login` desde una acción protegida.**
+ *
+ * Existe para que ningún call-site tenga que acordarse de combinar
+ * `loginUrlWithReturn` con `currentPathWithQuery`: un `router.push('/login')`
+ * pelado pierde el destino y el usuario termina en el dashboard en vez de
+ * volver a lo que estaba haciendo. Ese olvido era el patrón repetido en los
+ * guards de layout y en el manejo de sesión expirada.
+ *
+ * @param fallback destino a recordar si `window` no está disponible.
+ */
+export function loginUrlFromHere(fallback = '/'): string {
+  return loginUrlWithReturn(currentPathWithQuery() ?? fallback);
+}
+
+/**
+ * Lee el `callbackUrl` que hay en la URL actual, ya validado.
+ *
+ * Devuelve `null` en el servidor y también cuando el valor no es una ruta
+ * interna segura (ver `isSafeReturnPath`).
+ */
+export function getCurrentReturnPath(): string | null {
+  if (typeof window === 'undefined') return null;
+  const value = new URLSearchParams(window.location.search).get(RETURN_PARAM);
+  return isSafeReturnPath(value) ? value : null;
+}
+
+/**
+ * Traslada el `callbackUrl` vigente a otra ruta de autenticación.
+ *
+ * Sirve para que el destino sobreviva los rodeos entre `/login` y `/register`:
+ * el visitante que quiso dar un favorito, no tenía cuenta y pasó por el
+ * registro tiene que volver igual a la propiedad, no aterrizar en el dashboard.
+ * Sin esto la cadena se corta en el primer salto.
+ */
+export function withCurrentReturn(path: string): string {
+  const returnTo = getCurrentReturnPath();
+  if (!returnTo) return path;
+  return `${path}?${RETURN_PARAM}=${encodeURIComponent(returnTo)}`;
+}

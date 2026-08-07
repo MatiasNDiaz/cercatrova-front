@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '@/modules/auth/hooks/useAuth';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { withCurrentReturn } from '@/modules/shared/lib/returnTo';
 import { loginSchema, type LoginFormValues } from '@/modules/auth/schemas/auth.schemas';
 import { AuthShell } from './AuthShell';
 import { AuthField, authInput } from './AuthField';
@@ -26,6 +27,19 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  /**
+   * "Registrate gratis" tiene que arrastrar el `callbackUrl`: si el visitante
+   * llegó acá desde un favorito y resulta que no tenía cuenta, después de
+   * registrarse debe volver igual a la propiedad. Sin esto la cadena se corta
+   * en el primer salto y termina en el dashboard.
+   *
+   * Se resuelve en un efecto —no en el render— porque `withCurrentReturn` lee
+   * `window`: si el `href` cambiara entre el HTML del servidor y el del
+   * cliente, React reportaría un desajuste de hidratación.
+   */
+  const [registerHref, setRegisterHref] = useState('/register');
+  useEffect(() => setRegisterHref(withCurrentReturn('/register')), []);
 
   const {
     register,
@@ -133,7 +147,7 @@ export function LoginForm() {
 
         <p className="text-center text-sm text-ink-500">
           ¿No tenés cuenta?{' '}
-          <Link href="/register" className="font-bold text-brand-700 transition-colors hover:text-brand-800 hover:underline">
+          <Link href={registerHref} className="font-bold text-brand-700 transition-colors hover:text-brand-800 hover:underline">
             Registrate gratis
           </Link>
         </p>

@@ -7,7 +7,7 @@ import { authService } from '@/modules/auth/services/auth.service';
 import { setOnUnauthorized } from '@/modules/shared/lib/authEvents';
 import { clearPendingNotifMarks } from '@/modules/shared/lib/pendingNotifSession';
 import { getErrorStatus } from '@/modules/shared/lib/apiError';
-import { RETURN_PARAM, isSafeReturnPath } from '@/modules/shared/lib/returnTo';
+import { getCurrentReturnPath, loginUrlFromHere, withCurrentReturn } from '@/modules/shared/lib/returnTo';
 import type { AuthUser, LoginFormData, RegisterFormData } from '@/modules/auth/interface/auth.interfaces';
 
 // 1. DEFINIMOS QUÉ TIENE EL CONTEXTO
@@ -53,7 +53,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setOnUnauthorized(() => {
       setUser(null);
       toast.error('Tu sesión expiró. Iniciá sesión de nuevo.');
-      router.push('/login');
+      // Se recuerda dónde estaba: una sesión que vence en medio de algo es
+      // justamente el caso donde volver al mismo lugar más importa.
+      router.push(loginUrlFromHere());
     });
     return () => setOnUnauthorized(null);
   }, [router]);
@@ -79,24 +81,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
      * `useSearchParams` del render— para que valga igual en el flujo de email +
      * contraseña y en el de Google, sin duplicar la lógica en cada uno.
      *
-     * `isSafeReturnPath` es lo que evita que esto sea un open redirect: sólo se
-     * aceptan rutas internas. Ver la nota en `returnTo.ts`.
+     * `getCurrentReturnPath` valida que sea una ruta interna; eso es lo que
+     * evita que esto sea un open redirect. Ver la nota en `returnTo.ts`.
      *
-     * Los admins quedan afuera a propósito: su lugar natural post-login es el
-     * panel, y las acciones de usuario común (favoritos, valorar) el backend se
-     * las rechaza con 403 de todos modos.
+     * ⚠️ EL DESTINO GANA SIEMPRE, TAMBIÉN PARA EL ADMIN.
+     *
+     * Antes había un `if (role === 'admin')` ANTES de mirar el `callbackUrl`:
+     * cualquier admin que llegara al login desde una acción protegida terminaba
+     * en `/dashboardAdmin/` y perdía el destino, aunque el parámetro estuviera
+     * perfectamente seteado. Se veía como "el callbackUrl no funciona para
+     * /publicar" —el síntoma reportado—, pero en realidad fallaba para TODA
+     * ruta cuando el que se logueaba era admin, incluidos los enlaces profundos
+     * al propio panel (ej. `/dashboardAdmin/propiedades/nueva`).
+     *
+     * Que un admin siga un `callbackUrl` a una ruta de usuario no abre ningún
+     * agujero: el middleware conserva su CAPA 2 (rol) y el backend valida cada
+     * request. El rol solo decide el destino POR DEFECTO, cuando no hay ningún
+     * lugar al que volver.
      */
-    const returnTo = typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search).get(RETURN_PARAM)
-      : null;
+    const returnTo = getCurrentReturnPath();
+    const dashboardPorRol = authUser.role === 'admin' ? '/dashboardAdmin/' : '/dashboard';
 
-    if (authUser.role === 'admin') {
-      router.push('/dashboardAdmin/');
-    } else if (isSafeReturnPath(returnTo)) {
-      router.push(returnTo);
-    } else {
-      router.push('/dashboard');
-    }
+    router.push(returnTo ?? dashboardPorRol);
 
     // Usuario creado vía Google: queda sin teléfono ni contraseña local.
     if (authUser.profileIncomplete) {
@@ -139,7 +145,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (data: RegisterFormData) => {
     await authService.register(data);
-    router.push('/login'); // después de registrarse, va al login
+    // Después de registrarse va al login, arrastrando el destino: si llegó acá
+    // desde "dar favorito" y no tenía cuenta, tiene que volver a la propiedad
+    // al terminar, no aterrizar en el dashboard.
+    router.push(withCurrentReturn('/login'));
   };
 
   const updateUser = (data: Partial<AuthUser>) => {

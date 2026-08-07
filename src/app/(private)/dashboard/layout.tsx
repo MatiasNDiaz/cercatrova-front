@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import { DashboardShell } from '@/modules/shared/ui/DashboardShell';
 import api from '@/modules/shared/lib/axios';
+import { loginUrlFromHere } from '@/modules/shared/lib/returnTo';
 import {
   Home, Settings, Bell, FileText, Building2,
   LogOut, ChevronDown, Pencil, ArrowLeft, Shield,
@@ -285,7 +286,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/login');
+      // `loginUrlFromHere` y no `/login` pelado: así el visitante que entró por
+      // un link directo a una pantalla del dashboard vuelve a ESA pantalla al
+      // loguearse. Es el mismo mecanismo que usan favoritos/comentarios/rating.
+      router.push(loginUrlFromHere());
     }
   }, [user, isLoading, router]);
 

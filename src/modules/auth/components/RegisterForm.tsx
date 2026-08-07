@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Mail, Lock, Eye, EyeOff, User, Phone, UserPlus } from 'lucide-react';
 import { useAuth } from '@/modules/auth/hooks/useAuth';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { withCurrentReturn } from '@/modules/shared/lib/returnTo';
 import { registerSchema, type RegisterFormValues } from '@/modules/auth/schemas/auth.schemas';
 import { AuthShell } from './AuthShell';
 import { AuthField, authInput } from './AuthField';
@@ -32,6 +33,18 @@ export function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  /**
+   * "Iniciar sesión" tiene que arrastrar el `callbackUrl` igual que su par en
+   * `LoginForm`: el visitante que vino de una acción protegida y se dio cuenta
+   * de que ya tenía cuenta debe volver a esa acción, no al dashboard.
+   *
+   * Se resuelve en un efecto —no en el render— porque `withCurrentReturn` lee
+   * `window`: un `href` distinto entre el HTML del servidor y el del cliente
+   * dispararía un desajuste de hidratación.
+   */
+  const [loginHref, setLoginHref] = useState('/login');
+  useEffect(() => setLoginHref(withCurrentReturn('/login')), []);
 
   const {
     register,
@@ -165,7 +178,7 @@ export function RegisterForm() {
 
         <p className="text-center text-sm text-ink-500">
           ¿Ya tenés cuenta?{' '}
-          <Link href="/login" className="font-bold text-brand-700 transition-colors hover:text-brand-800 hover:underline">
+          <Link href={loginHref} className="font-bold text-brand-700 transition-colors hover:text-brand-800 hover:underline">
             Iniciá sesión
           </Link>
         </p>

@@ -9,6 +9,7 @@ import { ArrowRight, Loader2, Star, Bed, Bath, Maximize, ArrowUpDown } from 'luc
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import { myActivityService, type MyRating } from '@/modules/properties/services/myActivity.service';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
+import { loginUrlFromHere } from '@/modules/shared/lib/returnTo';
 
 import { DashboardPage, DashboardHeader, CARD_INTERACTIVE, ListReveal } from '@/modules/shared/ui/DashboardPage';
 import { ListToolbar, ListSearch, ListSelect, NoMatches } from '@/modules/shared/ui/ListToolbar';
@@ -41,8 +42,9 @@ export default function ValoradasPage() {
   }, [ratings, search, sortBy]);
 
   // Sin sesión → al login, en vez de una pantalla vacía o un error crudo.
+  // `loginUrlFromHere` recuerda esta pantalla para volver acá tras el login.
   useEffect(() => {
-    if (!isLoading && !user) router.push('/login');
+    if (!isLoading && !user) router.push(loginUrlFromHere());
   }, [user, isLoading, router]);
 
   useEffect(() => {

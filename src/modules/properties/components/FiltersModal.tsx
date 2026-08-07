@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -49,6 +49,83 @@ type NumsKey = keyof typeof EMPTY_NUMS;
 
 /** Los campos de ubicación llegan como `string[]`; el Dropdown pide `{value,label}`. */
 const toOptions = (values: string[]) => values.map((v) => ({ value: v, label: v }));
+
+/**
+ * Deja un valor de ubicación listo para MOSTRAR y para mandar a la URL:
+ * colapsa las corridas de espacios, recorta las puntas y fuerza la primera
+ * letra en mayúscula.
+ *
+ * Los espacios importan porque `\s` incluye el espacio duro (` `), y ese es
+ * el sospechoso número uno cuando dos opciones del desplegable se ven
+ * EXACTAMENTE iguales: son valores tipeados a mano, y un espacio invisible al
+ * final no se nota en pantalla pero para Postgres son dos filas distintas.
+ *
+ * La mayúscula inicial es una regla de presentación FIJA, no una elección entre
+ * variantes: como el admin carga `localidad`/`zone` a mano en un `<Input>`, en
+ * la base conviven `"Centro"` y `"centro"`, y el desplegable tiene que mostrar
+ * siempre la forma capitalizada sin importar cuál quedó guardada primero.
+ *
+ * Se capitaliza SOLO la primera letra, no cada palabra: `"Santa Cruz del Lago"`
+ * tiene que quedar tal cual (en castellano el `del` va en minúscula); lo que hay
+ * que corregir es el caso `"centro"` -> `"Centro"`.
+ */
+const cleanLocation = (v: string) => {
+  const s = v.replace(/\s+/g, ' ').trim();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
+/**
+ * Clave de comparación para deduplicar valores de ubicación.
+ *
+ * Se normaliza igual que el backend compara al filtrar:
+ * `unaccent(col) ILIKE unaccent(:v)` (`properties.service.ts:570` y `:572`), es
+ * decir sin distinguir mayúsculas ni acentos. Se le suma la limpieza de espacios
+ * de `cleanLocation`, que el `ILIKE` no hace por sí solo.
+ */
+const locationKey = (v: string) =>
+  cleanLocation(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+/** ¿El valor conserva sus acentos? (`"Córdoba"` sí, `"Cordoba"` no). */
+const hasAccents = (v: string) => v !== v.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+/**
+ * Igual que `toOptions`, pero colapsa los valores repetidos.
+ *
+ * Por qué hace falta: el endpoint `GET /properties/filters/locations` ya hace un
+ * `SELECT DISTINCT`, pero DISTINCT compara byte a byte. Como `localidad`/`zone`
+ * son texto libre cargado por el admin en un `<Input>` (no un select cerrado),
+ * tres propiedades del centro pueden haber quedado guardadas como `"Centro"`,
+ * `"centro"` y `"Centro "` — tres filas distintas para Postgres, tres opciones
+ * visualmente idénticas en el desplegable.
+ *
+ * El filtrado NO cambia: el backend matchea con `unaccent ILIKE '%valor%'`, así
+ * que la variante que sobrevive sigue trayendo las propiedades cargadas con
+ * cualquiera de las otras.
+ *
+ * Único desempate entre variantes: gana la que conserva los acentos
+ * (`"Córdoba"` por sobre `"Cordoba"`). Las mayúsculas ya no desempatan nada
+ * porque `cleanLocation` las normaliza. A igualdad, gana la primera, así el
+ * resultado es determinista.
+ *
+ * Se usa un `Map`, que conserva el orden de inserción: el desplegable mantiene
+ * el orden alfabético que ya venía del backend aunque la variante elegida se
+ * reemplace más tarde.
+ */
+const toUniqueOptions = (values: string[]) => {
+  const best = new Map<string, string>();
+
+  for (const raw of values) {
+    const value = cleanLocation(raw);
+    if (!value) continue;
+    const key = locationKey(value);
+    const current = best.get(key);
+    if (current === undefined || (!hasAccents(current) && hasAccents(value))) {
+      best.set(key, value);
+    }
+  }
+
+  return [...best.values()].map((value) => ({ value, label: value }));
+};
 
 export function FiltersModal({ open, onClose }: FiltersModalProps) {
   const { filters, setFilters, clearFilters } = usePropertyFilters();
@@ -299,13 +376,13 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
                 <div className="grid grid-cols-1 gap-3">
                   <Dropdown
                     label="Localidad" placeholder="Todas las localidades"
-                    value={draft.localidad} options={toOptions(locations.localidades)}
+                    value={draft.localidad} options={toUniqueOptions(locations.localidades)}
                     isOpen={openDrop === 'loc'} onToggle={() => setOpenDrop(openDrop === 'loc' ? null : 'loc')} onClose={closeDrop}
                     onSelect={(v) => { setDraft((p) => ({ ...p, localidad: v })); setOpenDrop(null); }}
                   />
                   <Dropdown
                     label="Zona" placeholder="Todas las zonas"
-                    value={draft.zone} options={toOptions(locations.zones)}
+                    value={draft.zone} options={toUniqueOptions(locations.zones)}
                     isOpen={openDrop === 'zone'} onToggle={() => setOpenDrop(openDrop === 'zone' ? null : 'zone')} onClose={closeDrop}
                     onSelect={(v) => { setDraft((p) => ({ ...p, zone: v })); setOpenDrop(null); }}
                   />

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import api from '@/modules/shared/lib/axios';
 import { DashboardShell } from '@/modules/shared/ui/DashboardShell';
+import { loginUrlFromHere } from '@/modules/shared/lib/returnTo';
 
 // ── Tipos ─────────────────────────────────────────────
 // `AdminNotification` y `getNotifType` viven en `notificaciones/notifShared`:
@@ -346,7 +347,9 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !user) { router.push('/login'); return; }
+    // `loginUrlFromHere` conserva la pantalla exacta del panel (incluido su
+    // query string) para volver ahí después del login, en vez de `/login` pelado.
+    if (!isLoading && !user) { router.push(loginUrlFromHere()); return; }
     if (!isLoading && user && user.role !== 'admin') router.push('/dashboard');
   }, [user, isLoading, router]);
 
