@@ -11,7 +11,7 @@ import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
 import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 import {
   Plus, Pencil, Trash2, Building2, Search,
-  Home, DollarSign, Tag, ImageOff,
+  Home, DollarSign, Tag, ImageOff, Eye,
   ArrowUpDown, SlidersHorizontal, ChevronDown, Link2, Check,
 } from 'lucide-react';
 import { BsWhatsapp } from 'react-icons/bs';
@@ -349,8 +349,21 @@ export default function PropiedadesAdminPage() {
 
                     En mobile ocupan su propia fila, cada botón a mitad de
                     ancho y con 44px de alto; antes flotaban al costado del
-                    texto y quedaban encimadas con la ubicación. */}
-                <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-gray-100 pt-3 sm:border-0 sm:pt-0">
+                    texto y quedaban encimadas con la ubicación.
+
+                    ── Separador ──
+                    En desktop las acciones quedaban pegadas a los datos de la
+                    propiedad y la fila se leía como un bloque continuo: no se
+                    distinguía dónde termina la información y dónde empiezan los
+                    botones. Se agrega una línea vertical fina
+                    (`sm:border-l`) + `sm:pl-4` para separarlas.
+
+                    Es la MISMA línea que ya existía como `border-t` horizontal
+                    en mobile, sólo que rotada: en mobile las acciones van
+                    debajo (separador arriba), en desktop van al costado
+                    (separador a la izquierda). Por eso los dos bordes son
+                    excluyentes — `sm:border-t-0`. */}
+                <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-gray-100 pt-3 sm:self-stretch sm:border-t-0 sm:border-l sm:pt-0 sm:pl-4">
                   {/* ── ENVIAR: copia el link de la ficha compartible ──
                       `type="button"` explícito: sin él un `<button>` es
                       `type="submit"` por defecto, y si algún día este listado
@@ -382,6 +395,32 @@ export default function PropiedadesAdminPage() {
                   >
                     <BsWhatsapp size={14} />
                   </a>
+
+                  {/* ── VER PROPIEDAD ──
+                      Abre el detalle público, tal cual lo ve un visitante desde
+                      el catálogo. Es distinto de "Enviar"/WhatsApp, que
+                      comparten la FICHA (`/ficha/:id`, la hoja de datos para
+                      mandarle a un cliente).
+
+                      Sólo ícono, como WhatsApp: la fila ya tiene cuatro
+                      acciones y un quinto botón con texto la desbordaba a un
+                      segundo renglón en pantallas medianas. El `title` y el
+                      `aria-label` cubren lo que no dice el ícono.
+
+                      `target="_blank"`: el admin está trabajando en su listado
+                      —muchas veces a mitad de una tanda de ediciones— y
+                      mandarlo al sitio público en la misma pestaña le hace
+                      perder el scroll y los filtros que tenía puestos. */}
+                  <Link
+                    href={`/properties/${p.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Ver la propiedad en el sitio público"
+                    aria-label={`Ver "${p.title}" en el sitio público`}
+                    className="flex min-h-11 w-11 cursor-pointer items-center justify-center rounded-xl bg-gray-100 text-gray-600 transition-all hover:bg-gray-200 hover:text-[#0b7a4b] sm:min-h-0 sm:w-auto sm:px-3 sm:py-2"
+                  >
+                    <Eye size={14} />
+                  </Link>
 
                   <Link href={`/dashboardAdmin/propiedades/${p.id}`}
                     className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#0b7a4b]/10 px-4 text-xs font-bold text-[#0b7a4b] transition-all hover:bg-[#0b7a4b]/20 sm:min-h-0 sm:flex-none sm:py-2">

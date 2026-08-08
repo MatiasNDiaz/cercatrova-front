@@ -13,6 +13,7 @@ import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 import {
   NotifItem, getNotifType, getConfig,
   type AdminNotification as Notification, } from './notifShared';
+import { NotifCountBadge } from '@/modules/shared/ui/notifIndicators';
 
 const INITIAL_VISIBLE = 10;
 
@@ -62,6 +63,27 @@ export default function AdminNotificacionesPage() {
   const [filter, setFilter]               = useState<FilterTab>('todas');
 
   const unreadCount    = notifications.filter(n => !n.read).length;
+
+  /**
+   * No leídas por categoría, para los badges de los tabs.
+   *
+   * Se calcula con el mismo `getNotifType` que usa el sidebar
+   * (`dashboardAdmin/layout.tsx`), así el badge del menú y el del tab no pueden
+   * decir números distintos — que es exactamente el bug que motivó extraer
+   * `notifShared` en su momento.
+   */
+  const sinLeerPorTab: Partial<Record<FilterTab, number>> = (() => {
+    const sinLeer = notifications.filter(n => !n.read);
+    const por = (t: string) => sinLeer.filter(n => getNotifType(n) === t).length;
+    return {
+      usuarios:     por('nuevo_usuario'),
+      solicitudes:  por('nueva_solicitud'),
+      comentarios:  por('comentario'),
+      valoraciones: por('valoracion'),
+      favoritos:    por('favorito'),
+    };
+  })();
+
   const importantelUnread = notifications.filter(n => {
     if (n.read) return false;
     const type = getNotifType(n);
@@ -208,17 +230,17 @@ const handleMarkAllAsRead = async () => {
         </div>
       )}
 
-      {/* Filtros tabs */}
+      {/* ── FILTROS ──
+          Cada tab muestra cuántas SIN LEER tiene su categoría. Antes el número
+          era el total de la categoría (leídas incluidas), así que no bajaba
+          nunca al ir leyendo y no servía para saber qué falta mirar.
+
+          "Todas" es el único sin badge: su número sería el mismo que el de la
+          campanita del sidebar, repetido al lado y sin agregar información. */}
       <div className="flex gap-1.5 bg-white border border-gray-100 p-1 rounded-xl w-fit flex-wrap">
         {FILTER_TABS.map(({ key, label, icon }) => {
           const isActive = filter === key;
-          const count = key === 'sin_leer' ? unreadCount
-            : key === 'usuarios'     ? notifications.filter(n => getNotifType(n) === 'nuevo_usuario').length
-            : key === 'solicitudes'  ? notifications.filter(n => getNotifType(n) === 'nueva_solicitud').length
-            : key === 'comentarios'  ? notifications.filter(n => getNotifType(n) === 'comentario').length
-            : key === 'valoraciones' ? notifications.filter(n => getNotifType(n) === 'valoracion').length
-            : key === 'favoritos'    ? notifications.filter(n => getNotifType(n) === 'favorito').length
-            : null;
+          const count = key === 'sin_leer' ? unreadCount : (sinLeerPorTab[key] ?? 0);
 
           return (
             <button
@@ -230,13 +252,9 @@ const handleMarkAllAsRead = async () => {
             >
               {icon}
               {label}
-              {count !== null && count > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-white/25 text-white' : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {count}
-                </span>
-              )}
+              {/* `onDark` cuando el tab está activo: su fondo ya es de color y
+                  un badge verde encima sería ilegible. */}
+              <NotifCountBadge count={count} variant="tab" onDark={isActive} />
             </button>
           );
         })}

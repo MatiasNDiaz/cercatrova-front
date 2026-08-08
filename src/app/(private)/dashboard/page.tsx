@@ -67,20 +67,61 @@ export default function DashboardHomePage() {
           que es donde hay ancho para que se vea bien; en mobile simplemente va
           debajo. Sin `absolute`, no hay nada que se pueda superponer. */}
       <div>
+        {/* ── BANNER ──
+            Antes era la foto con un `bg-black/50` plano encima y el saludo
+            centrado: el velo negro uniforme apagaba la imagen entera sin
+            mejorar la lectura en ningún lado en particular, y el texto flotaba
+            en el medio sin relación con la tarjeta de perfil de abajo.
+
+            Cuatro cambios:
+
+            1. **Velo en gradiente y en verde, no negro plano.** Va de
+               `brand-950` opaco abajo a casi transparente arriba: la parte alta
+               de la foto se ve de verdad, y la baja —donde apoya el texto y
+               donde se solapa la tarjeta— queda bien oscura. El verde en vez
+               del negro integra el banner con el resto del panel; un negro puro
+               era el único gris frío de la pantalla.
+            2. **Texto alineado a la izquierda y anclado abajo.** Centrado
+               competía con la tarjeta de perfil, que también está centrada en
+               mobile. Alineado a la izquierda arma una diagonal de lectura
+               (saludo → tarjeta → accesos) en vez de tres bloques centrados.
+            3. **Jerarquía tipográfica real.** El eyebrow chico en mayúsculas
+               (el mismo recurso de `SectionHeading` en la landing), el nombre
+               en `Playfair` —la fuente de títulos de la marca, que en el panel
+               no se usaba en ningún lado— y la bajada en un peso menor.
+            4. **`drop-shadow` en el texto** en vez de confiar sólo en el velo:
+               con fotos claras el blanco sobre blanco se perdía.
+
+            El `pb` grande de abajo reserva el espacio que ocupa la tarjeta de
+            perfil al solaparse, para que nunca tape el saludo. */}
         <div className="relative overflow-hidden rounded-xl shadow-lg">
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: 'url(/BannerInmo.png)' }}
           />
-          <div className="absolute inset-0 bg-black/50" />
+          {/* Dos capas: el gradiente hace el trabajo de contraste, y el velo
+              parejo muy suave evita que una foto con zonas claras en la esquina
+              superior derecha deje el borde lavado. */}
+          <div className="absolute inset-0 bg-linear-to-t from-brand-950/95 via-brand-950/70 to-brand-950/25" />
+          <div className="absolute inset-0 bg-brand-950/10" />
 
-          <div className="relative z-10 flex min-h-44 items-center justify-center px-5 py-10 sm:min-h-56 sm:px-8 md:h-64">
-            <h2 className="max-w-2xl text-center text-xl leading-tight font-bold tracking-tight text-white sm:text-3xl md:text-4xl">
-              ¡Hola, {user?.name}! Qué bueno verte de nuevo!
-              <span className="mt-2 block text-sm font-medium text-white/90 sm:text-lg md:text-2xl">
-                Tu próximo hogar te está esperando. 👋
-              </span>
+          <div className="relative z-10 flex min-h-52 flex-col justify-end px-6 pt-12 pb-16 sm:min-h-64 sm:px-9 sm:pb-20">
+            <p className="text-[10px] font-bold tracking-[0.2em] text-brand-200 uppercase sm:text-[11px]">
+              Tu espacio personal
+            </p>
+            {/* `style` y no una clase `font-*`: `--font-heading` está declarada
+                en `:root` y NO dentro del bloque `@theme`, así que Tailwind no
+                genera ninguna utilidad para ella. Es la misma forma en que la
+                usa `Confianza.tsx`, el único otro lugar del sitio que la aplica. */}
+            <h2
+              style={{ fontFamily: 'var(--font-heading)' }}
+              className="mt-2 text-2xl leading-tight font-bold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] sm:text-4xl"
+            >
+              ¡Hola, {user?.name}!
             </h2>
+            <p className="mt-1.5 max-w-md text-sm font-medium text-white/85 drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)] sm:text-base">
+              Qué bueno verte de nuevo. Tu próximo hogar te está esperando. 👋
+            </p>
           </div>
         </div>
 

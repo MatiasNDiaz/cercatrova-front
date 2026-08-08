@@ -1,13 +1,17 @@
 'use client';
 
 import { useAuth } from '@/modules/shared/context/AuthContext';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import { DashboardShell } from '@/modules/shared/ui/DashboardShell';
+import { NotifCountBadge } from '@/modules/shared/ui/notifIndicators';
 import api from '@/modules/shared/lib/axios';
 import { loginUrlFromHere } from '@/modules/shared/lib/returnTo';
+// Mismo clasificador que la pantalla de notificaciones — ver el docstring de
+// `notifShared.ts` para por qué NO puede haber una segunda copia acá.
+import { contarSinLeer, type UserNotification } from './notificaciones/notifShared';
 import {
   Home, Settings, Bell, FileText, Building2,
   LogOut, ChevronDown, Pencil, ArrowLeft, Shield,
@@ -30,6 +34,52 @@ const NAV_ITEM_BASE =
 const NAV_ITEM_IDLE = 'text-gray-500 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b] hover:pl-5';
 
 const NAV_ITEM_ACTIVE = 'bg-[#0b7a4b] text-white shadow-[0_6px_16px_-8px_rgba(11,122,75,0.8)]';
+
+/**
+ * Ruta actual COMPLETA (pathname + query string), normalizada.
+ *
+ * ── El bug que resuelve ─────────────────────────────────────────────────────
+ * El resaltado de los subítems se calculaba con
+ * `pathname === item.href.split('?')[0]`, es decir **tirando la query string a
+ * la basura**. Los seis subítems de Notificaciones apuntan todos a
+ * `/dashboard/notificaciones` y sólo se distinguen por `?tipo=`, así que al
+ * colapsarlos al mismo pathname la condición daba `true` para los seis a la
+ * vez: el grupo entero quedaba resaltado y era imposible ver en cuál estabas.
+ *
+ * Comparar la URL completa es lo único que distingue `?tipo=precios` de
+ * `?tipo=respuestas`. Se ordenan los parámetros para que `?a=1&b=2` y
+ * `?b=2&a=1` —la misma pantalla— no se consideren distintas.
+ */
+function useCurrentHref() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const qs = new URLSearchParams(searchParams.toString());
+  qs.sort();
+  const s = qs.toString();
+  return s ? `${pathname}?${s}` : pathname;
+}
+
+/** Igual que `useCurrentHref` pero sobre un `href` escrito a mano en el menú. */
+function normalizeHref(href: string) {
+  const [path, search = ''] = href.split('?');
+  const qs = new URLSearchParams(search);
+  qs.sort();
+  const s = qs.toString();
+  return s ? `${path}?${s}` : path;
+}
+
+/**
+ * ¿Este ítem del menú corresponde a la pantalla en la que estoy?
+ *
+ * Un ítem con query propia sólo se enciende con esa query exacta. Uno sin
+ * query se enciende con su pathname exacto —y NO cuando hay query—, así
+ * `/notificaciones?tipo=precios` no ilumina también "Todas".
+ */
+function isItemActive(href: string, pathname: string, currentHref: string) {
+  const normalizado = normalizeHref(href);
+  if (normalizado.includes('?')) return currentHref === normalizado;
+  return currentHref === normalizado || pathname.startsWith(`${normalizado}/`);
+}
 
 function NavAccent({ active }: { active: boolean }) {
   return (
@@ -63,12 +113,13 @@ function NavGroup({
 }: {
   label: string;
   icon: React.ElementType;
-  items: { href: string; label: string }[];
+  items: { href: string; label: string; badge?: number }[];
   /** Contador de no leídas. Mismo tratamiento que el badge del panel admin. */
   badge?: number;
 }) {
   const pathname = usePathname();
-  const isChildActive = items.some((i) => pathname === i.href.split('?')[0]);
+  const currentHref = useCurrentHref();
+  const isChildActive = items.some((i) => isItemActive(i.href, pathname, currentHref));
   const [open, setOpen] = useState(isChildActive);
 
   return (
@@ -84,11 +135,7 @@ function NavGroup({
         <NavAccent active={isChildActive} />
         <Icon size={18} className={`shrink-0 transition-colors duration-200 ${isChildActive ? 'text-[#0b7a4b]' : 'text-gray-400 group-hover:text-[#0b7a4b]'}`} />
         <span className="flex-1 truncate text-left">{label}</span>
-        {badge > 0 && (
-          <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-black text-white">
-            {badge > 99 ? '99+' : badge}
-          </span>
-        )}
+        <NotifCountBadge count={badge} variant="sidebar" />
         <ChevronDown size={15} className={`shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -97,19 +144,20 @@ function NavGroup({
       <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
         <ul className="mt-1 ml-5 space-y-0.5 overflow-hidden border-l border-gray-200 pl-3">
           {items.map((item) => {
-            const active = pathname === item.href.split('?')[0];
+            const active = isItemActive(item.href, pathname, currentHref);
             return (
               <li key={item.href + item.label}>
                 <Link
                   href={item.href}
                   tabIndex={open ? undefined : -1}
-                  className={`block rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200 ${
                     active
                       ? 'bg-[#0b7a4b]/12 font-semibold text-[#0b7a4b]'
                       : 'text-gray-500 hover:translate-x-0.5 hover:bg-[#0b7a4b]/8 hover:text-[#0b7a4b]'
                   }`}
                 >
-                  {item.label}
+                  <span className="flex-1">{item.label}</span>
+                  <NotifCountBadge count={item.badge ?? 0} variant="sidebarSub" />
                 </Link>
               </li>
             );
@@ -140,24 +188,40 @@ function Sidebar() {
    * evento `notif-updated` que emiten las acciones de "marcar como leída",
    * para que el número baje al instante y no al minuto.
    */
-  const [unreadCount, setUnreadCount] = useState(0);
+  /**
+   * ⚠️ Pasó de `GET /notifications/unread-count` a `GET /notifications`.
+   *
+   * `unread-count` devuelve sólo `{ count }` — alcanzaba cuando el sidebar
+   * mostraba un único número en el grupo "Notificaciones". Ahora cada subítem
+   * lleva su propio badge por categoría, y el backend no expone ese desglose
+   * (es exactamente la misma limitación que ya obligaba al panel de admin a
+   * traerse la lista completa, documentada en `CLAUDE.md`).
+   *
+   * El total sigue saliendo de la misma lista, así que el número del grupo y
+   * el de sus hijos no pueden contradecirse.
+   */
+  const [notifs, setNotifs] = useState<UserNotification[]>([]);
 
   useEffect(() => {
     if (!user) return;
-    const fetchUnread = async () => {
+    const fetchNotifs = async () => {
       try {
-        const { data } = await api.get<{ count: number }>('/notifications/unread-count');
-        setUnreadCount(data.count);
+        const { data } = await api.get<UserNotification[]>('/notifications');
+        setNotifs(Array.isArray(data) ? data : []);
       } catch { /* silencioso: el badge es informativo, no puede romper el panel */ }
     };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 60000);
-    window.addEventListener('notif-updated', fetchUnread);
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 60000);
+    window.addEventListener('notif-updated', fetchNotifs);
     return () => {
       clearInterval(interval);
-      window.removeEventListener('notif-updated', fetchUnread);
+      window.removeEventListener('notif-updated', fetchNotifs);
     };
   }, [user]);
+
+  // Mismo helper que usa la pantalla de notificaciones: el badge del menú y el
+  // del tab salen del mismo cálculo y no pueden decir números distintos.
+  const sinLeer = contarSinLeer(notifs);
 
   const handleLogoutConfirm = () => {
     // El saludo se arma acá (no en el componente compartido) porque el nombre
@@ -211,30 +275,36 @@ function Sidebar() {
           ]}
         />
 
-        <NavGroup
-          label="Preferencias"
-          icon={Settings}
-          items={[
-            { href: '/dashboard/preferencias', label: 'Ver y editar' },
-            { href: '/dashboard/preferencias?nueva=1', label: 'Cargar preferencias' },
-          ]}
-        />
+        {/* ⚠️ Acá vivía un grupo "Preferencias" (Ver y editar / Cargar
+            preferencias) que duplicaba el acceso ya presente en la sección
+            CUENTA de más abajo: los dos llevaban a `/dashboard/preferencias`.
+            Se eliminó el de arriba y quedó sólo el de CUENTA, junto a "Editar
+            Perfil", que es donde corresponde por tratarse de configuración de
+            la cuenta.
+
+            El link que se perdía era `?nueva=1`, que abre el formulario ya
+            desplegado. No queda nada huérfano: la propia pantalla de
+            preferencias tiene su botón de editar, y cuando el usuario todavía
+            no cargó ninguna, abre el formulario sola. */}
 
         {/* Orden pedido: lo que se publica primero (propiedades, publicaciones),
             después lo personalizado (preferencias) y por último los avisos de
             cambio (precio). Mismo orden que las tarjetas de acceso rápido de la
-            pantalla, para que el sidebar y el contenido no se contradigan. */}
+            pantalla, para que el sidebar y el contenido no se contradigan.
+
+            "Todas" NO lleva badge: su número ya está en la cabecera del grupo,
+            justo arriba. */}
         <NavGroup
           label="Notificaciones"
           icon={Bell}
-          badge={unreadCount}
+          badge={sinLeer.total}
           items={[
             { href: '/dashboard/notificaciones', label: 'Todas' },
-            { href: '/dashboard/notificaciones?tipo=propiedades_nuevas', label: 'Propiedades nuevas' },
-            { href: '/dashboard/notificaciones?tipo=publicaciones', label: 'Publicaciones nuevas' },
-            { href: '/dashboard/notificaciones?tipo=coincidencias', label: 'Según mis preferencias' },
-            { href: '/dashboard/notificaciones?tipo=precios', label: 'Bajaron de precio' },
-            { href: '/dashboard/notificaciones?tipo=respuestas', label: 'Respuestas a mis comentarios' },
+            { href: '/dashboard/notificaciones?tipo=propiedades_nuevas', label: 'Propiedades nuevas', badge: sinLeer.propiedades_nuevas },
+            { href: '/dashboard/notificaciones?tipo=publicaciones', label: 'Publicaciones nuevas', badge: sinLeer.publicaciones },
+            { href: '/dashboard/notificaciones?tipo=coincidencias', label: 'Según mis preferencias', badge: sinLeer.coincidencias },
+            { href: '/dashboard/notificaciones?tipo=precios', label: 'Bajaron de precio', badge: sinLeer.precios },
+            { href: '/dashboard/notificaciones?tipo=respuestas', label: 'Respuestas a mis comentarios', badge: sinLeer.respuestas },
           ]}
         />
 

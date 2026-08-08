@@ -13,103 +13,21 @@ import { useUrlFilter } from '@/modules/shared/hooks/useUrlFilter';
 
 import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
 import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
-import { NotificationType } from '@/modules/shared/types/api';
+import { PulseDot, NotifCountBadge } from '@/modules/shared/ui/notifIndicators';
 
-interface Notification {
-  id: number;
-  title: string;
-  message: string;
-  read: boolean;
-  propertyId?: number;
-  /** Campo real del backend; opcional por las filas previas a la migración. */
-  type?: NotificationType;
-  createdAt: string;
-}
+/**
+ * La clasificación (tipos + `getNotifType` + `contarSinLeer`) se mudó a
+ * `notifShared.ts`. El sidebar necesita contar por categoría exactamente igual
+ * que esta pantalla filtra; con dos copias, el badge decía "3" y al entrar
+ * aparecían 2. Acá quedan sólo los íconos y colores, que nadie más usa.
+ */
+import {
+  getNotifType,
+  contarSinLeer,
+  type UserNotification as Notification,
+} from './notifShared';
 
 const INITIAL_VISIBLE = 8;
-
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-type NotifType =
-  | 'precio'
-  | 'coincidencia'
-  | 'solicitud_aceptada'
-  | 'solicitud_rechazada'
-  | 'solicitud_revision'
-  | 'solicitud_recibida'
-  | 'propiedad_nueva'
-  | 'publicacion_nueva'
-  | 'respuesta_comentario'
-  | 'generica';
-
-/** Mapeo directo backend → categoría de la UI, para los casos 1 a 1. */
-const TYPE_TO_UI: Partial<Record<NotificationType, NotifType>> = {
-  [NotificationType.CAMBIO_PRECIO]: 'precio',
-  [NotificationType.PROPIEDAD_MATCH]: 'coincidencia',
-  [NotificationType.NUEVA_PROPIEDAD]: 'propiedad_nueva',
-  [NotificationType.NUEVA_PUBLICACION]: 'publicacion_nueva',
-  [NotificationType.RESPUESTA_COMENTARIO]: 'respuesta_comentario',
-};
-
-/**
- * Sub-estado de una notificación de solicitud.
- *
- * ⚠️ Acá el campo `type` del backend NO alcanza: las cuatro variantes
- * (recibida / en revisión / aceptada / rechazada) comparten un único
- * `estado_solicitud`, porque el backend no expone el estado resultante como
- * dato aparte. Esta pantalla sí las distingue (ícono y color distintos por
- * estado), así que para ESE caso —y sólo para ese— se sigue mirando el texto.
- *
- * Es un matcheo mucho más seguro que el anterior: ya sabemos que la
- * notificación es de una solicitud, así que no hay riesgo de que una respuesta
- * a un comentario que mencione "aceptado" se clasifique mal.
- *
- * Si en el futuro el backend agrega el estado al payload, esto se reemplaza por
- * un mapeo directo.
- */
-function solicitudSubtype(title: string, message: string): NotifType {
-  const t = (title + ' ' + message).toLowerCase();
-  if (t.includes('aceptad')) return 'solicitud_aceptada';
-  if (t.includes('rechazad')) return 'solicitud_rechazada';
-  if (t.includes('revisión') || t.includes('revision')) return 'solicitud_revision';
-  return 'solicitud_recibida';
-}
-
-/**
- * Heurística por texto — **sólo para filas anteriores a la migración** que
- * llegan sin `type` o con `generica`. Ver la nota equivalente en
- * `dashboardAdmin/notificaciones/notifShared.tsx`: es transitorio.
- */
-function inferFromText(title: string, message: string): NotifType {
-  const titulo = title.toLowerCase();
-  const t = (title + ' ' + message).toLowerCase();
-
-  if (titulo.includes('respondieron tu comentario'))                            return 'respuesta_comentario';
-  if (titulo.includes('nueva publicación') || titulo.includes('nueva publicacion')) return 'publicacion_nueva';
-  if (t.includes('precio') || t.includes('bajó'))                              return 'precio';
-  if (t.includes('interesa') || t.includes('coincid') || t.includes('cumple')) return 'coincidencia';
-  if (t.includes('aceptad'))                                                    return 'solicitud_aceptada';
-  if (t.includes('rechazad'))                                                   return 'solicitud_rechazada';
-  if (t.includes('revisión') || t.includes('revision'))                        return 'solicitud_revision';
-  if (t.includes('solicitud recibida') || t.includes('recibida correctamente')) return 'solicitud_recibida';
-  if (t.includes('nueva propiedad') || t.includes('publicad') || t.includes('se publicó')) return 'propiedad_nueva';
-  return 'generica';
-}
-
-/**
- * Categoría de la notificación, priorizando el campo `type` del backend.
- *
- * Antes esto se infería enteramente del texto en español, con el orden de los
- * `if` como única defensa: una respuesta a un comentario que mencionara
- * "precio" o "publicación" terminaba con el ícono equivocado.
- */
-function getNotifType(n: Pick<Notification, 'type' | 'title' | 'message'>): NotifType {
-  if (n.type === NotificationType.ESTADO_SOLICITUD) {
-    return solicitudSubtype(n.title, n.message);
-  }
-  const mapped = n.type ? TYPE_TO_UI[n.type] : undefined;
-  if (mapped) return mapped;
-  return inferFromText(n.title, n.message);
-}
 
 /**
  * Paleta por tipo de notificación.
@@ -176,12 +94,25 @@ function NotifItem({ n, onRead }: { n: Notification; onRead: (id: number) => voi
         : `bg-white ${cfg.border} shadow-[0_1px_2px_rgba(10,12,11,0.04),0_8px_20px_-14px_rgba(10,12,11,0.18)]`
     }`}>
       {!n.read && <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${cfg.accent}`} />}
+
+      {/* Punto verde titilante en la ESQUINA de la tarjeta.
+          Reemplaza al punto estático que estaba dentro del bloque de texto (a
+          la derecha del título) y que tomaba el color de la categoría: en una
+          tarjeta rosa de "Favorito" el punto rosa se confundía con el resto de
+          la decoración y no se leía como "sin leer".
+          Va posicionado dentro de los límites del contenedor (`top-3 right-3`)
+          porque la tarjeta tiene `overflow-hidden` por la barra de acento
+          lateral — cualquier cosa que asome fuera del borde se recorta. */}
+      {!n.read && <PulseDot className="absolute top-3 right-3" />}
+
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${cfg.bg} ${cfg.border}`}>
         {cfg.icon}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* `pr-4` reserva el lugar del punto de la esquina para que un título
+              largo no le pase por debajo. */}
+          <div className="flex items-center gap-2 flex-wrap pr-4">
             <p className={`text-sm font-semibold ${n.read ? 'text-gray-600' : 'text-gray-900'}`}>{n.title}</p>
             <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
               n.read
@@ -191,7 +122,6 @@ function NotifItem({ n, onRead }: { n: Notification; onRead: (id: number) => voi
               {cfg.label}
             </span>
           </div>
-          {!n.read && <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${cfg.dot}`} />}
         </div>
         <p className={`text-xs mt-1 leading-relaxed ${n.read ? 'text-gray-400' : 'text-gray-600'}`}>{n.message}</p>
         <div className="flex items-center justify-between mt-3">
@@ -295,6 +225,26 @@ export default function NotificacionesPage() {
   const [filter, setFilter] = useUrlFilter<FilterTab>('tipo', 'todas');
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  /**
+   * No leídas por categoría. Mismo helper que usa el sidebar, así el badge del
+   * menú y el del tab no pueden decir números distintos.
+   *
+   * `SIN_LEER_POR_TAB` traduce las claves de `contarSinLeer` a las de
+   * `FilterTab`. Las que no están en el mapa (`todas`, `leidas`) quedan sin
+   * badge, que es justamente lo que se quiere.
+   */
+  const sinLeer = contarSinLeer(notifications);
+  const SIN_LEER_POR_TAB: Partial<Record<FilterTab, number>> = {
+    propiedades_nuevas:     sinLeer.propiedades_nuevas,
+    publicaciones:          sinLeer.publicaciones,
+    coincidencias:          sinLeer.coincidencias,
+    precios:                sinLeer.precios,
+    respuestas:             sinLeer.respuestas,
+    solicitudes_aceptadas:  sinLeer.solicitudes_aceptadas,
+    solicitudes_rechazadas: sinLeer.solicitudes_rechazadas,
+    solicitudes_revision:   sinLeer.solicitudes_revision,
+  };
 
   const filtered = notifications.filter(n => {
     const type = getNotifType(n);
@@ -421,19 +371,21 @@ export default function NotificacionesPage() {
         </div>
       )}
 
-      {/* Filtros tabs */}
+      {/* ── FILTROS ──
+          Cada tab muestra cuántas SIN LEER tiene su categoría. Antes el número
+          era el total de la categoría (leídas incluidas), así que el badge no
+          bajaba nunca al ir leyendo y no servía para saber qué falta mirar.
+          Ahora es un contador de pendientes de verdad, y a 0 desaparece
+          (`NotifCountBadge` devuelve `null`).
+
+          "Todas" y "Leídas" son los dos únicos sin badge, y por motivos
+          distintos: "Todas" porque es el estado por defecto —su número sería el
+          mismo que el de la campanita del sidebar, repetido al lado— y "Leídas"
+          porque un contador de "pendientes leídos" no significa nada. */}
       <div className="flex gap-1.5 bg-white border border-gray-100 p-1 rounded-xl w-fit flex-wrap">
         {FILTER_TABS.map(({ key, label, color }) => {
           const isActive = filter === key;
-          const count =
-            key === 'sin_leer'               ? unreadCount :
-            key === 'propiedades_nuevas'      ? notifications.filter(n => getNotifType(n) === 'propiedad_nueva').length :
-            key === 'coincidencias'           ? notifications.filter(n => getNotifType(n) === 'coincidencia').length :
-            key === 'precios'                 ? notifications.filter(n => getNotifType(n) === 'precio').length :
-            key === 'solicitudes_aceptadas'   ? notifications.filter(n => getNotifType(n) === 'solicitud_aceptada').length :
-            key === 'solicitudes_rechazadas'  ? notifications.filter(n => getNotifType(n) === 'solicitud_rechazada').length :
-            key === 'solicitudes_revision'    ? notifications.filter(n => { const t = getNotifType(n); return t === 'solicitud_revision' || t === 'solicitud_recibida'; }).length :
-            null;
+          const count = key === 'sin_leer' ? sinLeer.total : (SIN_LEER_POR_TAB[key] ?? 0);
 
           return (
             <button key={key} onClick={() => setFilter(key)}
@@ -441,13 +393,9 @@ export default function NotificacionesPage() {
                 isActive ? color : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}>
               {label}
-              {count !== null && count > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-white/25 text-white' : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {count}
-                </span>
-              )}
+              {/* `onDark` cuando el tab está activo: su fondo ya es de color y
+                  un badge verde encima sería ilegible. */}
+              <NotifCountBadge count={count} variant="tab" onDark={isActive} />
             </button>
           );
         })}

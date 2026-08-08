@@ -1,16 +1,17 @@
 'use client';
 
 import { useAuth } from '@/modules/shared/context/AuthContext';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import {
   User, Home, FileText, LogOut, ChevronDown,
-  ArrowLeft, Users, Building2, BarChart2, Bell, Eye, Megaphone
+  ArrowLeft, Users, Building2, BarChart2, Bell, Megaphone
 } from 'lucide-react';
 import api from '@/modules/shared/lib/axios';
 import { DashboardShell } from '@/modules/shared/ui/DashboardShell';
+import { NotifCountBadge } from '@/modules/shared/ui/notifIndicators';
 import { loginUrlFromHere } from '@/modules/shared/lib/returnTo';
 
 // ── Tipos ─────────────────────────────────────────────
@@ -42,6 +43,62 @@ export const NAV_ITEM_IDLE =
 
 export const NAV_ITEM_ACTIVE = 'bg-[#0b7a4b] text-white shadow-[0_6px_16px_-8px_rgba(11,122,75,0.8)]';
 
+/**
+ * Ruta actual COMPLETA (pathname + query string), normalizada.
+ *
+ * ── El bug que resuelve ─────────────────────────────────────────────────────
+ * El resaltado de los subítems se calculaba con
+ * `pathname.startsWith(item.href.split('?')[0])`, es decir **tirando la query
+ * string a la basura**. Como los subítems de Solicitudes y Usuarios se
+ * distinguen SÓLO por su query (`?estado=aceptado`, `?rol=admin`…), todos
+ * colapsaban al mismo pathname y la condición daba `true` para los tres a la
+ * vez: el grupo entero aparecía resaltado y era imposible saber en cuál estabas.
+ *
+ * Comparar la URL completa es lo único que distingue `?rol=user` de
+ * `?rol=admin`. Se ordenan los parámetros para que `?a=1&b=2` y `?b=2&a=1` —la
+ * misma pantalla— no se consideren distintas.
+ */
+function useCurrentHref() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const qs = new URLSearchParams(searchParams.toString());
+  qs.sort();
+  const s = qs.toString();
+  return s ? `${pathname}?${s}` : pathname;
+}
+
+/** Igual que `useCurrentHref` pero sobre un `href` escrito a mano en el menú. */
+function normalizeHref(href: string) {
+  const [path, search = ''] = href.split('?');
+  const qs = new URLSearchParams(search);
+  qs.sort();
+  const s = qs.toString();
+  return s ? `${path}?${s}` : path;
+}
+
+/**
+ * ¿Este ítem del menú corresponde a la pantalla en la que estoy?
+ *
+ * Tres casos, en orden:
+ *  - El ítem tiene query propia → sólo está activo con esa query exacta.
+ *  - `exact: true` → coincidencia exacta de pathname (y sin query en la URL,
+ *    para que `/solicitudes?estado=aceptado` no encienda también "Todas").
+ *  - Resto → prefijo de pathname, que es lo que hace que
+ *    `/dashboardAdmin/usuarios/7` mantenga iluminado "Todos los usuarios".
+ */
+function isItemActive(
+  item: { href: string; exact?: boolean },
+  pathname: string,
+  currentHref: string,
+) {
+  const href = normalizeHref(item.href);
+  const tieneQuery = href.includes('?');
+
+  if (tieneQuery) return currentHref === href;
+  if (item.exact) return currentHref === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 /** Barra de acento a la izquierda. Va dentro del ítem, como `<span>`. */
 export function NavAccent({ active }: { active: boolean }) {
   return (
@@ -68,13 +125,8 @@ function NavLink({
       <NavAccent active={isActive} />
       <Icon size={18} className={`shrink-0 transition-colors duration-200 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-[#0b7a4b]'}`} />
       <span className="flex-1 truncate">{label}</span>
-      {badge > 0 && (
-        <span className={`flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] leading-none font-black ${
-          isActive ? 'bg-white text-[#0b7a4b]' : 'bg-red-500 text-white'
-        }`}>
-          {badge > 99 ? '99+' : badge}
-        </span>
-      )}
+      {/* `onDark` con el ítem activo: su fondo ya es verde sólido. */}
+      <NotifCountBadge count={badge} variant="sidebar" onDark={isActive} />
     </Link>
   );
 }
@@ -95,9 +147,8 @@ function NavGroup({
   badge?: number;
 }) {
   const pathname = usePathname();
-  const isChildActive = items.some((i) =>
-    i.exact ? pathname === i.href : pathname.startsWith(i.href.split('?')[0]),
-  );
+  const currentHref = useCurrentHref();
+  const isChildActive = items.some((i) => isItemActive(i, pathname, currentHref));
   const [open, setOpen] = useState(isChildActive);
 
   return (
@@ -113,11 +164,7 @@ function NavGroup({
         <NavAccent active={isChildActive} />
         <Icon size={18} className={`shrink-0 transition-colors duration-200 ${isChildActive ? 'text-[#0b7a4b]' : 'text-gray-400 group-hover:text-[#0b7a4b]'}`} />
         <span className="flex-1 truncate text-left">{label}</span>
-        {badge > 0 && (
-          <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-black text-white">
-            {badge > 99 ? '99+' : badge}
-          </span>
-        )}
+        <NotifCountBadge count={badge} variant="sidebar" />
         <ChevronDown size={15} className={`shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -126,9 +173,7 @@ function NavGroup({
       <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
         <ul className="mt-1 ml-5 space-y-0.5 overflow-hidden border-l border-gray-200 pl-3">
           {items.map((item) => {
-            const active = item.exact
-              ? pathname === item.href
-              : pathname.startsWith(item.href.split('?')[0]);
+            const active = isItemActive(item, pathname, currentHref);
             return (
               <li key={item.href + item.label}>
                 <Link
@@ -141,11 +186,7 @@ function NavGroup({
                   }`}
                 >
                   <span className="flex-1">{item.label}</span>
-                  {item.badge ? (
-                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] leading-none font-black text-white">
-                      {item.badge > 99 ? '99+' : item.badge}
-                    </span>
-                  ) : null}
+                  <NotifCountBadge count={item.badge ?? 0} variant="sidebarSub" />
                 </Link>
               </li>
             );
@@ -277,8 +318,11 @@ function Sidebar() {
           icon={Bell}
           badge={counts.notificaciones}
           // Cada categoría es su propia página, no un filtro de la vista general.
+          // "Todas" NO lleva badge: el número ya está en la cabecera del grupo,
+          // justo arriba, y repetirlo dos veces en la misma columna hacía
+          // dudar de si eran dos contadores distintos.
           items={[
-            { href: '/dashboardAdmin/notificaciones', label: 'Todas', badge: counts.notificaciones, exact: true },
+            { href: '/dashboardAdmin/notificaciones', label: 'Todas', exact: true },
             { href: '/dashboardAdmin/notificaciones/usuarios', label: 'Usuarios registrados', badge: counts.usuarios },
             { href: '/dashboardAdmin/notificaciones/solicitudes', label: 'Solicitudes de publicación', badge: counts.solicitudes },
             { href: '/dashboardAdmin/notificaciones/comentarios', label: 'Comentarios', badge: counts.comentarios },
@@ -287,10 +331,15 @@ function Sidebar() {
           ]}
         />
 
+        {/* Sin `badge`: Solicitudes y Usuarios mostraban el conteo de
+            NOTIFICACIONES sin leer de su tema, no la cantidad de solicitudes o
+            usuarios pendientes. Un número de notificaciones colgado de otra
+            sección se lee como "hay 3 solicitudes nuevas" cuando en realidad
+            dice "hay 3 avisos sin leer". El contador vive donde corresponde:
+            en Notificaciones. */}
         <NavGroup
           label="Solicitudes"
           icon={FileText}
-          badge={counts.solicitudes}
           items={[
             { href: '/dashboardAdmin/solicitudes', label: 'Todas', exact: true },
             { href: '/dashboardAdmin/solicitudes?estado=aceptado', label: 'Aceptadas' },
@@ -302,7 +351,6 @@ function Sidebar() {
         <NavGroup
           label="Usuarios"
           icon={Users}
-          badge={counts.usuarios}
           items={[
             { href: '/dashboardAdmin/usuarios', label: 'Todos los usuarios' },
             { href: '/dashboardAdmin/usuarios?rol=user', label: 'Solo usuarios' },
@@ -320,15 +368,19 @@ function Sidebar() {
         </div>
       </nav>
 
+      {/* ⚠️ Acá vivía el acceso "Vista de Usuario" (→ `/dashboard`).
+          Se quitó por pedido explícito: el admin no tiene por qué navegar la
+          experiencia de usuario común desde su panel de gestión.
+
+          ⚠️ Esto REVIERTE una decisión que estaba documentada como deliberada en
+          `CLAUDE.md` ("hay context-switcher explícito en los dos sentidos") —
+          ese documento se actualizó en consecuencia.
+
+          El camino de vuelta SÍ se mantiene: `dashboard/layout.tsx` sigue
+          mostrando "Panel Admin" cuando el usuario es admin. Sin eso, un admin
+          que llegue a `/dashboard` por un link directo quedaría sin salida
+          hacia su panel. */}
       <div className="p-4 pb-7 mt-auto border-t border-gray-300 space-y-1">
-        {/* Context switcher — el admin puede ver el sitio como un usuario común */}
-        <Link
-          href="/dashboard"
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-500 hover:bg-[#0b7a4b]/10 hover:text-[#0b7a4b] transition-all duration-200 group"
-        >
-          <Eye size={19} className="group-hover:scale-110 transition-transform" />
-          Vista de Usuario
-        </Link>
         <button
           onClick={handleLogoutConfirm}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-[#0b7a4b] hover:bg-red-100 hover:text-red-600 transition-all duration-200 group"

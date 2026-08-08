@@ -2913,3 +2913,274 @@ app corriendo (backend + Postgres + front en modo producción).
   quisiera unificar, es agregar `quality={85}` en esos tres componentes.
 - **Los thumbnails de la galería** (`sizes="64px"`) también quedaron en q=75. A
   48×64 px la diferencia no es perceptible.
+
+---
+
+# PARTE 14 — Notificaciones, sidebars y banner de los dos dashboards
+
+> Sesión 2026-08-08 (tercera tanda). Dos pedidos que se solapaban —uno para el
+> panel de admin y otro para el dashboard de usuario— resueltos juntos porque
+> tres de sus puntos eran el MISMO cambio en los dos lados.
+>
+> **Verificado contra la app corriendo**: backend NestJS `:3000` + Postgres real
+> + frontend en modo PRODUCCIÓN (`next start`) `:3001`, con sesión de admin real
+> inyectada en Chrome headless por CDP. Las capturas de un panel detrás de un
+> guard de cliente salen en blanco sin cookie, así que no alcanzaba con navegar.
+
+## Piezas nuevas compartidas
+
+### `modules/shared/ui/notifIndicators.tsx` (NUEVO)
+
+Los dos indicadores de la sección Notificaciones, juntos y fuera de
+`dashboard/` y `dashboardAdmin/` porque los usan las dos áreas. Antes cada
+archivo dibujaba su badge a mano con clases levemente distintas (`h-4.5` en un
+lado, `h-4` en otro, rojo en tres lugares).
+
+| Pieza | Qué dice | Dónde va |
+|---|---|---|
+| `PulseDot` | "esta notificación está sin leer" | esquina de UNA tarjeta |
+| `NotifCountBadge` | "esta categoría tiene N sin leer" | un tab o un ítem del sidebar |
+
+⚠️ Ambos son **exclusivos de Notificaciones**. El punto titilante es una señal
+fuerte y pierde todo su valor si aparece en media aplicación.
+
+### `dashboard/notificaciones/notifShared.ts` (NUEVO)
+
+La clasificación del lado usuario (`getNotifType` + tipos) vivía dentro de
+`page.tsx`. Se extrajo porque el sidebar pasó a mostrar un badge por categoría y
+**tiene que contar con el mismo criterio con el que la pantalla después
+filtra** — si no, el badge dice "3" y al entrar aparecen 2. Ese error exacto ya
+había pasado en el panel de admin (el layout tenía su propia copia con reglas
+distintas), y su solución fue el `notifShared` de allá; este es el equivalente.
+
+Suma `contarSinLeer(notifs)`, que devuelve el desglose por categoría y lo
+consumen **el sidebar y la pantalla**, así no pueden divergir.
+
+---
+
+## 1) Punto verde titilante en las tarjetas de notificación *(admin + usuario)*
+
+Es el MISMO indicador que acompaña a "conectado como" en el panel del navbar:
+dos capas, un `animate-ping` que se expande y se desvanece (`green-400`) sobre
+un núcleo sólido (`green-500`). Se replicó el patrón exacto —no un
+`animate-pulse`, que sólo cambia la opacidad de un círculo— para que el sitio
+tenga un solo lenguaje de "esto es nuevo".
+
+Reemplaza al punto **estático** que había dentro del bloque de texto y que
+tomaba el color de la categoría (`cfg.dot`): en una tarjeta rosa de "Favorito",
+un punto rosa se leía como decoración, no como estado.
+
+Único cambio respecto del navbar: 8px en vez de 6px. Ahí el punto va pegado a un
+texto que lo contextualiza; acá está solo en la esquina de una tarjeta ancha y a
+6px no se registraba.
+
+Detalles de implementación:
+- Va **dentro** de los límites de la tarjeta (`top-3 right-3`): la del usuario
+  tiene `overflow-hidden` por la barra de acento lateral, y cualquier cosa que
+  asome fuera del borde se recorta.
+- La tarjeta del admin no era `relative`; se le agregó.
+- El bloque del título lleva `pr-4` para que un título largo no le pase por
+  debajo al punto.
+- El tab "Todas" no lleva punto ni badge (ya no lo llevaba: su `count` era
+  `null`; ahora está garantizado por construcción).
+
+### 🐛 Bug propio, encontrado al verificar
+
+La primera versión de `PulseDot` era **un solo `<span>`** con `relative` fijo más
+el `className` del caller concatenado. Al pasarle `absolute top-3 right-3`, el
+punto aparecía **a la izquierda** de la tarjeta.
+
+No se detectó mirando la captura (el punto es chico y el ojo lo da por bueno):
+se detectó consultando el DOM real por CDP, que devolvió `left: 329` — el borde
+izquierdo del área de contenido — en vez de la esquina derecha.
+
+La causa es la trampa que este repo **ya tiene documentada**: no se usa
+`tailwind-merge`, así que `relative` y `absolute` (la misma propiedad CSS)
+conviven en el atributo y **gana el orden del stylesheet generado, no el del
+string**. Tailwind emite `.relative` después de `.absolute`, así que ganaba
+`relative` siempre.
+
+Arreglado partiendo el componente en dos spans: el de afuera es sólo
+posicionamiento y lo controla el caller; el de adentro es el `relative` que le
+sirve de ancla al anillo. Cada span tiene una única declaración de `position` y
+el conflicto es imposible.
+
+**Verificado después del fix**, otra vez contra el DOM: `position: absolute`,
+a 13px exactos del borde superior y derecho de la tarjeta.
+
+---
+
+## 2) Badges numéricos: verdes y en todas las categorías *(admin + usuario)*
+
+**Por qué verde y no rojo.** Estaban en `bg-red-500` en los tres lugares donde
+aparecían. El rojo en este sistema ya significa otra cosa —error, "no tiene",
+eliminar— y una campanita con un número rojo se lee como "algo salió mal" cuando
+en realidad dice "tenés cosas nuevas".
+
+**De total a pendientes.** Los tabs mostraban el total de la categoría, leídas
+incluidas, así que el número no bajaba nunca al ir leyendo y no servía para
+saber qué falta mirar. Ahora todos cuentan **sin leer**, y a 0 el badge
+desaparece — la regla vive dentro de `NotifCountBadge` (devuelve `null`) y no
+repetida en los nueve call-sites.
+
+**Cobertura.** Tabs y subítems del sidebar, en las dos áreas. Se agregaron los
+que faltaban del lado usuario (Publicaciones, Respuestas).
+
+**`onDark`.** Sobre un fondo ya verde (tab activo, ítem de sidebar seleccionado)
+un badge verde es invisible; ahí se invierte a blanco translúcido. No es una
+excepción al "todos verdes": es lo que hace que el número siga siendo legible.
+
+### Dos decisiones que van más allá del pedido literal
+
+1. **"Todas" tampoco lleva badge en el sidebar**, no sólo en la fila de tabs. Su
+   número es el mismo que el de la cabecera del grupo, justo arriba: repetido
+   dos veces en la misma columna hacía dudar de si eran dos contadores
+   distintos.
+2. **Se quitaron los badges de Solicitudes y Usuarios del sidebar admin.** El
+   pedido decía "no en otras secciones del sidebar como Usuarios o Solicitudes";
+   esos badges mostraban el conteo de *notificaciones sin leer* de su tema, no
+   la cantidad de solicitudes o usuarios pendientes. Un número de notificaciones
+   colgado de otra sección se lee como "hay 3 solicitudes nuevas" cuando dice
+   "hay 3 avisos sin leer". El contador queda donde corresponde.
+
+---
+
+## 3) 🐛 BUG — Todas las subsecciones del sidebar salían resaltadas *(admin + usuario)*
+
+### La causa
+
+Los dos layouts calculaban el resaltado **tirando la query string a la basura**:
+
+```ts
+// admin
+pathname.startsWith(item.href.split('?')[0])
+// usuario
+pathname === item.href.split('?')[0]
+```
+
+Los seis subítems de Notificaciones del usuario apuntan todos a
+`/dashboard/notificaciones` y sólo se distinguen por `?tipo=`. Al colapsarlos al
+mismo pathname, la condición daba `true` para los seis **a la vez**. Idéntico en
+el admin con Solicitudes (`?estado=`) y Usuarios (`?rol=`).
+
+### El fix
+
+`useCurrentHref()` arma la URL actual completa (`pathname` + query) y la compara
+contra el `href` del ítem, con los parámetros **ordenados** para que `?a=1&b=2` y
+`?b=2&a=1` —la misma pantalla— no cuenten como distintas.
+
+`isItemActive()` resuelve tres casos: ítem con query propia → sólo con esa query
+exacta; `exact` → pathname exacto y sin query (así
+`/solicitudes?estado=aceptado` no enciende también "Todas"); resto → prefijo de
+pathname, que es lo que mantiene iluminado "Todos los usuarios" cuando estás en
+`/usuarios/7`.
+
+⚠️ Esto mete `useSearchParams()` en los dos **layouts**, que envuelven rutas
+prerenderizadas. Se verificó en el build que **ninguna ruta se volvió dinámica**:
+las 20 pantallas de dashboard siguen marcadas `○ Static`.
+
+### Verificado en vivo
+
+| Pantalla | Antes | Ahora |
+|---|---|---|
+| `/dashboard/notificaciones?tipo=precios` | los 6 subítems resaltados | sólo "Bajaron de precio" |
+| `/dashboardAdmin/solicitudes?estado=aceptado` | los 4 resaltados | sólo "Aceptadas" |
+| `/dashboardAdmin/propiedades` | — | sólo "Gestionar propiedades" |
+
+---
+
+## 4) Separador vertical en "Gestionar propiedades" *(admin)*
+
+Las acciones quedaban pegadas a los datos y la fila se leía como un bloque
+continuo. Se agrega `sm:border-l` + `sm:pl-4` + `sm:self-stretch`.
+
+Es la MISMA línea que ya existía como `border-t` horizontal en mobile, rotada:
+en mobile las acciones van debajo (separador arriba), en desktop al costado
+(separador a la izquierda). Por eso los dos bordes son excluyentes
+(`sm:border-t-0`), no se suman.
+
+## 5) Acción "Ver propiedad" *(admin)*
+
+Abre el detalle público (`/properties/:id`), tal cual lo ve un visitante. Es
+**distinto** de "Enviar" y WhatsApp, que comparten la FICHA (`/ficha/:id`, la
+hoja de datos para mandarle a un cliente) — vale aclararlo porque los tres
+"comparten un link" y es fácil confundirlos.
+
+- **Sólo ícono** (`Eye`), como WhatsApp: la fila ya tenía cuatro acciones y un
+  quinto botón con texto la desbordaba a un segundo renglón en pantallas
+  medianas. `title` + `aria-label` cubren lo que no dice el ícono.
+- **Entre WhatsApp y Editar**, para que el grupo quede "compartir / ver" y
+  después "modificar / borrar".
+- **`target="_blank"`**: el admin está trabajando en su listado, muchas veces a
+  mitad de una tanda de ediciones, y mandarlo al sitio público en la misma
+  pestaña le hace perder el scroll y los filtros.
+
+## 6) Se quitó "Vista de Usuario" del panel admin
+
+⚠️ **Revierte una decisión que `CLAUDE.md` documentaba como deliberada** ("hay
+context-switcher explícito en los dos sentidos… fue una decisión, no un
+olvido"). Ese documento se actualizó.
+
+El camino de vuelta **se conserva**: `dashboard/layout.tsx` sigue mostrando
+"Panel Admin" si el usuario es admin. Sin eso, un admin que llegue a
+`/dashboard` por un link directo quedaría sin salida hacia su panel.
+
+## 7) Se eliminó el "Preferencias" duplicado *(usuario)*
+
+Había dos accesos a `/dashboard/preferencias`: un grupo desplegable encima de
+Notificaciones y el ítem de la sección CUENTA. Se eliminó el de arriba.
+
+**Nada queda huérfano**, verificado: el link que se perdía era `?nueva=1` (abre
+el formulario ya desplegado), y la propia pantalla de preferencias tiene su
+botón de editar (`onEdit={() => setShowForm(true)}`) y además abre el formulario
+sola cuando el usuario todavía no cargó ninguna preferencia.
+
+## 8) Banner del dashboard de usuario *(usuario)*
+
+Era la foto con un `bg-black/50` plano y el saludo centrado: el velo negro
+uniforme apagaba la imagen entera sin mejorar la lectura en ningún lado en
+particular, y el texto flotaba sin relación con la tarjeta de perfil de abajo.
+
+1. **Velo en gradiente y en verde, no negro plano.** De `brand-950` opaco abajo
+   a casi transparente arriba: la parte alta de la foto se ve, y la baja —donde
+   apoya el texto y se solapa la tarjeta— queda bien oscura. El verde integra el
+   banner con el panel; el negro puro era el único gris frío de la pantalla.
+2. **Texto a la izquierda y anclado abajo.** Centrado competía con la tarjeta de
+   perfil, que también está centrada en mobile. Alineado arma una diagonal de
+   lectura (saludo → tarjeta → accesos) en vez de tres bloques centrados.
+3. **Jerarquía tipográfica real.** Eyebrow chico en mayúsculas (el recurso de
+   `SectionHeading` de la landing), el nombre en la fuente de títulos de la
+   marca —que en el panel no se usaba en ningún lado— y la bajada en peso menor.
+4. **`drop-shadow` en el texto**, no sólo el velo: con fotos claras el blanco
+   sobre blanco se perdía.
+
+⚠️ La fuente de títulos se aplica con `style={{ fontFamily: 'var(--font-heading)' }}`
+y **no** con una clase `font-*`: `--font-heading` está declarada en `:root` y
+NO dentro del bloque `@theme`, así que Tailwind no genera ninguna utilidad para
+ella. Es la misma forma en que la usa `Confianza.tsx`, el único otro lugar del
+sitio que la aplica. (Un `font-playfair` escrito por intuición no habría hecho
+nada y habría pasado el build sin chistar.)
+
+---
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npx next lint` **0 warnings, 0 errores** ·
+`npm run build` exit 0 · verificado en navegador real con sesión iniciada.
+
+Ninguna ruta cambió de estático a dinámico pese al `useSearchParams` nuevo en
+los dos layouts.
+
+## Anotado, NO aplicado
+
+- **`cfg.dot` quedó muerto** en los dos mapas de configuración de notificaciones
+  (`notifShared.tsx` del admin y el `getConfig` inline del usuario): ya nadie lo
+  lee, porque el punto de color se reemplazó por el `PulseDot` verde. Sacarlo
+  son ~16 líneas repartidas en dos archivos, sin ningún efecto visible; se dejó
+  para no mezclar limpieza con el cambio funcional.
+- **La animación no se puede ver en una captura.** Con
+  `--force-prefers-reduced-motion`, Chrome activa el bloque global de
+  `prefers-reduced-motion` del sitio y el ping queda en su fotograma final
+  (opacidad 0), así que sólo se ve el núcleo verde. Se verificó aparte, con esa
+  bandera apagada, que el estilo computado es `ping / 1s / infinite` — el mismo
+  que el punto del navbar.
