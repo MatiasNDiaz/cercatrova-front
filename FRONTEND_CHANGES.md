@@ -2595,3 +2595,321 @@ confirmar el orden en el detalle, y cargar/borrar expensas.
 - **`BoolRow` de la ficha conserva el verde/gris viejo.** El rediseño de
   contraste se pidió puntualmente para la página de detalle. La ficha tiene el
   mismo problema de legibilidad y sería el mismo cambio de clases.
+
+---
+
+# PARTE 13 — Bug de caché tras editar + pulido visual del detalle
+
+> Sesión 2026-08-08 (segunda tanda). **Todo verificado contra la app corriendo
+> de verdad**: backend NestJS en `:3000` + Postgres real + frontend en modo
+> PRODUCCIÓN (`next start`) en `:3001` con `BACKEND_URL` apuntando al backend.
+> No alcanza con `npm run dev` para esta tanda: el bug del Bloque 1 es de
+> cachés que en desarrollo **no existen**.
+
+---
+
+## Bloque 1 — 🔴 Los cambios no se reflejaban tras editar una propiedad
+
+### Diagnóstico: dos de las tres hipótesis del reporte eran incorrectas
+
+Se verificaron una por una antes de tocar código.
+
+**❌ "¿La página usa `fetch` con el caché por defecto de Next?"** — No. Un grep
+sobre todo `src/` devuelve **cero llamadas a `fetch()`**: absolutamente toda la
+data pasa por la instancia única de axios (`shared/lib/axios.ts`). Esto importa
+porque descarta de plano dos "fixes" que suenan obvios y no habrían hecho
+**nada**: `{ cache: 'no-store' }` y `revalidateTag` son funcionalidades del
+`fetch()` instrumentado de Next. Sin `fetch` no hay Data Cache que invalidar.
+
+**❌ "¿Hay algún `revalidate` configurado?"** — Sí, pero no donde se sospechaba.
+Sólo la landing tiene `export const revalidate = 300`. `/properties` y
+`/properties/[id]` no tienen ninguna directiva.
+
+**✅ "¿El formulario invalida algo al guardar?"** — No, nada. Cero
+`revalidatePath`, cero `revalidateTag`, cero `router.refresh()` en todo el
+repositorio. El `handleSubmit` hacía `router.push()` y listo.
+
+### Lo que decía el build, que es la evidencia dura
+
+```
+┌ ○ /                    Revalidate 5m   ← estática con ISR
+├ ƒ /properties                          ← dinámica
+├ ƒ /properties/[id]                     ← dinámica
+```
+
+Eso parte el problema en **dos bugs distintos con dos cachés distintas**:
+
+| Caché | A quién afecta | Síntoma |
+|---|---|---|
+| **Full Route Cache** (servidor) | Sólo `/` (ISR 5 min) | Las Destacadas quedaban viejas hasta 5 minutos **para todos los visitantes**, no sólo para el admin |
+| **Router Cache** (cliente) | `/properties` y `/properties/:id` | Next reutiliza el payload RSC en memoria al navegar dentro de la SPA — el admin guardaba, navegaba, y veía lo viejo hasta apretar F5 |
+
+### El bug, REPRODUCIDO en vivo
+
+Con la app corriendo, propiedad real (id 6), título original `"Prueba"`:
+
+1. `PATCH /properties/6` → título `"Prueba CACHE 190344"`. La API ya devuelve el
+   nuevo valor.
+2. Sin revalidar nada, se piden las tres vistas:
+
+   | Vista | Mostraba |
+   |---|---|
+   | `/` (Destacadas) | **`Prueba`** ← 🔴 viejo |
+   | `/properties` | `Prueba CACHE 190344` ✅ |
+   | `/properties/6` | `Prueba CACHE 190344` ✅ |
+
+**Hallazgo que corrige el reporte original:** del lado del **servidor**, el
+detalle y el catálogo SÍ se re-renderizaban bien (son dinámicos). El único que
+quedaba viejo server-side era la landing. Lo que hacía ver datos viejos en el
+detalle es el **Router Cache del cliente**, que sólo se manifiesta navegando
+como SPA — no se puede reproducir con `curl`, porque cada `curl` es una carga
+completa.
+
+### El fix — `modules/properties/actions/revalidate-properties.ts` (NUEVO)
+
+Una **Server Action** que llama a `revalidatePath('/')`, `'/properties'`,
+`/properties/:id` y `/ficha/:id`.
+
+**Por qué una Server Action y no un Route Handler:** es el único mecanismo que
+alcanza **las dos** cachés. `revalidatePath` por sí solo purga la del servidor;
+invocado **dentro de una Server Action**, la respuesta además le ordena al
+navegador purgar su Router Cache. Un endpoint normal no puede hacer eso.
+
+⚠️ **Y hay una razón extra, específica de este repo, para NO usar un Route
+Handler:** `next.config.ts` tiene un rewrite `/api/:path*` → backend. Un
+`app/api/revalidate/route.ts` quedaría *shadoweando* ese proxy (las rutas del
+filesystem ganan sobre los rewrites `afterFiles`), y el día que el backend
+expusiera un `/revalidate` dejaría de ser alcanzable. Las Server Actions no
+tienen URL propia — POSTean a la página actual — así que no hay colisión posible.
+
+Se llama desde dos lugares:
+- `PropertyForm.tsx`, tras un PATCH/POST exitoso, **con `await` y antes del
+  `router.push`**: si se navegara primero, la página destino podría montarse
+  leyendo todavía la versión cacheada. Al crear se usa el `id` que devuelve el
+  backend.
+- `dashboardAdmin/propiedades/page.tsx`, tras un DELETE. **No estaba en el
+  pedido**, pero es exactamente el mismo bug: una propiedad ya eliminada seguía
+  apareciendo en el catálogo y en las Destacadas. Ahí se llama sin `propertyId`
+  (la propiedad ya no existe; revalidar su detalle sólo forzaría un 404).
+
+Un fallo de la revalidación **no rompe el guardado**, que ya sucedió: se avisa
+con `toast.warning` y se sigue. Tirar un error haría creer que se perdió todo lo
+editado.
+
+**Sobre `router.refresh()`** (que el pedido planteaba evaluar): se descartó por
+redundante. `revalidatePath` dentro de una Server Action ya purga el Router
+Cache del cliente, y el destino del `push` (`/dashboardAdmin/propiedades`) es una
+ruta estática que trae sus datos por axios en un `useEffect` — se refresca sola
+al montar. Agregarlo sería una llamada que no hace nada.
+
+**Sobre exponer la acción sin guard de sesión:** está documentado en el archivo.
+No muta datos, no lee nada y no devuelve información: sólo marca páginas como
+"volver a renderizar". Su peor caso es equivalente a que alguien pida esas
+páginas públicas. Un guard con `decodeJwt` —lo único que este frontend puede
+hacer sin el secreto— daría sensación de protección sin agregarla.
+
+### Verificación del fix — en vivo, no inferida
+
+3. Se invoca la Server Action (POST con header `Next-Action`, igual que el
+   navegador). Respuesta **HTTP 200** con el header:
+
+   ```
+   x-action-revalidated: [[],1,0]
+   ```
+
+   Ese `1` es la señal que Next manda al cliente para purgar el Router Cache.
+
+4. Se vuelven a pedir las tres vistas:
+
+   | Vista | Mostraba |
+   |---|---|
+   | `/` (Destacadas) | **`Prueba CACHE 190344`** ✅ ← se corrigió al instante, sin esperar los 5 min |
+   | `/properties` | `Prueba CACHE 190344` ✅ |
+   | `/properties/6` | `Prueba CACHE 190344` ✅ |
+
+De paso quedó verificado que el middleware protege la acción: invocarla **sin
+cookie de sesión** devuelve `307 → /login?callbackUrl=...`.
+
+⚠️ **Lo que NO se pudo verificar automáticamente:** la purga del Router Cache
+del cliente en una navegación SPA real (click en `<Link>` sin recarga). Requiere
+manejar un navegador con clicks, no `curl`. Está cubierta por el header
+`x-action-revalidated` y por el mecanismo documentado de Next, pero **conviene
+confirmarla a mano**: editar una propiedad, y desde el panel navegar con clicks
+hasta su detalle sin tocar F5.
+
+**Datos de prueba:** se editó la propiedad 6 y **se restauró su título original**
+(`"Prueba"`) al terminar. La base quedó como estaba.
+
+---
+
+## Bloque 2 — Chips de Dirección / Barrio / Zona / Localidad
+
+**El problema:** cada píldora apilaba **tres verdes distintos y muy parecidos**
+(`surface-mint` de fondo, `brand-700/10` en el círculo del ícono, `brand-700` en
+el ícono) más un borde **gris** `ink-100` y un label **gris** `ink-500`. Cuatro
+píldoras seguidas con esa mezcla se veían sucias: el círculo apenas se despegaba
+del fondo y el gris del borde peleaba con el verde del relleno.
+
+**Ahora:** el mismo par que el resto del rediseño — borde fino `brand-800` sobre
+fondo `brand-50`, ícono y valor en verde oscuro, label en `brand-700` (era el
+único gris que quedaba y rompía la lectura de la píldora como unidad).
+
+**Hover:** `brand-100`, un paso más oscuro dentro de la **misma** familia. Antes
+el hover cambiaba de familia (`surface-mint` → `brand-50`), que era justamente
+el salto que se veía poco prolijo.
+
+⚠️ **Corrección tras verlo renderizado:** el primer intento dejó el círculo del
+ícono en `brand-800/10`. En el screenshot real quedaba **casi invisible** sobre
+el fondo `brand-50`. Se cambió a **pastilla blanca con el ícono en verde
+oscuro**: el blanco lo recorta contra el verde clarito sin agregar peso. Se
+eligió blanco y no un disco sólido verde (como sí llevan las tarjetas de
+Características) porque el círculo mide 32px y cuatro discos oscuros seguidos en
+una misma fila pesaban más que el propio dato de ubicación.
+
+---
+
+## Bloque 3 — Tarjetas de "Características"
+
+Eran las **únicas grises** de toda la ficha (borde `ink-100`, fondo
+`surface-mint`, valor `ink-900`, label `ink-500`), y caían inmediatamente arriba
+de las de Comodidades, que ya estaban en verde: se leían como dos componentes de
+sistemas de diseño distintos pegados uno abajo del otro.
+
+Ahora usan el mismo par que Comodidades: borde fino `brand-800`, fondo
+`brand-50`, valor `brand-900`, label `brand-700`. Aplica a Habitaciones, Baños,
+Sup. Total, Sup. Cubierta, Antigüedad **y Expensas**.
+
+El valor sigue siendo el dato protagonista por **tamaño y peso** (`text-lg
+font-bold` contra 10px), no por ser el único con color. Se conserva el hover con
+elevación y sombra, pero el fondo pasa a `brand-100` en vez de saltar de gris a
+verde.
+
+⚠️ **Corrección tras verlo renderizado:** igual que en el Bloque 2, el círculo
+del ícono había quedado en `brand-800/10` y era invisible. Se pasó a **círculo
+sólido `brand-800` con el ícono en blanco — idéntico al de Comodidades**, que
+era literalmente lo que se pedía ("unificá el estilo con el de Comodidades").
+Con el tintado al 10% las dos secciones seguían sin parecerse, que era el
+problema a resolver.
+
+---
+
+## Bloque 4 — Sidebar "Resumen" y foto del agente
+
+### Resumen
+
+Era una lista de renglones planos: label gris, valor gris más oscuro, separados
+por una línea `ink-100` casi invisible. Con 10 filas del mismo peso, la vista
+resbalaba y costaba seguir un renglón de punta a punta.
+
+1. **Filas alternadas** (`odd:bg-brand-50/60`) — es lo que permite saltar de una
+   fila a otra sin perderse en horizontal. Se usa el verde de marca **al 60%** y
+   no un gris: un `ink-50` metería una cuarta familia de color en una ficha ya
+   unificada en verde. Va muy diluido a propósito: la alternancia tiene que
+   *sentirse*, no verse.
+2. **Se eliminan los separadores.** Con bandas alternadas la línea divisoria es
+   redundante y ensucia (dos señales para lo mismo). Antes era la única señal, y
+   era demasiado débil.
+3. **Label a `brand-700`, valor a `brand-900`** — mismo criterio que el resto.
+
+El `space-y-1` se reemplaza por padding dentro de cada fila: con bandas de fondo,
+el aire tiene que ir **dentro** de la banda, si no las franjas quedan flotando.
+Se compensa con `-mx-2` + `overflow-hidden rounded-xl` para que las bandas se
+extiendan más allá del texto sin desbordar la tarjeta.
+
+### Foto del agente
+
+El aro pasó de `brand-200` a **`brand-800`**. El verde claro casi no se
+distinguía del blanco de la tarjeta, así que el recorte circular se perdía y la
+foto parecía flotar. El `ring-offset-2` blanco se mantiene: es lo que evita que
+el aro se pegue a la foto.
+
+---
+
+## Bloque 5 — 🔍 Imágenes pixeladas: diagnóstico y fix
+
+Las tres hipótesis del pedido se probaron **contra datos reales** (propiedad 6,
+5 imágenes en Cloudinary).
+
+**❌ ¿Transformación de Cloudinary con calidad reducida?** No. Las URLs que
+guarda el backend son limpias:
+`https://res.cloudinary.com/.../image/upload/v1785980575/properties/xxx.png` —
+sin `q_auto:low`, sin `w_`, sin ninguna transformación.
+
+**❌ ¿Se está usando una miniatura en vez del original?** No. Se descargaron las
+5 imágenes y se midieron: **1536×1024 px, ~2.5 MB cada una**. Es la URL original
+y la fuente es de sobra para el tamaño en pantalla.
+
+**✅ La causa real: `next/image` recodifica a WebP con `quality` por defecto = 75.**
+
+Medido sobre una imagen real, recortando **la misma región** (640×400 px) y
+comparándola píxel a píxel contra el original:
+
+| quality | peso WebP | error medio/canal | pico |
+|---|---|---|---|
+| **75** (lo que había) | 170 KB | 3.58/255 | 90 |
+| 80 | 207 KB | 3.28/255 | 87 |
+| **85** (elegido) | 252 KB | 2.98/255 | 85 |
+| 90 | 323 KB | 2.71/255 | 90 |
+
+*(original PNG: 2667 KB)*
+
+Los recortes se decodificaron con `sharp` y se compararon **a ojo**, no sólo por
+número: a q=75 se emborronan las líneas del revestimiento horizontal, los
+travesaños de las ventanas y la textura de las tejas — contenido de arquitectura,
+justo el tipo de detalle fino que WebP a calidad media aplana.
+
+**Se eligió `quality={85}`** y no 90 porque visualmente son indistinguibles (los
+dos recuperan el detalle que q=75 pierde) y 85 pesa 22% menos. Importa: las 5
+fotos de la galería están **todas** en el DOM desde el arranque —el slider las
+superpone con `opacity`, no las monta bajo demanda— así que el navegador se las
+baja todas y cada KB se multiplica por 5.
+
+### Bonus: `sizes` estaba mal
+
+`sizes="(max-width: 1024px) 100vw, 62vw"`. El `62vw` sólo coincide con el ancho
+real en el breakpoint `lg` (1024px). De ahí para arriba la columna **no** sigue
+creciendo: el contenedor tiene `max-w-6xl` (1152px), así que la galería se clava
+en ~736px, mientras que 62vw de un monitor de 1920 da 1190px. El navegador venía
+pidiendo una variante ~60% más grande de la que podía mostrar.
+
+Ahora es `(max-width: 1024px) 100vw, 800px`. Se puso 800 y no 736 a propósito:
+con `object-cover` sobre un contenedor de 520px de alto, la imagen (3:2) se
+escala por **altura** y se recorta a los costados, así que hacen falta ~780px de
+ancho de imagen para cubrirlo.
+
+⚠️ **Limitación conocida que queda:** en mobile (`100vw`) el contenedor es casi
+cuadrado (100vw × 420px) y `object-cover` necesita ~1.6× el ancho del viewport,
+pero `sizes` sólo puede declarar ancho. En un teléfono de 390px con DPR 3 el
+navegador pide ~1200px cuando le vendrían bien ~1900. Se dejó así en vez de
+poner un `170vw` (legal pero críptico): con q=85 la diferencia ya no se nota, y
+forzar la variante de 1536px en cada visita desde el celular es peor negocio.
+
+### Verificación visual
+
+Screenshot de `/properties/6` con Chrome headless contra el build de producción:
+la galería muestra nítidos los travesaños de las ventanas, las líneas del
+revestimiento y los ladrillos de la chimenea.
+
+⚠️ Para capturar la columna izquierda hubo que pasarle
+`--force-prefers-reduced-motion` a Chrome: los componentes envueltos en
+`<Reveal>` usan `whileInView` de framer-motion y en headless se quedan en
+`opacity: 0`. **No es un bug de la página** — es un artefacto del entorno
+headless. Vale anotarlo para la próxima vez que alguien saque screenshots
+automatizados de este proyecto.
+
+---
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npm run build` exit 0 · verificado contra la
+app corriendo (backend + Postgres + front en modo producción).
+
+## Anotado, NO aplicado
+
+- **Las tarjetas del catálogo (`PropertyCard`, `PropertyRow`,
+  `FeaturedPropertyCard`) siguen con `quality` por defecto (75).** El pedido
+  acotaba el problema al detalle, y ahí las imágenes se muestran mucho más
+  chicas (240px de alto), donde los artefactos de q=75 casi no se ven. Si se
+  quisiera unificar, es agregar `quality={85}` en esos tres componentes.
+- **Los thumbnails de la galería** (`sizes="64px"`) también quedaron en q=75. A
+  48×64 px la diferencia no es perceptible.

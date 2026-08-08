@@ -17,6 +17,7 @@ import {
 import { BsWhatsapp } from 'react-icons/bs';
 import { whatsappShareLink } from '@/modules/shared/lib/contact';
 import { formatPriceInline } from '@/modules/shared/lib/money';
+import { revalidatePropertyCaches } from '@/modules/properties/actions/revalidate-properties';
 
 interface PropertyImage {
   id: number;
@@ -128,6 +129,22 @@ export default function PropiedadesAdminPage() {
         try {
           await api.delete(`/properties/${id}`);
           setProperties(prev => prev.filter(p => p.id !== id));
+
+          // Mismo problema de caché que al editar (ver el docstring de la
+          // acción): sin esto, una propiedad ya eliminada seguía apareciendo en
+          // el catálogo y en las Destacadas de la landing.
+          //
+          // Se llama SIN `propertyId`: la propiedad ya no existe, así que
+          // revalidar `/properties/:id` sólo forzaría un render que termina en
+          // 404. Lo que hay que refrescar son los listados.
+          try {
+            await revalidatePropertyCaches();
+          } catch {
+            // No se avisa: el borrado ya se hizo y se ve reflejado en esta
+            // lista. Un toast de advertencia acá sería ruido sobre una acción
+            // que, desde donde está parado el admin, salió bien.
+          }
+
           toast.success('Propiedad eliminada');
         } catch (error) {
           toast.error(getErrorMessage(error));

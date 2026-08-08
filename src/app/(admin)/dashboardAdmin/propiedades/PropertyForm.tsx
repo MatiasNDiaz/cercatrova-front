@@ -11,6 +11,7 @@ import { Select } from '@/modules/shared/ui/Select';
 import { toast } from 'sonner';
 import { DashboardPage, DashboardHeader } from '@/modules/shared/ui/DashboardPage';
 import { useFormDraft, draftKey } from '@/modules/shared/hooks/useFormDraft';
+import { revalidatePropertyCaches } from '@/modules/properties/actions/revalidate-properties';
 import {
   Save, ArrowLeft, Upload, X, Star, ImagePlus, Building2,
   MapPin, Ruler, DollarSign, Info, FileWarning, Trash2, GripVertical
@@ -447,6 +448,10 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
       // header con el boundary correcto al serializar la request.
       const multipartConfig = { headers: { 'Content-Type': undefined } };
 
+      // `idGuardada` sirve para invalidar el detalle y la ficha de ESTA
+      // propiedad puntual. Al crear sale del id que devuelve el backend.
+      let idGuardada = propertyId;
+
       if (isEdit) {
         const { data: actualizada } = await api.patch(`/properties/${propertyId}`, formData, multipartConfig);
         await persistirOrden(actualizada?.images ?? [], archivosNuevos.length);
@@ -455,8 +460,30 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
         // Al CREAR no hace falta reordenar: las imágenes se subieron ya en el
         // orden de la galería y `createMany` les asigna `order = 0..n-1` en ese
         // mismo orden, con la primera como portada.
-        await api.post('/properties', formData, multipartConfig);
+        const { data: creada } = await api.post('/properties', formData, multipartConfig);
+        idGuardada = creada?.id;
         toast.success('Propiedad publicada ✓');
+      }
+
+      // ── Invalidación de cachés de Next ──
+      //
+      // Sin esto, el admin guardaba y seguía viendo los datos VIEJOS en el
+      // detalle, el catálogo y las Destacadas hasta apretar F5. Next no puede
+      // enterarse solo: el guardado va por axios a un backend externo, no por
+      // una Server Action ni por el `fetch()` que Next instrumenta.
+      //
+      // Va DESPUÉS del `await` del guardado y ANTES del `router.push`, y con
+      // `await`: si se navegara primero, la página destino podría montarse
+      // leyendo todavía la versión cacheada. Ver el docstring de la acción para
+      // el detalle de qué caché purga cada `revalidatePath`.
+      //
+      // Su fallo NO rompe el guardado, que ya sucedió: se avisa que puede hacer
+      // falta refrescar y se sigue. Tirar un error acá haría creer que no se
+      // guardó nada.
+      try {
+        await revalidatePropertyCaches(idGuardada);
+      } catch {
+        toast.warning('Se guardó todo, pero puede que necesites refrescar para ver los cambios reflejados en el sitio público.');
       }
 
       // El borrador se limpia SOLO acá: si el guardado falló, el `catch` de

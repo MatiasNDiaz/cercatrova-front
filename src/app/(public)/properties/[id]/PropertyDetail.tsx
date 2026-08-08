@@ -199,14 +199,64 @@ function ImageSlider({ images, title }: { images: PropertyImage[]; title: string
       <div className="relative h-105 w-full md:h-130">
         {images.map((img, i) => (
           <div key={img.id} className={`absolute inset-0 transition-opacity duration-500 ${i === current ? 'opacity-100' : 'opacity-0'}`}>
-            {/* Sin `sizes`, next/image asume 100vw y sirve la variante más
-                grande en cualquier pantalla. Acá la galería llega como mucho a
-                la columna principal del detalle (~62vw en desktop). */}
+            {/* ── CALIDAD DE LA GALERÍA — medido, no estimado ──────────────
+                `quality={85}`. El default de next/image es **75**, y era la
+                causa real de que las fotos se vieran borrosas en el detalle.
+
+                Se descartaron antes las otras dos hipótesis, con evidencia:
+                  · Las URLs que guarda el backend NO tienen transformaciones de
+                    Cloudinary (son `/upload/v123/properties/xxx.png` peladas,
+                    sin `q_auto:low` ni `w_`).
+                  · Los archivos originales miden 1536x1024 — de sobra para el
+                    tamaño en pantalla. Tampoco se estaba usando la URL de una
+                    miniatura: es la misma URL original.
+
+                Lo que sí pasaba: next/image **recodifica el PNG a WebP**, y a
+                q=75 sobre fotos de arquitectura (líneas de revestimiento,
+                travesaños de ventanas, tejas) el emborronamiento se ve a simple
+                vista. Medido sobre una propiedad real, recortando la misma
+                región y comparando contra el original:
+
+                  q=75 → 170 KB · error medio 3.58/255   ← lo que había
+                  q=80 → 207 KB · error medio 3.28/255
+                  q=85 → 252 KB · error medio 2.98/255   ← elegido
+                  q=90 → 323 KB · error medio 2.71/255
+
+                Se eligió 85 y no 90 porque visualmente son indistinguibles
+                entre sí (los dos recuperan el detalle fino que q=75 pierde) y
+                85 pesa 22% menos. Importa: las 5 fotos de la galería están
+                todas en el DOM desde el arranque —el slider las superpone con
+                `opacity`, no las monta bajo demanda— así que el navegador se
+                las baja todas, y cada KB se multiplica por 5.
+
+                ── `sizes`: el valor anterior (`62vw`) era incorrecto ──
+                62vw sólo coincide con el ancho real en el breakpoint `lg`
+                (1024px). De ahí para arriba la columna NO sigue creciendo: el
+                contenedor tiene `max-w-6xl` (1152px), así que la galería se
+                clava en ~736px, mientras que 62vw de un monitor de 1920 da
+                1190px. El navegador pedía una variante 60% más grande de la que
+                podía mostrar.
+
+                Se pone `800px` y no `736px` a propósito: con `object-cover`
+                sobre un contenedor de 520px de alto, la imagen se escala por
+                ALTURA (la fuente es 3:2, el contenedor 1.42:1) y se recorta a
+                los costados, así que hacen falta ~780px de ancho de imagen para
+                cubrirlo. 800 deja un margen chico sin volver a sobrepedir.
+
+                ⚠️ Limitación conocida que queda: en mobile (`100vw`) el
+                contenedor es casi cuadrado (100vw x 420px) y `object-cover`
+                necesita ~1.6x el ancho del viewport, pero `sizes` sólo puede
+                declarar el ancho. En un teléfono de 390px con DPR 3 el
+                navegador pide ~1200px cuando le vendrían bien ~1900. Se deja
+                así en vez de poner un `170vw` (legal pero críptico): con q=85 la
+                diferencia ya no se nota, y forzar la variante de 1536px en cada
+                visita desde el celular es peor negocio. */}
             <Image
               src={img.url}
               alt={`${title} - foto ${i + 1}`}
               fill
-              sizes="(max-width: 1024px) 100vw, 62vw"
+              sizes="(max-width: 1024px) 100vw, 800px"
+              quality={85}
               className="object-cover"
               priority={i === 0}
             />
@@ -908,7 +958,32 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                   `leading-none` en ambos textos: sin eso el label (10px) y el
                   valor (14px) arrastran line-heights distintos y cada píldora
                   centraba su contenido a una altura diferente.
-                  Los datos vacíos no se renderizan. */}
+                  Los datos vacíos no se renderizan.
+
+                  ── Paleta: mismo criterio que "Comodidades" ──
+                  Antes cada píldora apilaba TRES verdes distintos y muy
+                  parecidos entre sí (`surface-mint` de fondo, `brand-700/10` en
+                  el círculo del ícono, `brand-700` en el ícono) más un borde
+                  gris `ink-100` y un label gris `ink-500`. Cuatro píldoras en
+                  fila con esa mezcla se leían sucias: el círculo del ícono
+                  apenas se despegaba del fondo de la píldora, y el gris del
+                  borde peleaba con el verde del relleno.
+
+                  Ahora es el mismo par que el resto del rediseño: borde fino
+                  `brand-800` sobre fondo `brand-50` (muy claro), ícono y valor
+                  en verde oscuro. Un solo verde de fondo y un solo verde de
+                  trazo, en vez de tres tonos compitiendo.
+
+                  El label chico se sube de `ink-500` a `brand-700`: es el único
+                  gris que quedaba y rompía la lectura de la píldora como una
+                  unidad. Se mantiene más claro que el valor para conservar la
+                  jerarquía label/dato.
+
+                  Hover: `brand-100` (un paso más oscuro que el fondo, mismo
+                  criterio que pediste) y el círculo del ícono se invierte a
+                  sólido. Antes el hover CAMBIABA de familia de color
+                  (`surface-mint` → `brand-50`), que es justamente el salto que
+                  se veía poco prolijo. */}
               <div className="mt-7 flex flex-wrap items-center gap-2.5">
                 {[
                   { icon: MapPin,     label: 'Dirección', value: direccion },
@@ -920,16 +995,25 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                   .map(({ icon: Icon, label, value }) => (
                     <span
                       key={label}
-                      className="group inline-flex items-center gap-2.5 rounded-full border border-ink-100 bg-surface-mint py-1.5 pr-5 pl-1.5 transition-all duration-200 hover:border-brand-700/30 hover:bg-brand-50"
+                      className="group inline-flex items-center gap-2.5 rounded-full border border-brand-800 bg-brand-50 py-1.5 pr-5 pl-1.5 transition-colors duration-200 hover:bg-brand-100"
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-700/10 text-brand-700 transition-colors duration-200 group-hover:bg-brand-700 group-hover:text-white">
+                      {/* Pastilla BLANCA con el ícono en verde oscuro (y no un
+                          `brand-800/10`, que sobre el fondo `brand-50` de la
+                          píldora quedaba prácticamente invisible). Acá el ícono
+                          va en verde y no en blanco sobre sólido —a diferencia
+                          de las tarjetas de Características— porque el círculo
+                          mide 32px: un disco verde oscuro de ese tamaño, cuatro
+                          veces seguidas en una misma fila, pesaba más que el
+                          propio dato de ubicación. El blanco lo recorta contra
+                          el verde clarito sin agregar carga visual. */}
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-brand-800 transition-colors duration-200 group-hover:bg-brand-800 group-hover:text-white">
                         <Icon size={15} />
                       </span>
                       <span className="flex flex-col gap-1">
-                        <span className="text-[10px] leading-none font-bold tracking-[0.12em] text-ink-500 uppercase">
+                        <span className="text-[10px] leading-none font-bold tracking-[0.12em] text-brand-700 uppercase">
                           {label}
                         </span>
-                        <span className="text-sm leading-none font-semibold text-ink-800">{value}</span>
+                        <span className="text-sm leading-none font-semibold text-brand-900">{value}</span>
                       </span>
                     </span>
                   ))}
@@ -959,9 +1043,26 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
              <div className={`${CARD} p-8`}>
               <SectionHeader icon={Building2} title="Características" />
 
-              {/* Specs numéricas: tarjetas propias con el ícono en un círculo
-                  tintado y el valor como dato protagonista. Antes eran cuadrados
-                  planos con un fondo `brand-700/8` y todo el mismo peso.
+              {/* ── SPECS NUMÉRICAS ──
+                  Mismo par de colores que "Comodidades" y que las píldoras de
+                  ubicación: borde fino `brand-800` sobre fondo `brand-50`, con
+                  el valor y el label en verde oscuro.
+
+                  Antes eran las únicas tarjetas GRISES de toda la ficha (borde
+                  `ink-100`, valor `ink-900`, label `ink-500`) y quedaban
+                  inmediatamente arriba de las de Comodidades, que ya estaban en
+                  verde: se leía como si fueran dos componentes de sistemas de
+                  diseño distintos pegados uno abajo del otro.
+
+                  El label pasa de `ink-500` a `brand-700` y el valor de
+                  `ink-900` a `brand-900`: el valor sigue siendo el dato
+                  protagonista por tamaño y peso (`text-lg font-bold` contra
+                  10px), no por ser el único con color.
+
+                  Se conserva el `hover` con elevación y sombra —es lo que da la
+                  sensación de tarjeta— pero el cambio de fondo pasa a
+                  `brand-100`, un paso más oscuro dentro de la MISMA familia, en
+                  vez de saltar de gris a verde como antes.
 
                   Expensas se suma al final y SOLO si tiene valor: `formatExpensas`
                   devuelve `null` cuando el campo viene vacío, y el `.filter()`
@@ -981,13 +1082,20 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                   return (
                     <div
                       key={i}
-                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-ink-100 bg-surface-mint px-3 py-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-700/30 hover:bg-brand-50 hover:shadow-[0_10px_24px_-12px_rgba(6,57,35,0.3)]"
+                      className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-brand-800 bg-brand-50 px-3 py-6 transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-100 hover:shadow-[0_10px_24px_-12px_rgba(6,57,35,0.3)]"
                     >
-                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-700/10 text-brand-700 transition-colors duration-300 group-hover:bg-brand-700 group-hover:text-white">
+                      {/* Círculo SÓLIDO con el ícono en blanco, exactamente
+                          como las tarjetas de Comodidades de abajo. Se probó
+                          antes con `bg-brand-800/10` (tintado al 10%) y sobre
+                          el fondo `brand-50` de la tarjeta quedaba casi
+                          invisible: el ícono flotaba sin pastilla y las dos
+                          secciones seguían sin parecerse, que era justo lo que
+                          había que resolver. */}
+                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-800 text-white">
                         <Icon size={20} />
                       </span>
-                      <span className="text-lg leading-none font-bold text-ink-900">{item.value}</span>
-                      <span className="text-center text-[10px] leading-none font-bold tracking-[0.1em] text-ink-500 uppercase">
+                      <span className="text-lg leading-none font-bold text-brand-900">{item.value}</span>
+                      <span className="text-center text-[10px] leading-none font-bold tracking-[0.1em] text-brand-700 uppercase">
                         {item.label}
                       </span>
                     </div>
@@ -1139,11 +1247,18 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                         redondeado la recortaba por las mejillas. Además el
                         <Image> no llenaba el contenedor — sin `h-full w-full`
                         una foto no cuadrada quedaba descentrada dentro de la
-                        caja. El aro verde la separa del fondo blanco. */}
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-700/10 ring-2 ring-brand-200 ring-offset-2 ring-offset-white">
+                        caja. El aro verde la separa del fondo blanco.
+
+                        El aro pasó de `brand-200` a `brand-800`: el verde claro
+                        casi no se distinguía del blanco de la tarjeta, así que
+                        el recorte circular se perdía y la foto parecía flotar.
+                        Ahora es el mismo verde oscuro de los bordes del resto
+                        de la ficha. El `ring-offset-2` blanco se mantiene: es lo
+                        que evita que el aro se pegue a la foto y la ensucie. */}
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-800/10 ring-2 ring-brand-800 ring-offset-2 ring-offset-white">
                       {(agent.photo ?? agent.avatar)
                         ? <Image src={(agent.photo ?? agent.avatar)!} alt={agent.name} width={64} height={64} className="h-full w-full object-cover" />
-                        : <User size={26} className="text-brand-700" />}
+                        : <User size={26} className="text-brand-800" />}
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-base font-bold text-ink-900">
@@ -1160,10 +1275,37 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                 </div>
               )}
 
-              {/* Resumen */}
+              {/* ── RESUMEN ──
+                  Era una lista de renglones planos: label gris a la izquierda,
+                  valor gris más oscuro a la derecha, separados por una línea
+                  `ink-100` casi invisible. Con 10 filas seguidas, todas del
+                  mismo peso y sin ningún anclaje visual, la vista resbalaba y
+                  costaba seguir un renglón de punta a punta.
+
+                  Tres cambios, en orden de importancia:
+
+                  1. **Filas alternadas** (`odd:bg-brand-50/60`). Es lo que hace
+                     que el ojo pueda saltar de una fila a la otra sin perderse
+                     en horizontal. Se usa el verde de marca al 60% y no un gris:
+                     un `ink-50` acá metería una cuarta familia de color en una
+                     ficha que ya está unificada en verde. Va MUY diluido a
+                     propósito — la alternancia tiene que sentirse, no verse.
+                  2. **Se van los separadores.** Con bandas alternadas, la línea
+                     divisoria es redundante y ensucia (dos señales para lo
+                     mismo). Antes era la única señal, y era demasiado débil.
+                  3. **El label sube a `brand-700` y el valor a `brand-900`.**
+                     Mismo criterio que Características: se elimina el gris
+                     suelto y la jerarquía la dan el peso y el tono, no dos
+                     grises casi iguales.
+
+                  El `space-y-1` se reemplaza por padding horizontal en cada
+                  fila: con bandas de fondo, el aire tiene que ir DENTRO de la
+                  banda, si no las franjas quedan separadas y flotando. Se
+                  compensa con `-mx-2` para que las bandas se extiendan un poco
+                  más allá del texto sin desbordar la tarjeta. */}
               <div className={`${CARD} p-7`}>
                 <p className="mb-4 text-[11px] font-bold tracking-[0.14em] text-brand-700 uppercase">Resumen</p>
-                <ul className="space-y-1 text-sm">
+                <ul className="-mx-2 overflow-hidden rounded-xl text-sm">
                   {[
                     { label: 'Tipo',       value: typeOfProperty?.name },
                     { label: 'Operación',  value: operationType },
@@ -1181,9 +1323,12 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                     // fila no aparece.
                     { label: 'Expensas',      value: formatExpensas(expensas) ?? undefined },
                   ].filter(i => i.value).map((item) => (
-                    <li key={item.label} className="flex items-center justify-between gap-4 border-b border-ink-100 py-2.5 last:border-none">
-                      <span className="shrink-0 font-medium text-ink-500">{item.label}</span>
-                      <span className="text-right font-semibold text-ink-800 capitalize">{item.value}</span>
+                    <li
+                      key={item.label}
+                      className="flex items-center justify-between gap-4 px-3 py-2.5 odd:bg-brand-50/60"
+                    >
+                      <span className="shrink-0 font-medium text-brand-700">{item.label}</span>
+                      <span className="text-right font-semibold text-brand-900 capitalize">{item.value}</span>
                     </li>
                   ))}
                 </ul>
