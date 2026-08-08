@@ -29,6 +29,12 @@ export interface PropertyFilters {
   maxSupTotal?: number;
   minSupCubierta?: number;
   maxSupCubierta?: number;
+  // Expensas mensuales en pesos.
+  // ⚠️ Asimetría del backend, documentada en API_CONTRACT.md §5: `maxExpensas`
+  // INCLUYE las propiedades sin expensas cargadas (quien pone un tope de gasto
+  // quiere ver también las que no pagan), `minExpensas` las excluye.
+  minExpensas?: number;
+  maxExpensas?: number;
   maxAntiquity?: number;
 
   // --- FILTROS BOOLEANOS ---

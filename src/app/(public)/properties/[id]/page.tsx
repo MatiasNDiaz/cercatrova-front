@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { propertiesService } from '@/modules/properties/services/properties.service';
 import { getErrorStatus } from '@/modules/shared/lib/apiError';
+import { formatPriceInline } from '@/modules/shared/lib/money';
 import PropertyDetail, { type PropertyFull } from './PropertyDetail';
 
 interface PageProps {
@@ -78,7 +79,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!property) notFound();
 
   const ubicacion = [property.barrio, property.localidad].filter(Boolean).join(', ');
-  const precio = `USD ${property.price?.toLocaleString('es-AR') ?? ''}`;
+  // Vía `formatPriceInline` y no un "USD" fijo: este string es el que ve quien
+  // recibe el link por WhatsApp, así que una propiedad en pesos mostrada como
+  // dólares es un error visible fuera del sitio y difícil de rastrear después.
+  const precio = formatPriceInline(property.price, property.currency);
   const descripcion =
     `${property.typeOfProperty?.name ?? 'Propiedad'} en ${property.operationType} · ${precio}` +
     (ubicacion ? ` · ${ubicacion}` : '') +

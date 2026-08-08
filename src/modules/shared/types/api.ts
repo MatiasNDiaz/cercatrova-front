@@ -30,6 +30,22 @@ export enum OperationType {
   ALQUILER_TEMPORAL = 'temporal',
 }
 
+/**
+ * Moneda de `Property.price`.
+ *
+ * Antes de que esta columna existiera, las 9 vistas que muestran un precio
+ * imprimían "USD" como texto fijo: una propiedad en pesos se mostraba —y se
+ * compartía por WhatsApp— como si fueran dólares.
+ *
+ * ⚠️ NO aplica a `expensas`, que son SIEMPRE en pesos aunque el precio esté en
+ * dólares (es como funciona el mercado local). Ver `formatExpensas()` en
+ * `shared/lib/money.ts`.
+ */
+export enum Currency {
+  ARS = 'ARS',
+  USD = 'USD',
+}
+
 export enum RequestStatus {
   ENVIADO = 'enviado',
   REVISION = 'en_revision',
@@ -104,6 +120,14 @@ export interface PropertyImage {
   url: string;
   hash: string;
   isCover: boolean;
+  /**
+   * Posición en la galería (0 = primera).
+   *
+   * ⚠️ INVARIANTE garantizada por el backend: `order === 0` ⇔ `isCover === true`.
+   * Las lecturas de propiedades ya devuelven el array ordenado por `order ASC`,
+   * así que el frontend NO tiene que reordenar: `images[0]` es la portada.
+   */
+  order: number;
   publicId: string;
   /** Solo presente en GET /property-images/:id y PATCH .../set-cover */
   property?: Property;
@@ -127,10 +151,21 @@ export interface Property {
   boleto: boolean;
   garage: boolean;
   patio: boolean;
+  /** NOT NULL con default false. `false` = no declarado, NO "verificado que no acepta". */
+  aptoMascotas: boolean;
   supTotal: number | null;
   supCubierta: number | null;
   antiquity: number;
   price: number;
+  /**
+   * Expensas mensuales. ⚠️ SIEMPRE EN PESOS, sin importar `currency`.
+   *
+   * `null` = no informadas, distinto de `0` = no tiene expensas. La UI no debe
+   * renderizar la fila cuando es `null` (nada de "Expensas: —").
+   */
+  expensas: number | null;
+  /** Moneda de `price`. NOT NULL en el backend con default 'USD' — nunca llega null. */
+  currency: Currency;
   status: StatusProperty;
   created_at: string;
   updated_at: string;
@@ -396,16 +431,24 @@ export interface CreatePropertyDto {
   bathrooms: number;
   garage: boolean;
   patio: boolean;
+  /** Opcional: sin valor el backend lo deja en `false`. */
+  aptoMascotas?: boolean;
   supTotal: number;
   supCubierta: number;
   antiquity: number;
   price: number;
+  /** Opcional, entero ≥ 0, EN PESOS. Sin valor queda `null`. */
+  expensas?: number;
+  /** Opcional: si no se manda, el backend la deja en 'USD'. */
+  currency?: Currency;
   status: StatusProperty;
 }
 
 export type UpdatePropertyDto = Partial<CreatePropertyDto> & {
   deleteImages?: number[];
   setCoverImageId?: number;
+  /** `null` BORRA las expensas guardadas; omitir el campo las deja como estaban. */
+  expensas?: number | null;
 };
 
 export interface PropertyFilterResponse {

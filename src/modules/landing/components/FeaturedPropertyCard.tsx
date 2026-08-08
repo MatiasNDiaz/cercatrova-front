@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Bed, Toilet, Maximize, MapPin, Star, ArrowRight } from 'lucide-react';
 import { Property } from '@/modules/shared/types/api';
+import { priceParts } from '@/modules/shared/lib/money';
 
 /**
  * Tarjeta de propiedad para la sección "Destacadas" de la landing.
@@ -23,9 +24,12 @@ import { Property } from '@/modules/shared/types/api';
 
 export function FeaturedPropertyCard({ property }: { property: Property }) {
   const {
-    id, title, price, rooms, bathrooms, supTotal,
+    id, title, price, currency, rooms, bathrooms, supTotal,
     localidad, barrio, images, typeOfProperty, operationType, ratingAverage,
   } = property;
+
+  // Símbolo y código salen de `currency`, ya no de un "USD" escrito a mano.
+  const precio = priceParts(price, currency);
 
   const cover =
     images?.find((img) => img.isCover)?.url ||
@@ -67,8 +71,8 @@ export function FeaturedPropertyCard({ property }: { property: Property }) {
         {/* Precio */}
         <div className="absolute bottom-4 left-5">
           <p className="text-3xl font-bold tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]">
-            ${price.toLocaleString('es-AR')}
-            <span className="ml-1.5 text-base font-semibold text-white/80">USD</span>
+            {precio.amount}
+            <span className="ml-1.5 text-base font-semibold text-white/80">{precio.code}</span>
           </p>
         </div>
       </div>

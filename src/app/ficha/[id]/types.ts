@@ -18,6 +18,12 @@ export interface FichaProperty {
   title: string;
   description: string;
   price: number;
+  /**
+   * Moneda del precio (`'ARS' | 'USD'`). Se tipa como `string` opcional y no
+   * como el enum `Currency` porque esta página consume el JSON crudo del
+   * backend; `priceParts()` normaliza cualquier valor inesperado a USD.
+   */
+  currency?: string;
   operationType: string;
   status: string;
   typeOfProperty?: { id: number; name: string };
@@ -37,6 +43,9 @@ export interface FichaProperty {
   antiquity: number;
   garage: boolean;
   patio: boolean;
+  aptoMascotas?: boolean;
+  /** Expensas mensuales EN PESOS (no siguen a `currency`). null = no informadas. */
+  expensas?: number | null;
 
   // Documentación legal
   property_deed: boolean;

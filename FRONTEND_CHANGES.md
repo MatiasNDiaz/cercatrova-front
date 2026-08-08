@@ -2284,3 +2284,314 @@ después** (2 propiedades, 1 publicación, 1 usuario):
   orden nuevo de la fila de filtros, el badge rojo con el `3` en el sidebar, y las tres barras de
   acento con su color correspondiente.
 - **Toast** — capturado ya con el ícono de casa verde en vez del megáfono violeta.
+
+---
+
+# PARTE 12 — Moneda por propiedad, reordenar imágenes, expensas y apto mascotas
+
+> Sesión fullstack (2026-08-08). Los tres bloques nacieron en el backend — ver
+> `../CercaTrova-Back/FEATURES.md` (N1, N2, N3) y `API_CONTRACT.md` §5 y §6.
+> Nada de acá funciona sin el backend correspondiente desplegado.
+
+## Aclaración previa — "Tracto abreviado" y "Boleto" ya existían
+
+El pedido los mencionaba como ejemplo de estilo de nombres, no como campos a
+crear. Se verificó contra el código: **son campos reales del proyecto desde
+antes** (`Property.tractoAbreviado` y `Property.boleto`, ambos `default: false`),
+y ya estaban en el formulario del admin, el modal de filtros, las preferencias de
+búsqueda, el detalle y la ficha. No se tocaron. Los únicos campos nuevos de esta
+tanda son `expensas` y `aptoMascotas`.
+
+De paso quedó relevada la lista **real y completa** de "Comodidades y
+documentación" del detalle: son **5**, no 3 — Cochera (`garage`), Patio
+(`patio`), Apto Escritura (`property_deed`), Tracto abreviado
+(`tractoAbreviado`) y Boleto (`boleto`). Con "Apto Mascotas" pasan a 6.
+
+---
+
+## Bloque 1 — Moneda por propiedad (`currency`)
+
+### El problema, medido
+
+El precio se muestra en **9 lugares**, no en los 4 del pedido inicial, y en los
+9 estaba escrito a mano como el monto con `toLocaleString('es-AR')` seguido de un
+`<span>USD</span>` **literal**. Dos de esos 9 son `generateMetadata` de
+OpenGraph: el "USD" viajaba en la previsualización del link que se comparte por
+WhatsApp, donde un error no tiene vuelta atrás una vez enviado.
+
+### `src/modules/shared/lib/money.ts` (NUEVO)
+
+Punto único de la verdad para formatear plata. Tres funciones:
+
+| Función | Devuelve | Para qué |
+|---|---|---|
+| `priceParts(price, currency)` | `{ amount: "US$ 85.000", code: "USD", currency }` | Las 6 vistas que maquetan el monto grande y el sufijo chico en `<span>` separados |
+| `formatPriceInline(price, currency)` | `"USD 85.000"` | Los 2 `generateMetadata` + los listados donde no hay JSX que maquetar |
+| `formatExpensas(expensas)` | `"$ 45.000"` o **`null`** | Expensas — ver Bloque 3 |
+
+Decisiones documentadas en el archivo:
+
+- **`US$` para dólares, `$` para pesos.** Desambigua sin depender del contexto.
+- **Sufijo `ARS`/`USD` y no "Pesos"/"Dólares".** Son simétricos (uno no queda más
+  largo que el otro y descoloca la tarjeta) y coinciden con las etiquetas de los
+  checkboxes del formulario, así el admin ve el mismo código que eligió.
+- **`currency` es opcional en las firmas, con fallback a USD.** El backend la
+  declara `NOT NULL DEFAULT 'USD'`, pero varias pantallas tipan la propiedad con
+  una interfaz local recortada y una respuesta cacheada de antes del deploy
+  tampoco la trae. USD es el valor correcto para todo el catálogo histórico, que
+  es exactamente lo que esas respuestas contienen.
+
+### Los 9 call-sites migrados
+
+| Archivo | Qué muestra |
+|---|---|
+| `modules/landing/components/FeaturedPropertyCard.tsx` | Destacadas de la landing |
+| `modules/properties/components/PropertyCard.tsx` | Catálogo, vista grilla |
+| `modules/properties/components/PropertyRow.tsx` | Catálogo, vista lista |
+| `app/(public)/properties/[id]/PropertyDetail.tsx` | Detalle, sidebar de precio |
+| `app/(public)/properties/[id]/page.tsx` | **OpenGraph del detalle** |
+| `app/ficha/[id]/FichaContent.tsx` | Ficha compartible |
+| `app/ficha/[id]/page.tsx` | **OpenGraph de la ficha** |
+| `app/(private)/dashboard/favoritos/page.tsx` | Mis favoritos |
+| `app/(admin)/dashboardAdmin/propiedades/page.tsx` | Listado del admin |
+
+En el listado del admin se agregó el código de moneda donde antes solo había un
+número: el ícono `DollarSign` es genérico de "plata" y no distingue ARS de USD,
+así que sin eso el admin no podía saber en qué moneda estaba cada fila de su
+propio panel.
+
+### `PropertyForm.tsx` — los dos checkboxes
+
+Son **checkboxes visualmente** (así se pidió) pero **mutuamente excluyentes**:
+`set('currency', value)` **pisa** el valor, no lo togglea, así que tildar uno
+destilda el otro sin ninguna lógica extra. Un toggle real permitiría dejar los
+dos tildados —o ninguno— y mandar un valor inválido al backend; una propiedad no
+puede tener dos monedas.
+
+Llevan `role="radiogroup"` + `role="radio"` + `aria-checked`: para un lector de
+pantalla esto **es** un grupo de opciones excluyentes aunque se dibuje con
+cuadraditos. Sin eso se anunciarían como casillas independientes.
+
+Detalles del bloque de Precio:
+- El input de precio **dejó de ocupar todo el ancho** y comparte fila con la
+  moneda: el monto sin la moneda no dice nada, y verlos juntos evita cargar
+  `85000` pensando en dólares con "Pesos" tildado.
+- El **símbolo del input sigue a la moneda elegida** (`$` / `US$`), el label
+  cambia (`Precio (ARS)` / `Precio (USD)`) y el placeholder también
+  (`Ej: 45000000` / `Ej: 85000`). Mostrar "US$" con "Pesos" tildado sería que el
+  formulario se contradiga a sí mismo.
+- **Alta:** arranca en `'USD'`, igual que el default del backend.
+- **Edición:** `data.currency ?? 'USD'` — la moneda guardada manda, y se puede
+  cambiar en los dos sentidos.
+
+---
+
+## Bloque 2 — Reordenar imágenes por drag & drop
+
+### La decisión estructural: la portada ES la primera
+
+Antes había **dos controles que podían contradecirse**: la estrella de "portada"
+(`isCover`) y el orden implícito de la galería. Con un campo de orden real eso se
+vuelve un bug visible — la portada podía quedar 4ª y el catálogo mostraría una
+foto distinta de la que abre el detalle.
+
+Ahora hay **un solo concepto**: se arrastra, y la primera de la fila es la
+portada. El backend garantiza la invariante `order === 0` ⇔ `isCover`. **El botón
+⭐ desapareció del formulario** — la portada pasó a ser un dato derivado de la
+posición, y un dato derivado no se puede desincronizar.
+
+### `PropertyForm.tsx` — una sola lista en vez de dos
+
+`existingImages` + `newImages` (dos estados separados, con `isCover` a mantener
+sincronizado a mano entre ambos) se reemplazaron por un único `gallery` de
+`GalleryItem`:
+
+```ts
+type GalleryItem =
+  | { kind: 'existing'; key: string; id: number; url: string }
+  | { kind: 'new';      key: string; file: File; preview: string };
+```
+
+Motivo: el admin tiene que poder arrastrar una foto **nueva delante de una
+vieja**, y dos listas separadas no pueden representar ese orden intercalado.
+
+Efecto colateral bueno: `removeAt()` ya no recalcula portada (era la parte más
+enredada del código anterior — cuatro ramas para reasignar `isCover` entre las
+dos listas). Si se borra la primera, la que ocupa su lugar pasa a serlo sola.
+
+### Drag & drop: API nativa, **sin dependencia nueva**
+
+`draggable` + `onDragStart`/`onDragOver`/`onDrop`/`onDragEnd`. **No hizo falta
+`@dnd-kit` ni ninguna otra librería**, y por eso no se preguntó: con un máximo de
+10 miniaturas en una grilla, la experiencia nativa alcanza y `@dnd-kit` habría
+sumado ~30 kB al bundle del panel admin.
+
+Tres trampas resueltas, todas documentadas en el código:
+
+1. **`draggable={false}` en el `<img>`.** Sin eso el navegador arrastra la
+   *imagen* en vez del contenedor, y el `dragstart` del `<div>` nunca llega.
+2. **`e.dataTransfer.setData('text/plain', ...)` en `dragStart`.** Firefox no
+   inicia el arrastre si no hay datos seteados. El valor no se usa (el índice
+   vive en el estado).
+3. **La zona de subida ahora filtra por `e.dataTransfer.types.includes('Files')`.**
+   Sin ese chequeo, pasar una miniatura por encima la iluminaba en verde y
+   anunciaba "Soltá las imágenes acá", como si fuera a subirse de nuevo.
+
+`moveItem(from, to)` hace `splice` + `splice`, **no un swap**: arrastrar la 5ª al
+primer lugar empuja a las otras cuatro una posición, no las intercambia.
+
+Feedback visual: el ítem arrastrado baja a `opacity-40 scale-95`, el destino se
+marca con `ring-2 ring-[#0b7a4b]`, la portada lleva `ring-2 ring-amber-400` + su
+badge, y **cada miniatura muestra su número de posición**. El número importa
+porque la grilla va de 2 a 5 columnas según el ancho: sin él, "cuál es la
+tercera" depende del tamaño de la pantalla.
+
+### Cómo se manda el orden
+
+- **Al CREAR: no se manda nada.** Los archivos se suben en el orden de la galería
+  y `createMany()` del backend les asigna `order = 0..n-1` en ese mismo orden,
+  con la primera como portada. Una llamada menos.
+- **Al EDITAR:** después del PATCH se llama a
+  `PATCH /property-images/:propertyId/reorder` con `{ imageIds }`.
+  El problema a resolver es que **las fotos recién subidas no tienen id** hasta
+  que el backend las crea. `persistirOrden()` lo resuelve así: las imágenes de la
+  respuesta cuyo id no está en `originalImageIds` son las nuevas, y vienen en el
+  orden en que se subieron (`createMany` las inserta en el orden del array y el
+  `id` es un SERIAL, así que ordenar por id ascendente reconstruye ese orden).
+  Con eso se recorre la galería local y se resuelve cada posición a un id real.
+- **Si el reorder falla, NO se revierte nada ni se muestra un error rojo.** La
+  propiedad ya se guardó bien; lo único pendiente es el orden. Un `toast.error`
+  haría creer que se perdió todo lo editado, así que se usa `toast.warning` con
+  el detalle y se sigue. Además la portada ya viajó aparte en `setCoverImageId`,
+  justamente como red para este caso.
+- **Guarda de seguridad:** si el backend no devolvió tantas imágenes nuevas como
+  archivos se mandaron, el mapeo posición→id no es confiable y **no se manda
+  nada**, en vez de aplicar un orden adivinado que dejaría fotos al azar.
+
+### El `sort` local del detalle y de la ficha: eliminado
+
+`PropertyDetail.tsx` y `FichaContent.tsx` reordenaban las imágenes en el cliente
+por `isCover`. Se sacó en los dos: el backend ya las devuelve ordenadas y
+reordenar acá pisaba la decisión del admin.
+
+Además **el comparador del detalle estaba mal**:
+
+```ts
+(a, b) => a.isCover ? -1 : b.isCover ? 1 : 0   // ❌
+```
+
+No define un orden consistente (para dos imágenes sin portada devolvía 0 pero
+comparaba sólo contra `a`), así que el resultado dependía del algoritmo interno
+de `Array.prototype.sort`. Era un bug latente incluso antes de esta tanda.
+
+---
+
+## Bloque 3 — Expensas y Apto Mascotas
+
+### `PropertyForm.tsx`
+
+- **"Expensas (opcional)"** en la sección de **Precio**, no en Características:
+  es plata, no una característica edilicia. Ocupa la fila entera debajo del par
+  precio/moneda. Símbolo `$` **siempre**, con el hint "Monto mensual. Siempre en
+  pesos, aunque el precio esté en dólares."
+- **"Apto mascotas"** junto a los checkboxes ya existentes de
+  Escritura / Tracto abreviado / Boleto / Garage / Patio, **mismo estilo visual**
+  (entra en el mismo `.map()`, no es un caso especial).
+- Campo vacío → se manda **`null`**, no `0`. Son cosas distintas ("no
+  informadas" vs "no tiene expensas") y en el PATCH mandar `null` explícito es la
+  **única** forma de borrar unas expensas ya cargadas: omitir el campo las
+  dejaría intactas.
+- Al cargar en edición: `data.expensas != null ? String(...) : ''` y **no**
+  `data.expensas || ''` — con `||` el valor `0` (que es válido) se perdería y el
+  input quedaría vacío como si nunca se hubiera cargado.
+
+### Detalle de la propiedad
+
+- **Expensas** entra como 6ª tarjeta de "Características", junto a Habitaciones /
+  Baños / Sup. Total / Sup. Cubierta / Antigüedad, con ícono `Receipt`.
+  **Sólo si tiene valor**: `formatExpensas()` devuelve `null` cuando viene vacío
+  y un `.filter()` descarta la tarjeta. No se muestra "Expensas: —" — ocuparía
+  una celda para no decir nada, y en una casa (que nunca tiene expensas)
+  aparecería siempre. Mismo criterio en la lista "Resumen" del sidebar.
+- **Apto Mascotas** entra en "Comodidades y documentación" con ícono `PawPrint`,
+  en el mismo `.map()` que el resto.
+
+### Rediseño de "Comodidades y documentación" — contraste
+
+**El problema reportado:** de un vistazo la grilla se leía como seis tarjetas
+iguales. Lo que tiene y lo que no se distinguían por un ícono chico (✓ vs ✗) y
+por un verde muy suave (`brand-700/25` + `brand-50`) contra un gris casi idéntico
+(`ink-100` + `surface-mint`). Había que ir ítem por ítem.
+
+**Ahora el color hace todo el trabajo y el ícono sólo confirma:**
+
+| Estado | Borde | Fondo | Texto | Pastilla del ícono |
+|---|---|---|---|---|
+| **Tiene** | `border-brand-800` (verde de marca, un paso más oscuro que el `brand-700` histórico) | `bg-brand-50` | `text-brand-900` | `bg-brand-800` |
+| **No tiene** | `border-red-600` | `bg-red-50` | `text-red-800` | `bg-red-600` |
+
+Los dos bordes son **finitos** (1px, el `border` por defecto de Tailwind, no
+`border-2`): se notan por saturación, no por grosor. Un borde grueso convertiría
+la grilla en un tablero de ajedrez.
+
+⚠️ **El rojo NO significa "error"**: significa "esta propiedad no lo incluye",
+que es justamente el dato que el visitante viene a buscar. Para que el color no
+sea el único portador de la información (WCAG 1.4.1), cada tarjeta lleva además
+un `title` explícito ("Esta propiedad tiene: Cochera" / "Esta propiedad NO tiene:
+Cochera") y conserva el ✓/✗, así que quien no distingue rojo de verde sigue
+teniendo dos señales redundantes.
+
+### Filtro de expensas en el modal
+
+`FiltersModal.tsx`, sub-sección "Presupuesto y superficie": **"Expensas mín." y
+"Expensas máx."** como par, **justo encima** del input de Antigüedad, con el
+mismo componente `IconNumber` que el resto. Ícono `Receipt` para diferenciarlas
+del `DollarSign` del precio, que sí depende de la moneda.
+
+Cadena completa, no sólo el input: `PropertyFilters` (interfaz),
+`usePropertyFilters` (lectura de la URL **y** `FILTERS_THAT_RESET_PAGE`, si no un
+cambio de expensas dejaría al usuario en la página 7 de un resultado de 2
+páginas), `EMPTY_NUMS`, el borrador del modal, el conteo en vivo, y los **chips
+de filtros activos** de `CatalogFilterBar`. El label del chip dice "Expensas
+desde/hasta $X" y no sólo el monto, para que no se confunda con los chips de
+precio, que usan el mismo símbolo `$`.
+
+⚠️ **"Expensas máx." incluye a propósito las propiedades sin expensas
+cargadas.** Quien pone un tope de gasto mensual quiere ver también las que no
+pagan nada — esconderlas sería lo contrario de lo que pidió. "Expensas mín." sí
+las excluye. La asimetría está implementada en el backend
+(`p.expensas IS NULL OR p.expensas <= :max`) y documentada en `API_CONTRACT.md` §5.
+
+### Ficha compartible (`/ficha/:id`)
+
+Es un "espejo completo de la propiedad" por diseño, así que se sumaron los tres
+datos nuevos: la moneda del precio, **Apto mascotas** (la fila de booleanos pasó
+de `sm:grid-cols-2` a `sm:grid-cols-3`) y **Expensas** como 6ª spec. Se actualizó
+el docstring de cabecera que enumera los campos representados, y se anotó la
+única excepción a "no se oculta nada": `expensas` no se renderiza cuando es
+`null`, porque en una ficha que se le manda a un cliente un "Expensas: —" se lee
+como un dato faltante, no como "no aplica".
+
+---
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npx eslint` sin warnings en los archivos
+tocados · `npm run build` exit 0.
+
+⚠️ **Verificación pendiente:** esta tanda se validó con build y typecheck, **no
+en el navegador contra el backend real** — a diferencia de las PARTES 10 y 11.
+Las tres migraciones del backend tampoco se corrieron todavía contra una base con
+datos. Falta probar a mano, como mínimo: crear una propiedad en pesos, editar una
+de USD a ARS y al revés, reordenar una galería mixta (fotos viejas + nuevas) y
+confirmar el orden en el detalle, y cargar/borrar expensas.
+
+## Anotado, NO aplicado
+
+- **No hay filtro por "Apto Mascotas"** en el modal. El pedido lo puso junto a
+  Cochera/Patio/Escritura del **detalle** y del **formulario**, no en los
+  "Adicionales" del filtro. Agregarlo es una línea en el `.map()` de
+  `FiltersModal` más el campo en el DTO del backend, si se quiere.
+- **`BoolRow` de la ficha conserva el verde/gris viejo.** El rediseño de
+  contraste se pidió puntualmente para la página de detalle. La ficha tiene el
+  mismo problema de legibilidad y sería el mismo cambio de clases.

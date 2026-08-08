@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { propertiesService } from '@/modules/properties/services/properties.service';
 import { getErrorStatus } from '@/modules/shared/lib/apiError';
+import { formatPriceInline } from '@/modules/shared/lib/money';
 import { FichaContent } from './FichaContent';
 import type { FichaProperty } from './types';
 
@@ -67,7 +68,10 @@ export async function generateMetadata({
   if (!p) notFound();
 
   const ubicacion = [p.barrio, p.localidad].filter(Boolean).join(', ');
-  const precio = `USD ${p.price?.toLocaleString('es-AR') ?? ''}`;
+  // Mismo motivo que en el detalle público: este string encabeza la
+  // previsualización del link en WhatsApp, donde un "USD" equivocado no tiene
+  // vuelta atrás una vez enviado.
+  const precio = formatPriceInline(p.price, p.currency);
   const ficha = [
     p.typeOfProperty?.name,
     `${p.rooms} amb.`,

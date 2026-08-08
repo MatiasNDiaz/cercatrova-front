@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Home, DollarSign, Car, TreePine, FileText,
-  Bed, Bath, Maximize, Calendar, ChevronDown, X, Search, Trash2, Building2,
+  Bed, Bath, Maximize, Calendar, ChevronDown, X, Search, Trash2, Building2, Receipt,
 } from 'lucide-react';
 import { usePropertyFilters } from '../hooks/usePropertyFilters';
 import { propertiesService } from '../services/properties.service';
@@ -42,6 +42,7 @@ interface PropertyType {
 const EMPTY_NUMS = {
   rooms: '', bathrooms: '', minPrice: '', maxPrice: '',
   minSupTotal: '', maxSupTotal: '', minSupCubierta: '', maxSupCubierta: '',
+  minExpensas: '', maxExpensas: '',
   maxAntiquity: '',
 };
 
@@ -178,6 +179,8 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
       maxSupTotal: filters.maxSupTotal?.toString() ?? '',
       minSupCubierta: filters.minSupCubierta?.toString() ?? '',
       maxSupCubierta: filters.maxSupCubierta?.toString() ?? '',
+      minExpensas: filters.minExpensas?.toString() ?? '',
+      maxExpensas: filters.maxExpensas?.toString() ?? '',
       maxAntiquity: filters.maxAntiquity?.toString() ?? '',
     });
     setOpenDrop(null);
@@ -222,6 +225,8 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
       maxSupTotal: n(nums.maxSupTotal),
       minSupCubierta: n(nums.minSupCubierta),
       maxSupCubierta: n(nums.maxSupCubierta),
+      minExpensas: n(nums.minExpensas),
+      maxExpensas: n(nums.maxExpensas),
       maxAntiquity: n(nums.maxAntiquity),
     };
   }, [draft, nums]);
@@ -432,6 +437,16 @@ export function FiltersModal({ open, onClose }: FiltersModalProps) {
                   <IconNumber icon={Maximize} placeholder="Sup. Total máx." value={nums.maxSupTotal} onChange={(v) => setNum('maxSupTotal', v)} />
                   <IconNumber icon={Maximize} placeholder="Sup. Cubierta mín." value={nums.minSupCubierta} onChange={(v) => setNum('minSupCubierta', v)} />
                   <IconNumber icon={Maximize} placeholder="Sup. Cubierta máx." value={nums.maxSupCubierta} onChange={(v) => setNum('maxSupCubierta', v)} />
+                  {/* Expensas — mismo par mín/máx que el resto, justo encima de
+                      antigüedad. Van EN PESOS siempre, sin importar la moneda de
+                      la propiedad (ver `Property.expensas` en el contrato); el
+                      ícono `Receipt` las diferencia del `DollarSign` del precio,
+                      que sí depende de la moneda.
+                      ⚠️ "Expensas máx." INCLUYE a propósito las propiedades sin
+                      expensas cargadas: quien pone un tope de gasto mensual
+                      quiere ver también las que no pagan nada. */}
+                  <IconNumber icon={Receipt} placeholder="Expensas mín." value={nums.minExpensas} onChange={(v) => setNum('minExpensas', v)} />
+                  <IconNumber icon={Receipt} placeholder="Expensas máx." value={nums.maxExpensas} onChange={(v) => setNum('maxExpensas', v)} />
                   {/* `col-span-1` de base: con la grilla en una sola columna,
                       un `col-span-2` suelto crea una segunda columna implícita
                       y este campo queda al doble de ancho que los de arriba. */}

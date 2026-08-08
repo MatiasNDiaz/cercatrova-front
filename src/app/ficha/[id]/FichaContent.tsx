@@ -2,8 +2,10 @@ import Image from 'next/image';
 import {
   Bed, Bath, Maximize, Home, Hourglass, MapPin, Car, TreePine,
   FileCheck, Landmark, ScrollText, CheckCircle2, XCircle, Building2,
+  PawPrint, Receipt,
 } from 'lucide-react';
 import { fechaLarga } from '@/modules/shared/lib/fecha';
+import { priceParts, formatExpensas } from '@/modules/shared/lib/money';
 import type { FichaProperty } from './types';
 
 /**
@@ -17,11 +19,17 @@ import type { FichaProperty } from './types';
  * el destinatario es un colega o un cliente directo.
  *
  * Campos representados, uno por uno (contra `Property` del backend):
- *   título · descripción · precio · operación · tipo · estado ·
+ *   título · descripción · precio (con su MONEDA) · operación · tipo · estado ·
  *   provincia · localidad · barrio · dirección · zona ·
- *   ambientes · baños · sup. total · sup. cubierta · antigüedad ·
- *   escritura · tracto abreviado · boleto · cochera · patio ·
- *   todas las imágenes · fecha de publicación y de última actualización
+ *   ambientes · baños · sup. total · sup. cubierta · antigüedad · expensas ·
+ *   escritura · tracto abreviado · boleto · cochera · patio · apto mascotas ·
+ *   todas las imágenes (en el orden elegido por el admin) ·
+ *   fecha de publicación y de última actualización
+ *
+ * Única excepción a "no se oculta nada": `expensas` NO se renderiza cuando
+ * viene `null` (no informadas). Una casa nunca tiene expensas, y una celda
+ * "Expensas: —" en una ficha que se le manda a un cliente se lee como un dato
+ * faltante, no como "no aplica".
  *
  * ── Lo que se deja AFUERA, y por qué ────────────────────────────────────────
  * `agent`, `referredBy`, `comments`, `ratings`, `ratingAverage` y
@@ -119,13 +127,18 @@ function Section({
 }
 
 export function FichaContent({ p }: { p: FichaProperty }) {
-  const imagenes = [...(p.images ?? [])].sort(
-    (a, b) => (b.isCover ? 1 : 0) - (a.isCover ? 1 : 0),
-  );
+  /**
+   * Sin `sort` local: `GET /properties/:id` ya devuelve la galería ordenada por
+   * `order ASC` (el orden que el admin dejó con el drag & drop del formulario),
+   * y el backend garantiza que la de `order = 0` es la portada. Reordenar acá
+   * por `isCover` desarmaría ese orden.
+   */
+  const imagenes = p.images ?? [];
   const portada = imagenes[0];
   const resto = imagenes.slice(1);
 
   const ubicacionCorta = [p.barrio, p.localidad].filter(Boolean).join(', ');
+  const precio = priceParts(p.price, p.currency);
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
@@ -161,8 +174,8 @@ export function FichaContent({ p }: { p: FichaProperty }) {
         )}
 
         <p className="mt-5 text-3xl font-black tracking-tight text-brand-700 sm:text-4xl">
-          ${p.price?.toLocaleString('es-AR')}
-          <span className="ml-2 text-base font-bold text-ink-400">USD</span>
+          {precio.amount}
+          <span className="ml-2 text-base font-bold text-ink-400">{precio.code}</span>
         </p>
       </header>
 
@@ -214,11 +227,18 @@ export function FichaContent({ p }: { p: FichaProperty }) {
             <Spec icon={Maximize} label="Sup. total" value={p.supTotal != null ? `${p.supTotal} m²` : '—'} />
             <Spec icon={Maximize} label="Sup. cubierta" value={p.supCubierta != null ? `${p.supCubierta} m²` : '—'} />
             <Spec icon={Hourglass} label="Antigüedad" value={`${p.antiquity ?? 0} años`} />
+            {/* Solo si tiene: `formatExpensas` devuelve null cuando no hay
+                valor, y una casa sin expensas no debería mostrar una celda
+                vacía en una ficha pensada para mandarle a un cliente. */}
+            {formatExpensas(p.expensas) && (
+              <Spec icon={Receipt} label="Expensas" value={formatExpensas(p.expensas)!} />
+            )}
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
             <BoolRow icon={Car} label="Cochera" value={!!p.garage} />
             <BoolRow icon={TreePine} label="Patio" value={!!p.patio} />
+            <BoolRow icon={PawPrint} label="Apto mascotas" value={!!p.aptoMascotas} />
           </div>
         </Section>
 

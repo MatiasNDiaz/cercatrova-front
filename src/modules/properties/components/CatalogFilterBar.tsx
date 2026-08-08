@@ -102,6 +102,10 @@ export function CatalogFilterBar({ onOpenFilters, activeFiltersCount }: CatalogF
     if (filters.maxSupTotal) push('maxSupTotal', `Sup. Total hasta ${filters.maxSupTotal} m²`);
     if (filters.minSupCubierta) push('minSupCubierta', `Sup. Cubierta desde ${filters.minSupCubierta} m²`);
     if (filters.maxSupCubierta) push('maxSupCubierta', `Sup. Cubierta hasta ${filters.maxSupCubierta} m²`);
+    // Expensas: el label dice "Expensas" y no solo el monto para que no se
+    // confunda con los chips de precio, que usan el mismo símbolo `$`.
+    if (filters.minExpensas) push('minExpensas', `Expensas desde ${money(filters.minExpensas)}`);
+    if (filters.maxExpensas) push('maxExpensas', `Expensas hasta ${money(filters.maxExpensas)}`);
     if (filters.maxAntiquity) push('maxAntiquity', `Hasta ${filters.maxAntiquity} años`);
     if (filters.garage) push('garage', 'Cochera');
     if (filters.patio) push('patio', 'Patio');

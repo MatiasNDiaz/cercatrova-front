@@ -8,6 +8,7 @@ import { Property } from '../interfaces/propertyInterface';
 import { FavoriteButton } from '@/modules/shared/ui/Favoritebutton';
 import { whatsappLink } from '@/modules/shared/lib/contact';
 import { BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor } from '../lib/badgeStyles';
+import { priceParts } from '@/modules/shared/lib/money';
 
 /**
  * Tarjeta de propiedad del catálogo — vista LISTA (Bloque 3 del rediseño).
@@ -22,9 +23,11 @@ import { BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor } from '../lib/
  */
 export function PropertyRow({ property }: { property: Property }) {
   const {
-    id, title, price, rooms, bathrooms, supTotal, supCubierta, antiquity,
+    id, title, price, currency, rooms, bathrooms, supTotal, supCubierta, antiquity,
     localidad, barrio, description, images, typeOfProperty, operationType, ratingAverage,
   } = property;
+
+  const precio = priceParts(price, currency);
 
   const rating =
     typeof ratingAverage === 'number' && ratingAverage > 0 ? ratingAverage : null;
@@ -111,8 +114,8 @@ export function PropertyRow({ property }: { property: Property }) {
         <div className="sm:text-right">
           <p className="text-[11px] font-bold tracking-widest text-ink-400 uppercase">Precio</p>
           <p className="text-2xl font-black text-brand-700">
-            ${price.toLocaleString('es-AR')}
-            <span className="ml-1 text-sm font-semibold text-ink-500">USD</span>
+            {precio.amount}
+            <span className="ml-1 text-sm font-semibold text-ink-500">{precio.code}</span>
           </p>
         </div>
 

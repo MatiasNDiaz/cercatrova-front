@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { BsWhatsapp } from 'react-icons/bs';
 import { whatsappShareLink } from '@/modules/shared/lib/contact';
+import { formatPriceInline } from '@/modules/shared/lib/money';
 
 interface PropertyImage {
   id: number;
@@ -27,6 +28,8 @@ interface Property {
   id: number;
   title: string;
   price: number;
+  /** `'ARS' | 'USD'`. Opcional: `formatPriceInline()` cae en USD si falta. */
+  currency?: string;
   status: string;
   operationType: string;
   localidad: string;
@@ -312,7 +315,11 @@ export default function PropiedadesAdminPage() {
                     </span>
                     <span className="flex items-center gap-1 text-xs font-bold text-gray-800">
                       <DollarSign size={12} className="text-[#0b7a4b]" />
-                      {p.price?.toLocaleString('es-AR')}
+                      {/* Con el código de moneda adelante: el ícono `DollarSign`
+                          es genérico de "plata" y no distingue ARS de USD, así
+                          que sin esto el admin no puede saber en qué moneda está
+                          cada fila de su propio listado. */}
+                      {formatPriceInline(p.price, p.currency)}
                     </span>
                     <span className="text-xs text-gray-500">
                       {p.rooms} hab · {p.bathrooms} baños{p.supTotal != null ? ` · ${p.supTotal} m²` : ''}

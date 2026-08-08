@@ -8,6 +8,7 @@ const FILTERS_THAT_RESET_PAGE = [
   'search', 'operationType', 'typeOfPropertyId', 'localidad', 'barrio',
   'zone', 'provincia', 'rooms', 'bathrooms', 'minPrice', 'maxPrice',
   'minSupTotal', 'maxSupTotal', 'minSupCubierta', 'maxSupCubierta',
+  'minExpensas', 'maxExpensas',
   'maxAntiquity', 'garage', 'patio', 'property_deed', 'tractoAbreviado', 'boleto',
   'title', 'status', 'sortBy', 'order'
 ];
@@ -59,6 +60,8 @@ export const usePropertyFilters = () => {
       maxSupTotal: getNum('maxSupTotal'),
       minSupCubierta: getNum('minSupCubierta'),
       maxSupCubierta: getNum('maxSupCubierta'),
+      minExpensas: getNum('minExpensas'),
+      maxExpensas: getNum('maxExpensas'),
       maxAntiquity: getNum('maxAntiquity'),
 
       // Booleanos

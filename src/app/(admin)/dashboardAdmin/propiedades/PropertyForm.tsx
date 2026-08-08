@@ -13,23 +13,33 @@ import { DashboardPage, DashboardHeader } from '@/modules/shared/ui/DashboardPag
 import { useFormDraft, draftKey } from '@/modules/shared/hooks/useFormDraft';
 import {
   Save, ArrowLeft, Upload, X, Star, ImagePlus, Building2,
-  MapPin, Ruler, DollarSign, Info, FileWarning, Trash2
+  MapPin, Ruler, DollarSign, Info, FileWarning, Trash2, GripVertical
 } from 'lucide-react';
 
 // ── TIPOS ─────────────────────────────────────────────────────────────────────
 interface PropertyType { id: number; name: string; }
 
-interface ExistingImage {
-  id: number;
-  url: string;
-  isCover: boolean;
-}
+/**
+ * Una posición de la galería, sea una imagen ya subida o una todavía local.
+ *
+ * ── Por qué UNA sola lista y no dos ──────────────────────────────────────────
+ * Antes había `existingImages` y `newImages` en estados separados, y la portada
+ * era un `isCover` que había que mantener sincronizado a mano entre los dos
+ * (cada `setExistingCover` tenía que acordarse de apagar el cover de las nuevas,
+ * y al revés). Con el drag & drop eso ya no alcanza: el admin tiene que poder
+ * arrastrar una foto nueva delante de una vieja, y dos listas separadas no
+ * pueden representar ese orden intercalado.
+ *
+ * Además desaparece el estado `isCover` del formulario: **la portada es la
+ * posición 0**, misma invariante que respeta el backend. Un dato derivado no se
+ * puede desincronizar.
+ */
+type GalleryItem =
+  | { kind: 'existing'; key: string; id: number; url: string }
+  | { kind: 'new'; key: string; file: File; preview: string };
 
-interface NewImage {
-  file: File;
-  preview: string;
-  isCover: boolean;
-}
+/** URL a mostrar, sea de Cloudinary o un `blob:` local. */
+const itemSrc = (item: GalleryItem) => (item.kind === 'existing' ? item.url : item.preview);
 
 // ── CONSTANTES ────────────────────────────────────────────────────────────────
 const STATUS_OPTIONS = [
@@ -45,6 +55,18 @@ const OP_OPTIONS = [
   { value: 'alquiler', label: 'Alquiler' },
   { value: 'temporal', label: 'Alquiler temporal' },
 ];
+
+/**
+ * Monedas admitidas por `Property.currency` en el backend.
+ *
+ * `short` es lo que se muestra entre paréntesis en el label del input de precio,
+ * para que el rótulo del campo también cambie al elegir la moneda (antes decía
+ * "Precio (USD)" fijo).
+ */
+const CURRENCY_OPTIONS = [
+  { value: 'ARS', label: 'Pesos (ARS)',   short: 'ARS' },
+  { value: 'USD', label: 'Dólares (USD)', short: 'USD' },
+] as const;
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 // `Field`, `Input` y `Select` ahora vienen de shared/ui (antes estaban duplicados acá).
@@ -72,12 +94,28 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
   const [dragging, setDragging] = useState(false);
   const [propertyTypes, setPropertyTypes] = useState<PropertyType[]>([]);
 
-  // Imágenes existentes (solo en edición)
-  const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
+  // Galería completa, EN EL ORDEN EN QUE SE VA A GUARDAR (posición 0 = portada).
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<number[]>([]);
 
-  // Imágenes nuevas (locales, antes de subir)
-  const [newImages, setNewImages] = useState<NewImage[]>([]);
+  /**
+   * Ids que YA existían al abrir el formulario.
+   *
+   * Sirve para identificar, en la respuesta del PATCH, cuáles imágenes son las
+   * recién creadas: son las que no están en este conjunto. Sin eso no habría
+   * forma de saber qué id le tocó a cada archivo recién subido, y por lo tanto
+   * tampoco de armar el orden final para mandarlo al endpoint de reorder.
+   */
+  const [originalImageIds, setOriginalImageIds] = useState<number[]>([]);
+
+  // Contador para las `key` de React de las imágenes locales. Un índice del
+  // array NO sirve como key acá: al reordenar cambia y React remonta el <img>,
+  // lo que hace parpadear la miniatura justo durante el arrastre.
+  const nextKeyRef = useRef(0);
+
+  // Índices del arrastre en curso (origen y destino), para el feedback visual.
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
 
   const [form, setForm] = useState({
     title:           '',
@@ -96,11 +134,18 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
     supCubierta:     '',
     antiquity:       '',
     price:           '',
+    // Coincide con el default del backend (`CreatePropertyDto` deja 'USD' si el
+    // campo no viene): el formulario de alta arranca en dólares porque es lo que
+    // tiene todo el catálogo cargado.
+    currency:        'USD',
+    // Opcional. String vacío = "no informadas" → se manda `null` al backend.
+    expensas:        '',
     property_deed:   false,
     tractoAbreviado: false,
     boleto:          false,
     garage:          false,
-    patio:           false
+    patio:           false,
+    aptoMascotas:    false
   });
 
   const set = (k: string, v: string | boolean) => setForm(p => ({ ...p, [k]: v }));
@@ -156,13 +201,32 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
           supCubierta:      data.supCubierta?.toString() ?? '',
           antiquity:        data.antiquity?.toString() ?? '',
           price:            data.price?.toString() ?? '',
+          // La moneda guardada manda: al editar hay que poder pasar de dólares a
+          // pesos y al revés. El `?? 'USD'` sólo cubre una respuesta cacheada de
+          // antes de que la columna existiera.
+          currency:         data.currency ?? 'USD',
+          // `?? ''` y no `?.toString() ?? ''`: `expensas: 0` es un valor válido
+          // ("no tiene expensas") y con `||` se perdería, quedando el input
+          // vacío como si nunca se hubiera cargado.
+          expensas:         data.expensas != null ? String(data.expensas) : '',
           property_deed:    data.property_deed ?? false,
           tractoAbreviado:  data.tractoAbreviado ?? false,
           boleto:           data.boleto ?? false,
           garage:           data.garage ?? false,
-          patio:            data.patio ?? false
+          patio:            data.patio ?? false,
+          aptoMascotas:     data.aptoMascotas ?? false
         });
-        setExistingImages(data.images ?? []);
+        // El backend ya devuelve las imágenes ordenadas por `order ASC, id ASC`
+        // (ver §6 de API_CONTRACT.md), así que se toman tal cual: reordenarlas
+        // acá pisaría justamente lo que el admin guardó la última vez.
+        const imagenes: { id: number; url: string }[] = data.images ?? [];
+        setGallery(imagenes.map(img => ({
+          kind: 'existing' as const,
+          key: `ex-${img.id}`,
+          id: img.id,
+          url: img.url,
+        })));
+        setOriginalImageIds(imagenes.map(img => img.id));
       } catch {
         toast.error('No se pudo cargar la propiedad');
       } finally {
@@ -173,17 +237,16 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
   }, [isEdit, propertyId]);
 
   /**
-   * Agrega archivos validados a la lista de imágenes nuevas.
+   * Agrega archivos validados al FINAL de la galería.
    *
    * ⚠️ Va en `useCallback` con dependencias reales — no es cosmético. Antes era
    * una función suelta que se redefinía en cada render, y `handleDrop` la
-   * capturaba en un `useCallback` con `[]`: el drag & drop quedaba usando para
-   * siempre la versión del PRIMER render, con `existingImages`,
-   * `deletedImageIds` y `newImages` vacíos. Resultado: el cálculo de
-   * `available` (el tope de 10) se hacía contra el estado inicial, así que
-   * arrastrando imágenes se podía pasar del límite o marcar portada de más.
-   * Soltar archivos con el explorador nunca tuvo el bug, porque ese camino
-   * llamaba a `addFiles` directo desde el render actual.
+   * capturaba en un `useCallback` con `[]`: el drag & drop de archivos quedaba
+   * usando para siempre la versión del PRIMER render, con la galería vacía, así
+   * que el cálculo del tope de 10 se hacía contra el estado inicial y
+   * arrastrando imágenes se podía pasar del límite. Soltar archivos con el
+   * explorador nunca tuvo el bug, porque ese camino llamaba a `addFiles` directo
+   * desde el render actual.
    */
   const addFiles = useCallback((files: File[]) => {
     // Validación client-side (tipo image/* y ≤ 5MB, límites del backend)
@@ -198,20 +261,19 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
     }
     if (validFiles.length === 0) return;
 
-    const totalExisting = existingImages.filter(i => !deletedImageIds.includes(i.id)).length;
-    const totalNew = newImages.length;
-    const available = 10 - totalExisting - totalNew;
+    const available = 10 - gallery.length;
     if (available <= 0) { toast.error('Máximo 10 imágenes'); return; }
     const toAdd = validFiles.slice(0, available);
-    const mapped: NewImage[] = toAdd.map((file, idx) => ({
+    const mapped: GalleryItem[] = toAdd.map((file) => ({
+      kind: 'new' as const,
+      key: `new-${nextKeyRef.current++}`,
       file,
       preview: URL.createObjectURL(file),
-      isCover: totalExisting === 0 && totalNew === 0 && idx === 0
     }));
-    setNewImages(prev => [...prev, ...mapped]);
-  }, [existingImages, deletedImageIds, newImages]);
+    setGallery(prev => [...prev, ...mapped]);
+  }, [gallery]);
 
-  // ── Drag & Drop ──
+  // ── Drop de ARCHIVOS sobre la zona de subida ──
   // Definido DESPUÉS de `addFiles` y con él en las dependencias, para que
   // siempre use la versión actual (ver la nota de arriba).
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -221,48 +283,90 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
     addFiles(files);
   }, [addFiles]);
 
-  // ── Portada — imágenes existentes ──
-  const setExistingCover = async (id: number) => {
-    try {
-      await api.patch(`/property-images/${id}/set-cover`);
-      setExistingImages(prev => prev.map(i => ({ ...i, isCover: i.id === id })));
-      setNewImages(prev => prev.map(i => ({ ...i, isCover: false })));
-      toast.success('Portada actualizada ✓');
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-    }
-  };
-
-  // ── Portada — imágenes nuevas ──
-  const setNewCover = (idx: number) => {
-    setExistingImages(prev => prev.map(i => ({ ...i, isCover: false })));
-    setNewImages(prev => prev.map((i, j) => ({ ...i, isCover: j === idx })));
-  };
-
-  // ── Eliminar imagen existente ──
-  const removeExisting = (id: number) => {
-    setDeletedImageIds(prev => [...prev, id]);
-    // Si era portada y quedan otras, la primera que no esté eliminada queda como portada
-    const wasCover = existingImages.find(i => i.id === id)?.isCover;
-    if (wasCover) {
-      const remaining = existingImages.filter(i => i.id !== id && !deletedImageIds.includes(i.id));
-      if (remaining.length > 0) {
-        setExistingImages(prev => prev.map(i => ({ ...i, isCover: i.id === remaining[0].id })));
-      } else if (newImages.length > 0) {
-        setNewImages(prev => prev.map((i, j) => ({ ...i, isCover: j === 0 })));
-      }
-    }
-  };
-
-  // ── Eliminar imagen nueva ──
-  const removeNew = (idx: number) => {
-    const wasCover = newImages[idx].isCover;
-    URL.revokeObjectURL(newImages[idx].preview);
-    setNewImages(prev => {
-      const next = prev.filter((_, j) => j !== idx);
-      if (wasCover && next.length > 0) next[0].isCover = true;
+  // ── Reordenar por arrastre (API nativa de HTML5, sin librería) ──
+  /**
+   * Mueve el ítem de `from` a `to` conservando el resto del orden.
+   *
+   * No es un swap: arrastrar la 5ª foto al primer lugar tiene que empujar a las
+   * otras cuatro una posición, no intercambiarla con la que estaba primera.
+   */
+  const moveItem = (from: number, to: number) => {
+    if (from === to) return;
+    setGallery(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
       return next;
     });
+  };
+
+  const endDrag = () => { setDragIndex(null); setOverIndex(null); };
+
+  // ── Eliminar una imagen de la galería ──
+  const removeAt = (index: number) => {
+    const item = gallery[index];
+    if (item.kind === 'existing') {
+      // El borrado real lo hace el backend con `deleteImages` en el PATCH.
+      setDeletedImageIds(prev => [...prev, item.id]);
+    } else {
+      // Liberar el `blob:` — si no, el archivo queda retenido en memoria
+      // mientras viva la pestaña.
+      URL.revokeObjectURL(item.preview);
+    }
+    setGallery(prev => prev.filter((_, i) => i !== index));
+    // La portada NO hay que recalcularla: es la posición 0, y si se borró la
+    // primera, la que ocupa su lugar pasa a serlo sola.
+  };
+
+  /**
+   * Manda el orden final de la galería al backend, después de un PATCH exitoso.
+   *
+   * ── El problema que resuelve ────────────────────────────────────────────────
+   * El orden lo decide el admin arrastrando miniaturas, pero las fotos recién
+   * subidas no tienen id hasta que el backend las crea. Así que el orden no se
+   * puede mandar junto con el PATCH: primero hay que enterarse de qué id le tocó
+   * a cada archivo.
+   *
+   * La respuesta del PATCH (`findOne`) trae la galería completa. Las imágenes
+   * cuyo id NO estaba en `originalImageIds` son las recién creadas, y vienen en
+   * el mismo orden en que se subieron los archivos: `createMany` las inserta en
+   * el orden del array de `newImages`, y el `id` es un SERIAL, así que ordenar
+   * por id ascendente reconstruye exactamente ese orden. Con eso se puede
+   * recorrer la galería local y resolver cada posición a un id real.
+   *
+   * ── Por qué un fallo acá no revierte nada ──────────────────────────────────
+   * La propiedad ya se guardó bien; lo único que puede quedar pendiente es el
+   * orden. Tirar un error acá haría creer que se perdió TODO lo editado. Se
+   * avisa con un toast de advertencia y se sigue: el admin puede volver a
+   * entrar y reacomodar. La portada, además, ya viajó en `setCoverImageId`.
+   */
+  const persistirOrden = async (
+    imagenesGuardadas: { id: number }[],
+    cantidadNuevas: number,
+  ) => {
+    if (gallery.length === 0) return;
+
+    const previos = new Set(originalImageIds);
+    const idsNuevos = imagenesGuardadas
+      .filter(img => !previos.has(img.id))
+      .sort((a, b) => a.id - b.id)
+      .map(img => img.id);
+
+    // Si el backend no devolvió tantas imágenes nuevas como archivos se
+    // mandaron, el mapeo posición→id no es confiable: mejor no mandar un orden
+    // adivinado que dejaría fotos en lugares al azar.
+    if (idsNuevos.length !== cantidadNuevas) return;
+
+    let cursor = 0;
+    const imageIds = gallery.map(item =>
+      item.kind === 'existing' ? item.id : idsNuevos[cursor++]
+    );
+
+    try {
+      await api.patch(`/property-images/${propertyId}/reorder`, { imageIds });
+    } catch (error) {
+      toast.warning(`Se guardaron los cambios, pero no se pudo aplicar el orden de las imágenes: ${getErrorMessage(error)}`);
+    }
   };
 
   // ── Submit ──
@@ -293,24 +397,42 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
         supCubierta:      Number(form.supCubierta) || 0,
         antiquity:        Number(form.antiquity) || 0,
         price:            Number(form.price),
+        currency:         form.currency,
+        // Campo vacío → `null`, no `0`: son cosas distintas ("no informadas" vs
+        // "no tiene expensas"), y el detalle público solo muestra la tarjeta
+        // cuando hay un valor real. En el PATCH, mandar `null` explícito es
+        // además la ÚNICA forma de borrar unas expensas ya cargadas: omitir el
+        // campo las dejaría intactas.
+        expensas:         form.expensas === '' ? null : Number(form.expensas),
         property_deed:    form.property_deed,
         tractoAbreviado:  form.tractoAbreviado,
         boleto:           form.boleto,
         garage:           form.garage,
         patio:            form.patio,
+        aptoMascotas:     form.aptoMascotas,
         ...(isEdit && deletedImageIds.length > 0 && { deleteImages: deletedImageIds }),
-        // Portada: id de la imagen existente marcada como cover (solo edición)
+        // Portada: la primera de la galería, si es una imagen que YA existe.
+        //
+        // El reorder de más abajo también fija la portada, así que esto es
+        // redundante en el camino feliz. Se manda igual como red: si el reorder
+        // fallara (red caída entre las dos llamadas), la portada queda correcta
+        // de todos modos, que es el dato que se ve en el catálogo. Si la primera
+        // es una imagen nueva todavía no tiene id, y ahí sí depende del reorder.
         ...(isEdit && (() => {
-          const cover = existingImages.find(i => i.isCover && !deletedImageIds.includes(i.id));
-          return cover ? { setCoverImageId: cover.id } : {};
+          const primera = gallery[0];
+          return primera?.kind === 'existing' ? { setCoverImageId: primera.id } : {};
         })())
       };
 
       const formData = new FormData();
       formData.append('data', JSON.stringify(payload));
 
-      // Agregar imágenes nuevas
-      newImages.forEach(img => {
+      // Los archivos nuevos van EN EL ORDEN DE LA GALERÍA (no en el orden en que
+      // se seleccionaron): `createMany` del backend les asigna `order` según la
+      // posición en este array, así que al CREAR una propiedad el orden queda
+      // bien sin necesidad de ninguna llamada extra.
+      const archivosNuevos = gallery.filter(item => item.kind === 'new');
+      archivosNuevos.forEach(img => {
         formData.append(isEdit ? 'newImages' : 'images', img.file);
       });
 
@@ -326,9 +448,13 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
       const multipartConfig = { headers: { 'Content-Type': undefined } };
 
       if (isEdit) {
-        await api.patch(`/properties/${propertyId}`, formData, multipartConfig);
+        const { data: actualizada } = await api.patch(`/properties/${propertyId}`, formData, multipartConfig);
+        await persistirOrden(actualizada?.images ?? [], archivosNuevos.length);
         toast.success('Propiedad actualizada ✓');
       } else {
+        // Al CREAR no hace falta reordenar: las imágenes se subieron ya en el
+        // orden de la galería y `createMany` les asigna `order = 0..n-1` en ese
+        // mismo orden, con la primera como portada.
         await api.post('/properties', formData, multipartConfig);
         toast.success('Propiedad publicada ✓');
       }
@@ -349,8 +475,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
     }
   };
 
-  const visibleExisting = existingImages.filter(i => !deletedImageIds.includes(i.id));
-  const totalImages = visibleExisting.length + newImages.length;
+  const totalImages = gallery.length;
 
   if (loading) return (
     <div className="flex flex-col gap-4">
@@ -413,8 +538,10 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
                 title: '', description: '', typeOfPropertyId: '', operationType: 'venta',
                 status: 'disponible', provincia: 'Córdoba', localidad: '', barrio: '',
                 direccion: '', zone: '', rooms: '', bathrooms: '', supTotal: '',
-                supCubierta: '', antiquity: '', price: '', property_deed: false,
-                tractoAbreviado: false, boleto: false, garage: false, patio: false
+                supCubierta: '', antiquity: '', price: '', currency: 'USD',
+                expensas: '', property_deed: false,
+                tractoAbreviado: false, boleto: false, garage: false, patio: false,
+                aptoMascotas: false
               });
               toast.success('Borrador descartado');
             }}
@@ -429,10 +556,19 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
       <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
         <SectionTitle icon={ImagePlus} label={`Imágenes (${totalImages}/10)`} />
 
-        {/* Drop zone */}
+        {/* Drop zone — SOLO para archivos.
+            El `types.includes('Files')` distingue el arrastre de un archivo del
+            sistema operativo del arrastre INTERNO de una miniatura para
+            reordenar: sin ese chequeo, pasar una miniatura por encima de esta
+            zona la iluminaba en verde y anunciaba "Soltá las imágenes acá",
+            como si fuera a subirse de nuevo. */}
         <div
           ref={dropRef}
-          onDragOver={e => { e.preventDefault(); setDragging(true); }}
+          onDragOver={e => {
+            if (!e.dataTransfer.types.includes('Files')) return;
+            e.preventDefault();
+            setDragging(true);
+          }}
           onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
@@ -466,94 +602,116 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
           />
         </div>
 
-        {/* Preview grid */}
+        {/* ── PREVISUALIZACIÓN ORDENABLE ──
+            Drag & drop con la API nativa de HTML5 (`draggable` + los eventos
+            `dragstart`/`dragover`/`drop`), sin sumar ninguna dependencia. Con
+            un máximo de 10 miniaturas en una grilla, no hace falta una librería
+            de listas virtualizadas ni animaciones de reflow.
+
+            Ya NO hay botón de portada: la portada es la primera de la fila, la
+            misma invariante que garantiza el backend. Antes eran dos controles
+            que podían contradecirse (una portada marcada con la estrella podía
+            quedar en cualquier posición de la galería). */}
         {totalImages > 0 && (
           <div className="mt-4">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-              Previsualización — hacé click en ⭐ para elegir portada
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+              Previsualización — arrastrá para reordenar
+            </p>
+            <p className="text-xs text-gray-500 mb-3">
+              La primera imagen es la <strong className="text-[#0b7a4b]">portada</strong>: es la que se ve en el catálogo y la que abre el detalle.
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {gallery.map((item, idx) => {
+                const esPortada = idx === 0;
+                const arrastrando = dragIndex === idx;
+                const esDestino = overIndex === idx && dragIndex !== null && dragIndex !== idx;
+                return (
+                  <div
+                    key={item.key}
+                    draggable
+                    onDragStart={(e) => {
+                      setDragIndex(idx);
+                      // Firefox no inicia el arrastre si no hay datos seteados.
+                      // El valor no se usa: el índice de origen vive en el estado.
+                      e.dataTransfer.setData('text/plain', String(idx));
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
+                    onDragOver={(e) => {
+                      // Sin `preventDefault()` el navegador no permite soltar.
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      if (overIndex !== idx) setOverIndex(idx);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      // `stopPropagation` para que el drop no burbujee hasta la
+                      // zona de subida de archivos, que también escucha drops.
+                      e.stopPropagation();
+                      if (dragIndex !== null) moveItem(dragIndex, idx);
+                      endDrag();
+                    }}
+                    onDragEnd={endDrag}
+                    className={`relative group rounded-xl overflow-hidden aspect-square bg-gray-100 cursor-grab active:cursor-grabbing transition-all ${
+                      arrastrando ? 'opacity-40 scale-95' : ''
+                    } ${
+                      esDestino ? 'ring-2 ring-[#0b7a4b] ring-offset-2' : ''
+                    } ${
+                      esPortada ? 'ring-2 ring-amber-400' : ''
+                    }`}
+                  >
+                    {/* `draggable={false}` en la imagen: si no, el navegador
+                        arrastra la IMAGEN en vez del contenedor y el evento
+                        `dragstart` del `<div>` nunca llega con el índice. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={itemSrc(item)}
+                      alt={esPortada ? 'Portada de la propiedad' : `Imagen ${idx + 1} de la propiedad`}
+                      draggable={false}
+                      className="w-full h-full object-cover pointer-events-none"
+                    />
 
-              {/* Imágenes existentes */}
-              {visibleExisting.map(img => (
-                <div key={`ex-${img.id}`} className="relative group rounded-xl overflow-hidden aspect-square bg-gray-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.url} alt="" className="w-full h-full object-cover" />
+                    {/* Overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all pointer-events-none" />
 
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all" />
-
-                  {/* Badge portada */}
-                  {img.isCover && (
-                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-amber-400 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
-                      <Star size={9} fill="white" /> Portada
+                    {/* Número de posición: el orden tiene que ser legible sin
+                        depender de la disposición de la grilla, que cambia con
+                        el ancho de pantalla (2 a 5 columnas). */}
+                    <div className="absolute top-2 left-2 flex items-center gap-1 pointer-events-none">
+                      {esPortada ? (
+                        <span className="flex items-center gap-1 bg-amber-400 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                          <Star size={9} fill="white" /> Portada
+                        </span>
+                      ) : (
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white text-[10px] font-black">
+                          {idx + 1}
+                        </span>
+                      )}
                     </div>
-                  )}
 
-                  {/* Botones */}
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {!img.isCover && (
-                      <button
-                        onClick={() => setExistingCover(img.id)}
-                        title="Establecer como portada"
-                        className="w-7 h-7 rounded-full bg-amber-400 hover:bg-amber-500 flex items-center justify-center text-white transition-all"
-                      >
-                        <Star size={12} />
-                      </button>
+                    {/* Badge "Nueva" solo en las que todavía no se subieron */}
+                    {item.kind === 'new' && (
+                      <div className="absolute bottom-2 left-2 bg-[#0b7a4b] text-white text-[9px] font-black px-2 py-0.5 rounded-full pointer-events-none">
+                        Nueva
+                      </div>
                     )}
+
+                    {/* Asa visual de arrastre */}
+                    <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <GripVertical size={16} className="text-white drop-shadow" />
+                    </div>
+
                     <button
-                    aria-label='a'
-                      onClick={() => removeExisting(img.id)}
-                      className="w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-all"
+                      type="button"
+                      aria-label={`Quitar imagen ${idx + 1}`}
+                      title="Quitar imagen"
+                      onClick={() => removeAt(idx)}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-all opacity-0 group-hover:opacity-100"
                     >
                       <X size={12} />
                     </button>
                   </div>
-                </div>
-              ))}
-
-              {/* Imágenes nuevas */}
-              {newImages.map((img, idx) => (
-                <div key={`new-${idx}`} className="relative group rounded-xl overflow-hidden aspect-square bg-gray-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.preview} alt="" className="w-full h-full object-cover" />
-
-                  {/* Badge nueva */}
-                  <div className="absolute bottom-2 left-2 bg-[#0b7a4b] text-white text-[9px] font-black px-2 py-0.5 rounded-full">
-                    Nueva
-                  </div>
-
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all" />
-
-                  {/* Badge portada */}
-                  {img.isCover && (
-                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-amber-400 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
-                      <Star size={9} fill="white" /> Portada
-                    </div>
-                  )}
-
-                  {/* Botones */}
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {!img.isCover && (
-                      <button
-                        onClick={() => setNewCover(idx)}
-                        title="Establecer como portada"
-                        className="w-7 h-7 rounded-full bg-amber-400 hover:bg-amber-500 flex items-center justify-center text-white transition-all"
-                      >
-                        <Star size={12} />
-                      </button>
-                    )}
-                    <button
-                      aria-label='a'
-                      onClick={() => removeNew(idx)}
-                      className="w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-all"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -659,6 +817,7 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
             { key: 'boleto',          label: 'Con boleto' },
             { key: 'garage',          label: 'Con garage' },
             { key: 'patio',           label: 'Con patio' },
+            { key: 'aptoMascotas',    label: 'Apto mascotas' },
           ].map(({ key, label }) => (
             <button key={key} type="button"
               onClick={() => set(key, !form[key as keyof typeof form])}
@@ -681,18 +840,91 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
       {/* ── PRECIO ── */}
       <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
         <SectionTitle icon={DollarSign} label="Precio" />
-        <Field label="Precio (USD)">
-          <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0b7a4b] font-black text-sm">$</span>
-            {/* Único campo que NO usa <Input>: necesita pl-8 (no px-4) para dejar
-                lugar al "$" superpuesto. Como el proyecto no usa tailwind-merge,
-                pasar pl-8 por className dejaría px-4 y pl-8 compitiendo y el
-                ganador dependería del orden del CSS generado. Se deja explícito. */}
-            <input type="number" min="0" value={form.price} onChange={e => set('price', e.target.value)}
-              className="w-full pl-8 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0b7a4b] focus:bg-white transition-all placeholder:text-gray-400"
-              placeholder="Ej: 85000" />
+
+        {/* El input de precio ocupaba el ancho completo. Ahora comparte fila con
+            el selector de moneda: el monto sin la moneda no dice nada, y verlos
+            juntos evita cargar 85000 pensando en dólares con "Pesos" tildado. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Field label={`Precio (${CURRENCY_OPTIONS.find(c => c.value === form.currency)?.short ?? 'USD'})`}>
+            <div className="relative">
+              {/* El símbolo sigue a la moneda elegida: con "Pesos" tildado
+                  mostrar "US$" sería contradecir el propio formulario. */}
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0b7a4b] font-black text-sm">
+                {form.currency === 'ARS' ? '$' : 'US$'}
+              </span>
+              {/* Único campo que NO usa <Input>: necesita pl-8 (no px-4) para dejar
+                  lugar al símbolo superpuesto. Como el proyecto no usa tailwind-merge,
+                  pasar pl-8 por className dejaría px-4 y pl-8 compitiendo y el
+                  ganador dependería del orden del CSS generado. Se deja explícito.
+                  `pl-12` con "US$", que es más ancho que "$". */}
+              <input type="number" min="0" value={form.price} onChange={e => set('price', e.target.value)}
+                className={`w-full ${form.currency === 'ARS' ? 'pl-8' : 'pl-12'} pr-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0b7a4b] focus:bg-white transition-all placeholder:text-gray-400`}
+                placeholder={form.currency === 'ARS' ? 'Ej: 45000000' : 'Ej: 85000'} />
+            </div>
+          </Field>
+
+          {/* ── MONEDA ──
+              Son checkboxes por pedido explícito, pero el comportamiento es
+              MUTUAMENTE EXCLUYENTE: `set('currency', value)` pisa el valor, no
+              lo togglea, así que tildar uno destilda el otro sin lógica extra.
+              Una propiedad no puede tener dos monedas, y un toggle real
+              permitiría dejar las dos tildadas (o ninguna) y mandar un valor
+              inválido al backend.
+
+              `role="radiogroup"` + `aria-checked`: para un lector de pantalla
+              esto ES un grupo de opciones excluyentes, aunque se dibuje con
+              cuadraditos. Sin eso se anunciarían como casillas independientes. */}
+          <Field label="Moneda">
+            <div role="radiogroup" aria-label="Moneda del precio" className="flex flex-wrap gap-3">
+              {CURRENCY_OPTIONS.map(({ value, label }) => {
+                const active = form.currency === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => set('currency', value)}
+                    className={`flex flex-1 items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                      active
+                        ? 'bg-[#0b7a4b]/10 border-[#0b7a4b]/40 text-[#0b7a4b]'
+                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-[#0b7a4b]/30'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${
+                      active ? 'bg-[#0b7a4b] border-[#0b7a4b]' : 'border-gray-400'
+                    }`}>
+                      {active && <span className="text-white text-[10px] font-black">✓</span>}
+                    </div>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+
+          {/* ── EXPENSAS ──
+              Va en la sección de Precio y no en Características porque es plata,
+              no una característica edilicia. Opcional: una casa no paga
+              expensas, y dejarlo vacío NO bloquea la publicación (el submit solo
+              exige título, tipo, dirección y precio).
+              Ocupa la fila entera en desktop: queda debajo del par
+              precio/moneda, que es la información con la que se relaciona. */}
+          <div className="lg:col-span-2">
+            <Field
+              label="Expensas (opcional)"
+              hint="Monto mensual. Siempre en pesos, aunque el precio esté en dólares."
+            >
+              <div className="relative">
+                {/* Siempre "$": las expensas no siguen a `currency`. */}
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0b7a4b] font-black text-sm">$</span>
+                <input type="number" min="0" value={form.expensas} onChange={e => set('expensas', e.target.value)}
+                  className="w-full pl-8 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0b7a4b] focus:bg-white transition-all placeholder:text-gray-400"
+                  placeholder="Ej: 45000 — dejalo vacío si no tiene" />
+              </div>
+            </Field>
           </div>
-        </Field>
+        </div>
       </div>
 
       {/* Submit */}

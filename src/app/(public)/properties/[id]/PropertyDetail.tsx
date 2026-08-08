@@ -9,6 +9,7 @@ import {
   ChevronRight, User, Calendar, CheckCircle2, XCircle,
   Building2, Navigation, MessageCircle, Send, Pencil,
   Trash2, LogIn, MessageCircleMore, ShieldCheck, Landmark, Eye, EyeOff,
+  PawPrint, Receipt,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BsWhatsapp } from 'react-icons/bs';
@@ -20,6 +21,7 @@ import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { FavoriteButton } from '@/modules/shared/ui/Favoritebutton';
 import { whatsappLink } from '@/modules/shared/lib/contact';
+import { priceParts, formatExpensas } from '@/modules/shared/lib/money';
 import { PropertyCard } from '@/modules/properties/components/PropertyCard';
 import { propertiesService } from '@/modules/properties/services/properties.service';
 import { Property } from '@/modules/properties/interfaces/propertyInterface';
@@ -742,8 +744,8 @@ function SimilarProperties({
 export default function PropertyDetail({ property }: { property: PropertyFull }) {
   const {
     title, description, direccion, localidad, barrio, zone,
-    rooms, bathrooms, garage, patio, property_deed, tractoAbreviado, boleto,
-    supTotal, supCubierta, antiquity, price, operationType, status,
+    rooms, bathrooms, garage, patio, aptoMascotas, property_deed, tractoAbreviado, boleto,
+    supTotal, supCubierta, antiquity, price, currency, expensas, operationType, status,
     typeOfProperty, images = [], agent,
     comments = [], ratings = [], ratingAverage = 0,
     created_at,
@@ -769,8 +771,24 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
     setLiveAverage(updatedAverage);
   }, []);
 
-  const sortedImages = [...images].sort((a, b) => a.isCover ? -1 : b.isCover ? 1 : 0);
+  /**
+   * Las imágenes se muestran EN EL ORDEN QUE MANDA EL BACKEND.
+   *
+   * Antes acá había un `sort` local por `isCover`. Se eliminó por dos motivos:
+   *
+   *  1. El backend ahora persiste el orden que el admin eligió por drag & drop
+   *     (`PropertyImages.order`) y `GET /properties/:id` las devuelve con
+   *     `ORDER BY order ASC, id ASC`. Reordenar acá pisaría esa decisión.
+   *  2. El comparador estaba MAL: `(a, b) => a.isCover ? -1 : b.isCover ? 1 : 0`
+   *     no define un orden consistente (para dos imágenes sin portada devolvía
+   *     0, pero comparaba solo contra `a`), así que el resultado dependía del
+   *     algoritmo interno de `Array.prototype.sort`.
+   *
+   * La portada sigue quedando primera: el backend garantiza `order = 0 ⇔ isCover`.
+   */
+  const sortedImages = images;
   const isAvailable = status === 'disponible';
+  const precio = priceParts(price, currency);
 
   // Query del mapa: ahora existe `direccion` (calle y número) como campo real.
   // Se completa con barrio/localidad para desambiguar la búsqueda en Google Maps.
@@ -943,7 +961,13 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
 
               {/* Specs numéricas: tarjetas propias con el ícono en un círculo
                   tintado y el valor como dato protagonista. Antes eran cuadrados
-                  planos con un fondo `brand-700/8` y todo el mismo peso. */}
+                  planos con un fondo `brand-700/8` y todo el mismo peso.
+
+                  Expensas se suma al final y SOLO si tiene valor: `formatExpensas`
+                  devuelve `null` cuando el campo viene vacío, y el `.filter()`
+                  descarta esa tarjeta. Mostrar "Expensas: —" ocuparía una celda
+                  para no decir nada, y en una casa (que nunca tiene expensas)
+                  aparecería siempre. */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 {[
                   { icon: Bed,       value: rooms,               label: 'Habitaciones' },
@@ -951,7 +975,8 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                   { icon: Maximize,  value: supTotal != null ? `${supTotal} m²` : '—',       label: 'Sup. Total' },
                   { icon: Maximize,  value: supCubierta != null ? `${supCubierta} m²` : '—', label: 'Sup. Cubierta' },
                   { icon: Hourglass, value: `${antiquity} años`, label: 'Antigüedad' },
-                ].map((item, i) => {
+                  { icon: Receipt,   value: formatExpensas(expensas), label: 'Expensas' },
+                ].filter((item) => item.value != null).map((item, i) => {
                   const Icon = item.icon;
                   return (
                     <div
@@ -970,7 +995,29 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                 })}
               </div>
 
-              {/* Comodidades y documentación */}
+              {/* ── COMODIDADES Y DOCUMENTACIÓN ──
+                  Rediseño de contraste. Antes lo que tiene y lo que no se
+                  distinguían por el ícono (✓ vs ✗) y por un verde muy suave
+                  contra un gris casi idéntico: de un vistazo la grilla se leía
+                  como seis tarjetas iguales, y había que ir ítem por ítem
+                  mirando el ícono chico de la derecha para saber qué incluye la
+                  propiedad.
+
+                  Ahora el color hace todo el trabajo y el ícono solo confirma:
+                   - TIENE  → borde `brand-800` (el verde de marca, un paso más
+                     oscuro que el `brand-700` histórico) sobre fondo `brand-50`,
+                     muy claro. Contraste alto entre borde y fondo.
+                   - NO TIENE → borde `red-600` fuerte sobre fondo `red-50`.
+                  Los dos bordes son finitos (1px, el `border` por defecto): la
+                  idea es que se noten por saturación, no por grosor — un borde
+                  grueso convertiría la grilla en un tablero de ajedrez.
+
+                  El rojo NO significa "error": significa "esta propiedad no lo
+                  incluye", que es exactamente el dato que el visitante viene a
+                  buscar. Por eso también se le da un `title` explícito a cada
+                  tarjeta: el color solo no puede ser el único portador de la
+                  información (WCAG 1.4.1), y quien no distingue rojo de verde
+                  sigue teniendo el ✓/✗ y el texto del tooltip. */}
               <p className="mt-8 mb-4 text-[11px] font-bold tracking-[0.14em] text-ink-500 uppercase">
                 Comodidades y documentación
               </p>
@@ -978,6 +1025,7 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                 {[
                   { icon: Car,       label: 'Cochera',           value: garage },
                   { icon: TreePine,  label: 'Patio',             value: patio },
+                  { icon: PawPrint,  label: 'Apto Mascotas',     value: aptoMascotas },
                   // Documentación legal: los tres son independientes y pueden
                   // convivir en la misma propiedad.
                   { icon: FileCheck, label: 'Apto Escritura',    value: property_deed },
@@ -988,23 +1036,24 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                   return (
                     <div
                       key={item.label}
+                      title={item.value ? `Esta propiedad tiene: ${item.label}` : `Esta propiedad NO tiene: ${item.label}`}
                       className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition-all duration-200 ${
                         item.value
-                          ? 'border-brand-700/25 bg-brand-50 text-brand-800'
-                          : 'border-ink-100 bg-surface-mint text-ink-500'
+                          ? 'border-brand-800 bg-brand-50 text-brand-900'
+                          : 'border-red-600 bg-red-50 text-red-800'
                       }`}
                     >
                       <span
                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                          item.value ? 'bg-brand-700 text-white' : 'bg-ink-100 text-ink-500'
+                          item.value ? 'bg-brand-800 text-white' : 'bg-red-600 text-white'
                         }`}
                       >
                         <Icon size={16} />
                       </span>
                       <span className="text-sm font-semibold">{item.label}</span>
                       {item.value
-                        ? <CheckCircle2 size={17} className="ml-auto shrink-0 text-brand-600" />
-                        : <XCircle size={17} className="ml-auto shrink-0 text-ink-500" />}
+                        ? <CheckCircle2 size={17} className="ml-auto shrink-0 text-brand-800" />
+                        : <XCircle size={17} className="ml-auto shrink-0 text-red-600" />}
                     </div>
                   );
                 })}
@@ -1048,9 +1097,11 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                     era solo un número grande sobre blanco con un rótulo gris
                     encima — se leía como un dato más de la lista. Ahora vive en
                     su propio panel verde clarísimo: la etiqueta es una píldora
-                    de marca, el monto está separado del sufijo USD en su propia
-                    línea de base, y debajo va el tipo de operación, que antes
-                    solo aparecía arriba en los badges del título. */}
+                    de marca, el monto está separado del código de moneda en su
+                    propia línea de base, y debajo va el tipo de operación, que
+                    antes solo aparecía arriba en los badges del título.
+                    El símbolo (`$` / `US$`) y el código (`ARS` / `USD`) salen de
+                    `currency`, no de un "USD" escrito a mano como antes. */}
                 <div className="border-b border-brand-100 bg-brand-50/60 px-7 pt-6 pb-6">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-700 px-3 py-1 text-[10px] font-bold tracking-[0.16em] text-white uppercase">
                     <Landmark size={12} />
@@ -1058,9 +1109,9 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                   </span>
                   <p className="mt-3 flex items-baseline gap-1.5 leading-none">
                     <span className="text-[2.6rem] font-black tracking-tight text-brand-800">
-                      ${price.toLocaleString('es-AR')}
+                      {precio.amount}
                     </span>
-                    <span className="text-sm font-bold tracking-wide text-brand-600">USD</span>
+                    <span className="text-sm font-bold tracking-wide text-brand-600">{precio.code}</span>
                   </p>
                   {operationType && (
                     <p className="mt-2.5 text-xs font-semibold text-ink-500">
@@ -1125,6 +1176,10 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                     { label: 'Sup. Total',    value: supTotal != null ? `${supTotal} m²` : undefined },
                     { label: 'Sup. Cubierta', value: supCubierta != null ? `${supCubierta} m²` : undefined },
                     { label: 'Antigüedad',    value: `${antiquity} años` },
+                    // `formatExpensas` devuelve null si no hay valor, y el
+                    // `.filter()` de abajo se encarga: sin expensas cargadas la
+                    // fila no aparece.
+                    { label: 'Expensas',      value: formatExpensas(expensas) ?? undefined },
                   ].filter(i => i.value).map((item) => (
                     <li key={item.label} className="flex items-center justify-between gap-4 border-b border-ink-100 py-2.5 last:border-none">
                       <span className="shrink-0 font-medium text-ink-500">{item.label}</span>

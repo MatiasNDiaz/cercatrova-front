@@ -6,6 +6,7 @@ import { Bed, Toilet, Maximize, Hourglass, MapPin, ArrowRight, Star } from 'luci
 import { Property, PropertyImage } from '../interfaces/propertyInterface';
 import { FavoriteButton } from '@/modules/shared/ui/Favoritebutton';
 import { BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor } from '../lib/badgeStyles';
+import { priceParts } from '@/modules/shared/lib/money';
 
 /**
  * Tarjeta de propiedad del catálogo — vista MOSAICO (Bloque 3 del rediseño).
@@ -21,9 +22,11 @@ import { BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor } from '../lib/
  */
 export const PropertyCard = ({ property }: { property: Property }) => {
   const {
-    id, title, price, rooms, bathrooms, supTotal, antiquity,
+    id, title, price, currency, rooms, bathrooms, supTotal, antiquity,
     localidad, barrio, images, typeOfProperty, operationType, ratingAverage,
   } = property;
+
+  const precio = priceParts(price, currency);
 
   const cover =
     images?.find((img: PropertyImage) => img.isCover)?.url ||
@@ -55,8 +58,8 @@ export const PropertyCard = ({ property }: { property: Property }) => {
           {/* Precio */}
           <div className="absolute bottom-4 left-5">
             <p className="text-2xl font-bold tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]">
-              ${price.toLocaleString('es-AR')}
-              <span className="ml-1.5 text-sm font-semibold text-white/80">USD</span>
+              {precio.amount}
+              <span className="ml-1.5 text-sm font-semibold text-white/80">{precio.code}</span>
             </p>
           </div>
 

@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { DashboardPage, DashboardHeader, ListReveal } from '@/modules/shared/ui/DashboardPage';
 import { ListToolbar, ListSearch, ListSelect, NoMatches } from '@/modules/shared/ui/ListToolbar';
 import { ErrorState } from '@/modules/shared/ui/ErrorState';
+import { formatPriceInline } from '@/modules/shared/lib/money';
 import {
   Heart, MapPin, Bed, Bath, Maximize, Trash2, Home, ArrowRight, ArrowUpDown,
 } from 'lucide-react';
@@ -27,6 +28,8 @@ interface FavoriteProperty {
     localidad: string;
     barrio: string;
     price: number;
+    /** `'ARS' | 'USD'`. Opcional: `priceParts()` cae en USD si falta. */
+    currency?: string;
     operationType: string;
     status: string;
     supTotal: number | null;
@@ -218,7 +221,7 @@ export default function FavoritosPage() {
                       {property.operationType}
                     </span>
                     <p className="absolute bottom-3 left-4 text-lg font-black text-white drop-shadow-lg">
-                      USD {property.price.toLocaleString('es-AR')}
+                      {formatPriceInline(property.price, property.currency)}
                     </p>
                   </Link>
 
