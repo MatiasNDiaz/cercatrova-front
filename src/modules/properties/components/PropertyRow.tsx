@@ -2,13 +2,13 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Bed, Toilet, Maximize, Hourglass, MapPin, Star } from 'lucide-react';
+import { Bed, Toilet, Maximize, Hourglass, MapPin, Star, Receipt } from 'lucide-react';
 import { BsWhatsapp } from 'react-icons/bs';
 import { Property } from '../interfaces/propertyInterface';
 import { FavoriteButton } from '@/modules/shared/ui/Favoritebutton';
 import { whatsappLink } from '@/modules/shared/lib/contact';
 import { BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor } from '../lib/badgeStyles';
-import { priceParts } from '@/modules/shared/lib/money';
+import { priceParts, formatExpensas } from '@/modules/shared/lib/money';
 
 /**
  * Tarjeta de propiedad del catálogo — vista LISTA (Bloque 3 del rediseño).
@@ -25,6 +25,7 @@ export function PropertyRow({ property }: { property: Property }) {
   const {
     id, title, price, currency, rooms, bathrooms, supTotal, supCubierta, antiquity,
     localidad, barrio, description, images, typeOfProperty, operationType, ratingAverage,
+    expensas,
   } = property;
 
   const precio = priceParts(price, currency);
@@ -96,6 +97,12 @@ export function PropertyRow({ property }: { property: Property }) {
           {[
             { icon: Bed, value: rooms, label: 'Hab.' },
             { icon: Toilet, value: bathrooms, label: 'Baños' },
+            // Expensas: sólo si la propiedad tiene valor cargado.
+            // `formatExpensas` devuelve `null` cuando viene vacío, así que el
+            // spread no agrega nada en ese caso — nada que filtrar después.
+            ...(formatExpensas(expensas)
+              ? [{ icon: Receipt, value: formatExpensas(expensas)!, label: 'Expensas' }]
+              : []),
             { icon: Hourglass, value: antiquity, label: 'Años' },
             // En la vista lista hay espacio para las dos superficies
             ...(supTotal != null

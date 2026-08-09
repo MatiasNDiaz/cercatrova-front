@@ -305,6 +305,15 @@ function Sidebar() {
             { href: '/dashboard/notificaciones?tipo=coincidencias', label: 'Según mis preferencias', badge: sinLeer.coincidencias },
             { href: '/dashboard/notificaciones?tipo=precios', label: 'Bajaron de precio', badge: sinLeer.precios },
             { href: '/dashboard/notificaciones?tipo=respuestas', label: 'Respuestas a mis comentarios', badge: sinLeer.respuestas },
+            // Los tres estados de solicitud faltaban acá — la pantalla de
+            // notificaciones ya los tenía como tabs (`FilterTab` en
+            // notificaciones/page.tsx) y `contarSinLeer()` ya los calculaba;
+            // sólo no estaban expuestos como acceso directo del sidebar.
+            // Mismas etiquetas que esos tabs, para que no haya dos nombres
+            // distintos para la misma categoría.
+            { href: '/dashboard/notificaciones?tipo=solicitudes_aceptadas', label: 'Aceptadas', badge: sinLeer.solicitudes_aceptadas },
+            { href: '/dashboard/notificaciones?tipo=solicitudes_rechazadas', label: 'Rechazadas', badge: sinLeer.solicitudes_rechazadas },
+            { href: '/dashboard/notificaciones?tipo=solicitudes_revision', label: 'En revisión', badge: sinLeer.solicitudes_revision },
           ]}
         />
 

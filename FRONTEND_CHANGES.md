@@ -3418,3 +3418,63 @@ de producción (build local con `BACKEND_URL` apuntando a
 - Los thumbnails de la galería del detalle (`sizes="64px"`) y las miniaturas
   de otras vistas menores siguen en calidad por defecto. A esos tamaños el
   ahorro de peso importa más que el detalle perdido.
+
+---
+
+# PARTE 17 — Expensas en la vista lista + estados de solicitud en notificaciones
+
+> Sesión 2026-08-09. Dos cambios puntuales, sin tocar nada más.
+
+## 1) Expensas en la vista LISTA del catálogo (`PropertyRow.tsx`)
+
+Se agregó un chip "Expensas" a la fila de características, **inmediatamente
+después de "Baños"**, usando el mismo `formatExpensas()` que ya existía
+(`shared/lib/money.ts`, usado en el detalle desde la PARTE 12).
+
+- **Sólo si la propiedad tiene expensas cargadas.** `formatExpensas()`
+  devuelve `null` cuando el campo viene vacío, y el mismo patrón de spread
+  condicional que ya usaban `supTotal`/`supCubierta` en este archivo se
+  reusó acá: `...(formatExpensas(expensas) ? [...] : [])`. Sin eso, mostrar
+  "$ 0 EXPENSAS" en una propiedad sin dato cargado sería un dato falso.
+- **No se tocó `PropertyCard.tsx`** (vista mosaico/grilla): el pedido fue
+  explícito en que el chip va únicamente en la vista lista.
+- Ícono `Receipt`, mismo que usa el detalle y el filtro para Expensas —
+  consistencia de iconografía en todo el sitio.
+
+Orden final de la fila: Hab. → Baños → **Expensas** (si aplica) → Años →
+Sup. Total → Sup. Cubierta.
+
+### Verificado con datos reales
+
+Front local en modo producción, `BACKEND_URL` apuntando a
+`inmobiliariacercatrova.com/api`. De las 9 propiedades en catálogo, sólo la
+8 tiene `expensas: 231`. Capturada la vista lista: esa fila —y sólo esa—
+muestra `$ 231 EXPENSAS` entre Baños y Años; las otras 8 no muestran nada
+en su lugar (ni un chip vacío, ni "—").
+
+## 2) Estados de solicitud en el sidebar de notificaciones del usuario
+
+El grupo "Notificaciones" del sidebar (`dashboard/layout.tsx`) sólo listaba
+6 subítems: Todas, Propiedades nuevas, Publicaciones nuevas, Según mis
+preferencias, Bajaron de precio, Respuestas a mis comentarios. Faltaban los
+tres estados de solicitud —**Aceptadas**, **Rechazadas**, **En revisión**—
+que la propia pantalla de notificaciones (`notificaciones/page.tsx`) ya
+tenía como tabs desde antes.
+
+No hizo falta agregar lógica nueva: `contarSinLeer()`
+(`notificaciones/notifShared.ts`, PARTE 14) ya calculaba
+`solicitudes_aceptadas`, `solicitudes_rechazadas` y `solicitudes_revision`
+—se usan en la pantalla para los badges de esos mismos tabs—, sólo no
+estaban expuestos como acceso directo del sidebar. Se agregaron los tres
+`href` con `?tipo=solicitudes_*`, badge de no leídas incluido, y las
+**mismas etiquetas** que ya usan los tabs de la pantalla (Aceptadas /
+Rechazadas / En revisión), para que no haya dos nombres para la misma
+categoría en dos lugares del sitio.
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npx next lint` 0 warnings · `npm run
+build` exit 0 · verificado con datos reales de producción (Expensas
+comprobado visualmente; los 3 subítems de solicitud comparten exactamente
+el mismo mecanismo ya verificado en la PARTE 14 para el resto del grupo,
+que sigue sano tras el agregado).
