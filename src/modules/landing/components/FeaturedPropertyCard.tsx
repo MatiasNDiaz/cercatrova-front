@@ -46,10 +46,15 @@ export function FeaturedPropertyCard({ property }: { property: Property }) {
     >
       {/* ── IMAGEN ── */}
       <div className="relative h-64 w-full shrink-0 overflow-hidden">
+        {/* `quality={95}` — mismo criterio que el detalle (PARTE 15).
+            `object-cover` se mantiene: las 4 tarjetas de Destacadas tienen
+            que quedar a la misma altura, y el modo "foto completa" del
+            detalle desalinearía la fila. */}
         <Image
           src={cover}
           alt={title}
           fill
+          quality={95}
           sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
         />

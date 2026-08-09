@@ -3184,3 +3184,237 @@ los dos layouts.
   (opacidad 0), así que sólo se ve el núcleo verde. Se verificó aparte, con esa
   bandera apagada, que el estilo computado es `ping / 1s / infinite` — el mismo
   que el punto del navbar.
+
+---
+
+# PARTE 15 — Nitidez de la galería: el diagnóstico correcto
+
+> Sesión 2026-08-09. **Corrige el diagnóstico de la PARTE 13**, que era
+> incompleto, y resuelve el problema real. Medido contra las **80 imágenes de
+> producción**, no contra una propiedad de prueba.
+
+## ⚠️ Por qué el fix de la PARTE 13 no alcanzó
+
+La PARTE 13 concluyó que la causa era `quality={75}` y lo subió a 85. Esa
+medición se hizo sobre **una sola propiedad de la base local (id 6), cuyas
+imágenes son de 1536x1024 y 2,5 MB** — la única del sistema con fotos buenas.
+Generalizar desde ahí fue el error.
+
+Auditadas las 80 imágenes de **producción**:
+
+| Medición | Valor |
+|---|---|
+| Ancho de origen: mín / mediana / máx | **261** / **720** / 1414 px |
+| Ya se amplían en pantalla normal (1x) | **60 de 80** |
+| Se amplían en retina (2x) | **80 de 80** |
+| Peso típico | 23–130 KB |
+
+La propiedad 8 tiene sus fotos en **261x261 px**. En el visor de 736x520 eso es
+una ampliación de **x2,82**. Ninguna configuración de compresión puede
+inventar los píxeles que no están en el archivo.
+
+## La comparación pedida: Cloudinary crudo vs next/image
+
+Imagen `id=50` de la propiedad 7 (819x621), contra producción:
+
+| Camino | Peso | Formato | Error vs. original |
+|---|---|---|---|
+| **Cloudinary crudo** | 129,8 KB | jpeg | — (referencia) |
+| next/image `q=75` | 77,4 KB | webp | 2,99 /255 |
+| next/image `q=85` (PARTE 13) | 107,1 KB | webp | 2,01 /255 |
+| **next/image `q=95`** | 129,8 KB | jpeg | **0,00** |
+| Cloudinary `f_auto,q_auto` | 82,1 KB | jpeg | comprime MÁS |
+
+Dos conclusiones que cambian el plan:
+
+1. **A partir de `q=95`, next/image deja de recodificar y devuelve el archivo
+   original tal cual** (mismo peso, mismo formato, error 0). La doble
+   compresión que se sospechaba **existía** —2,01/255 a q=85— y se elimina por
+   completo con un número, sin `unoptimized` (que costaría el `srcset` y el
+   lazy loading).
+2. **Agregar `f_auto,q_auto` a la URL de Cloudinary habría EMPEORADO la
+   imagen**: devuelve 82 KB contra los 130 KB del original. Hoy Cloudinary no
+   optimiza nada (las URLs guardadas son `/upload/v123/...` peladas), así que
+   nunca hubo dos capas compitiendo: había una sola, la de Next.
+
+### Nota sobre el origen de las fotos — afirmación retirada
+
+En el análisis se dijo que las fotos "venían de WhatsApp", por el tope de 960 px
+en el lado largo. **Los metadatos no lo respaldan** y la afirmación se retira:
+ninguna imagen tiene marcador de WhatsApp.
+
+Lo que los metadatos **sí** muestran: medidas irregulares (`819x621`, `846x568`,
+`612x459`, `464x618`, `261x261`) que no salen de una cámara —una cámara da
+`4032x3024` y similares—, `72 dpi` en todas (resolución de pantalla) y EXIF
+borrado en casi todas. Es consistente con imágenes guardadas o descargadas desde
+una pantalla, pero **no se puede determinar con qué herramienta**.
+
+## El fix: encuadre decidido POR FOTO
+
+`quality={95}` (elimina la doble compresión) **más** una decisión de encuadre
+por imagen, en vez de aplicar el mismo `object-fit` a todas.
+
+**La regla**, en `fit()` dentro de `ImageSlider`:
+
+```
+ampliacionCover = max(anchoCaja / anchoFoto, altoCaja / altoFoto)
+ampliacionCover > 1.15  →  object-contain   (foto entera, nítida)
+si no                   →  object-cover     (a sangre, como estaba)
+```
+
+`object-cover` obliga a escalar por el lado que **peor** entra; `object-contain`
+escala por el otro, que siempre es menor o igual. Para una foto vertical la
+diferencia es enorme: de ampliar **x1,59** a **reducir x0,84**.
+
+El umbral de 1,15 deja pasar hasta un 15% de ampliación con `cover`, porque a
+ese nivel no se percibe y conviene el encuadre a sangre.
+
+### Reparto real sobre las 80 fotos de producción
+
+| Encuadre | Cantidad |
+|---|---|
+| Siguen a sangre (`object-cover`) | **45 de 80** |
+| Pasan a foto entera (`object-contain`) | **35 de 80** |
+
+Peor caso corregido: `261x261` pasa de ampliarse **x2,82** a **x1,99**. Las
+verticales `464x618` y `480x640` pasan de **x1,59 / x1,53** a **reducirse**
+(x0,84 / x0,81), o sea de borrosas a nítidas.
+
+### Cómo se miden los píxeles reales
+
+Del `<img>` ya cargado (`naturalWidth/Height`) en `onLoad`, y **no** de la base:
+`PropertyImages` no guarda dimensiones y agregarlas implicaba migración +
+backfill de 80 filas. Además esto mide lo que el navegador **efectivamente
+recibió** —`min(variante pedida, ancho del original)`— que es justo el número
+que decide si alcanza.
+
+El tamaño del visor se mide con un `ref` en vez de hardcodear 736x520, para que
+la decisión también sea correcta en mobile, donde el hueco es casi cuadrado
+(100vw x 420) y por lo tanto mucho más exigente con las verticales.
+
+Mientras la foto no cargó se asume `cover`: es el caso más común (45 de 80) y
+evita que la galería arranque con bandas y salte al encuadre definitivo.
+
+### El fondo difuminado
+
+Las bandas que deja `object-contain` se rellenan con una copia ampliada y
+borroneada de la misma foto, en vez de dos barras negras. Se pide diminuta
+(`sizes="32px"`, `quality={20}`): está desenfocada 24px, así que más resolución
+no se vería y sólo sumaría peso. `scale-110` porque `blur` samplea fuera del
+elemento y sin agrandarlo se ven los bordes lavados.
+
+## Verificación
+
+Front local en modo producción con `BACKEND_URL` apuntando a la API de
+producción, para renderizar **las fotos reales** con el código nuevo, y captura
+del sitio en vivo para comparar:
+
+| Propiedad | Fotos | Antes (en vivo) | Ahora |
+|---|---|---|---|
+| 8 | `261x261` | ampliada x2,82, cartelería ilegible | foto entera, se leen los carteles y las rejas |
+| 7 | `819x621` | a sangre | **a sangre igual** (no cambia: no lo necesita) |
+
+## Cambio aparte — orden de los accesos rápidos
+
+En la barra del detalle se intercambiaron **"Ver Valoraciones"** y **"Ver
+dirección exacta"**. Orden nuevo: Volver al catálogo · Ver Valoraciones · Ver
+Comentarios · Ver dirección exacta.
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npx next lint` 0 warnings · `npm run build`
+exit 0 · verificado con las fotos reales de producción.
+
+## ⚠️ Lo que este fix NO puede hacer
+
+**El techo lo pone el archivo.** Una foto de 261x261 sigue teniendo 261 píxeles:
+ahora se aprovechan todos y se ve mucho mejor, pero no va a tener el detalle de
+una foto de 2000 px. Para nitidez real en esas propiedades hay que **volver a
+subir las fotos en su resolución original**.
+
+## Anotado, NO aplicado
+
+- **Las tarjetas del catálogo** (`PropertyCard`, `PropertyRow`,
+  `FeaturedPropertyCard`) siguen en `quality` por defecto (75) y `object-cover`
+  fijo. Ahí el recorte uniforme es necesario para que la grilla no se
+  desalinee, así que la solución del detalle no se puede trasladar tal cual.
+  Subirles la calidad sí es trasladable, si se quiere.
+- **Aviso al subir fotos chicas** en el formulario del admin (detectar el ancho
+  real al seleccionar el archivo y advertir si es menor a ~1200 px). Ataca la
+  causa de raíz; quedó fuera de esta tanda.
+
+---
+
+# PARTE 16 — Calidad de imagen en las tarjetas del catálogo
+
+> Sesión 2026-08-09. Extiende el fix de nitidez de la PARTE 15
+> (`quality={95}` en next/image) a las tarjetas del catálogo:
+> `PropertyCard` (grid), `PropertyRow` (lista) y `FeaturedPropertyCard`
+> (Destacadas de la landing). A diferencia del detalle, acá el recorte
+> uniforme (`object-cover`) se mantiene sin cambios — una grilla necesita
+> que todas las tarjetas midan lo mismo, y el modo "foto completa + fondo
+> difuminado" de la PARTE 15 la desalinearía.
+
+## El cambio
+
+Ninguno de los tres componentes tenía `quality` explícito en su `<Image>`,
+así que los tres estaban en el default de Next (**75**) — la misma causa
+raíz que en el detalle. Se agregó `quality={95}` a los tres, sin tocar
+`sizes`, `object-cover` ni ningún otro comportamiento.
+
+| Componente | Uso | Cambio |
+|---|---|---|
+| `PropertyCard.tsx` | Catálogo, vista grilla | `quality={95}` |
+| `PropertyRow.tsx` | Catálogo, vista lista | `quality={95}` |
+| `FeaturedPropertyCard.tsx` | Destacadas de la landing | `quality={95}` |
+
+## Verificación — con matices, no una repetición mecánica del detalle
+
+Se comparó la tarjeta de la propiedad 8 (la de fotos `261x261`, la más
+comprometida del catálogo) entre el sitio en producción y el build local
+con el fix, mismas coordenadas de recorte. **Visualmente, a tamaño de
+tarjeta (~350px), la diferencia es mucho más sutil que en el detalle.**
+
+La causa está en cómo responde next/image cuando el ancho pedido supera al
+original: en el detalle (819px de fuente, casilla de 736px) el ancho pedido
+es *menor*, así que hay reescalado real y `quality` decide cuántos
+artefactos de compresión sobreviven a ese reescalado — ahí la diferencia
+es grande. En el catálogo, con fuentes de 261px y anchos pedidos de
+384-640px (los breakpoints de Next), el optimizador de imágenes de Next
+**no agranda más allá del original** (`withoutEnlargement`): la salida
+sigue midiendo 261x261 sin importar qué ancho se pida.
+
+Eso NO vuelve inútil el cambio — sigue habiendo una recompresión de esos
+261x261 píxeles, y ahí `quality` importa igual:
+
+| Ancho pedido | q | Salida | Peso |
+|---|---|---|---|
+| 384 / 640 px | 75 (antes) | 261x261 webp | **15,9 KB** |
+| 384 / 640 px | **95 (ahora)** | 261x261 webp | **33,2 KB** |
+
+Más del doble de información conservada en el mismo recuadro de píxeles —
+menos artefactos de bloque que el navegador después magnifica al escalar
+por CSS (`object-cover`) para llenar la tarjeta. Es una mejora real, pero
+de un orden distinto a la del detalle: ahí se pasó de ampliar x2,73 a
+reducir x0,54 (una foto distinta); acá se pasa de una compresión con
+artefactos a una casi sin pérdida, sobre la MISMA resolución nativa.
+
+⚠️ **Honesto: en una captura de pantalla a tamaño de tarjeta, esta mejora
+es difícil de ver a simple vista** — se comprobó comparando los mismos
+píxeles recortados de ambas versiones. El techo real para esa propiedad
+sigue siendo el mismo que se documentó en la PARTE 15: son 261 píxeles de
+origen, y ninguna calidad de compresión agrega detalle que no estaba en el
+archivo.
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npx next lint` 0 warnings · `npm run
+build` exit 0 · verificado contra next/image sirviendo las imágenes reales
+de producción (build local con `BACKEND_URL` apuntando a
+`inmobiliariacercatrova.com/api`).
+
+## Anotado, NO aplicado
+
+- Los thumbnails de la galería del detalle (`sizes="64px"`) y las miniaturas
+  de otras vistas menores siguen en calidad por defecto. A esos tamaños el
+  ahorro de peso importa más que el detalle perdido.

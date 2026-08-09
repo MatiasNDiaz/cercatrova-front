@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -179,9 +179,73 @@ function formatDate(dateStr?: string) {
   return fechaLarga(dateStr);
 }
 
+/**
+ * Cuánto se toleraría AGRANDAR una foto antes de preferir mostrarla entera.
+ *
+ * 1.15 = hasta un 15% de ampliación se deja pasar con `object-cover`, porque a
+ * ese nivel no se percibe y conviene el encuadre a sangre. De ahí para arriba
+ * la pérdida se nota y gana la nitidez.
+ */
+const TOLERANCIA_AMPLIACION = 1.15;
+
 // ── SLIDER ────────────────────────────────────────────────────────────────────
 function ImageSlider({ images, title }: { images: PropertyImage[]; title: string }) {
   const [current, setCurrent] = useState(0);
+  const cajaRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Píxeles reales que trajo cada foto, por id.
+   *
+   * Se leen del `<img>` ya cargado (`naturalWidth/Height`) y no de la base: la
+   * entidad `PropertyImages` del backend no guarda dimensiones, y agregarlas
+   * habría implicado migración + backfill de 80 filas. Además esto mide lo que
+   * el navegador **efectivamente recibió** —que es `min(variante pedida, ancho
+   * del original)`— que es justo el número que decide si alcanza o no.
+   */
+  const [medidas, setMedidas] = useState<Record<number, { w: number; h: number }>>({});
+  const [caja, setCaja] = useState({ w: 736, h: 520 });
+
+  // Tamaño real del visor. Se mide en vez de hardcodear 736x520 para que la
+  // decisión también sea correcta en mobile, donde el hueco es casi cuadrado
+  // (100vw x 420) y por lo tanto mucho más exigente con las fotos verticales.
+  useEffect(() => {
+    const medirCaja = () => {
+      const r = cajaRef.current?.getBoundingClientRect();
+      if (r?.width) setCaja({ w: r.width, h: r.height });
+    };
+    medirCaja();
+    window.addEventListener('resize', medirCaja);
+    return () => window.removeEventListener('resize', medirCaja);
+  }, []);
+
+  const medir = useCallback((id: number, el: HTMLImageElement) => {
+    const { naturalWidth: w, naturalHeight: h } = el;
+    if (!w || !h) return;
+    setMedidas((prev) => (prev[id]?.w === w && prev[id]?.h === h ? prev : { ...prev, [id]: { w, h } }));
+  }, []);
+
+  /**
+   * Encuadre de UNA foto: a sangre si le sobran píxeles, entera si no.
+   *
+   * `object-cover` obliga a escalar por el lado que peor entra
+   * (`max(cajaW/w, cajaH/h)`). Si ese número pasa de 1, el navegador está
+   * inventando píxeles y ahí es donde se pierden las líneas de las lozas.
+   * `object-contain` escala por el otro lado (`min(...)`), que siempre es menor
+   * o igual — nunca amplía más que `cover`, y en las verticales amplía
+   * MUCHÍSIMO menos (medido: x2.73 → x0.54).
+   *
+   * Mientras la foto no cargó se asume `cover`: es el caso más común y evita
+   * que la galería arranque con bandas y salte al encuadre definitivo.
+   */
+  const fit = useCallback(
+    (img: PropertyImage): 'cover' | 'contain' => {
+      const m = medidas[img.id];
+      if (!m) return 'cover';
+      const ampliacionCover = Math.max(caja.w / m.w, caja.h / m.h);
+      return ampliacionCover > TOLERANCIA_AMPLIACION ? 'contain' : 'cover';
+    },
+    [medidas, caja],
+  );
 
   if (!images.length) return (
     <div className="flex h-96 w-full items-center justify-center rounded-3xl bg-ink-100">
@@ -196,69 +260,72 @@ function ImageSlider({ images, title }: { images: PropertyImage[]; title: string
     // Sombra aliviada: antes era `0_20px_50px_-24px` verde y caía como un
     // bloque pesado debajo de la galería.
     <div className="relative w-full overflow-hidden rounded-3xl border border-ink-100 bg-ink-950 shadow-[0_2px_4px_-2px_rgba(10,12,11,0.08),0_12px_28px_-16px_rgba(10,12,11,0.28)]">
-      <div className="relative h-105 w-full md:h-130">
+      <div ref={cajaRef} className="relative h-105 w-full md:h-130">
         {images.map((img, i) => (
           <div key={img.id} className={`absolute inset-0 transition-opacity duration-500 ${i === current ? 'opacity-100' : 'opacity-0'}`}>
-            {/* ── CALIDAD DE LA GALERÍA — medido, no estimado ──────────────
-                `quality={85}`. El default de next/image es **75**, y era la
-                causa real de que las fotos se vieran borrosas en el detalle.
+            {/* Fondo difuminado — SÓLO en las fotos que se muestran enteras.
+                Rellena las bandas que deja `object-contain` con una copia
+                ampliada y borroneada de la misma foto, en vez de dos barras
+                negras. Se pide diminuta (`sizes="32px"`, `quality={20}`):
+                está desenfocada 24px, así que más resolución no se vería y
+                sólo sumaría peso. `scale-110` porque `blur` samplea fuera del
+                elemento y sin agrandarlo se ven los bordes lavados. */}
+            {fit(img) === 'contain' && (
+              <Image
+                src={img.url}
+                alt=""
+                aria-hidden
+                fill
+                sizes="32px"
+                quality={20}
+                className="scale-110 object-cover blur-2xl"
+              />
+            )}
 
-                Se descartaron antes las otras dos hipótesis, con evidencia:
-                  · Las URLs que guarda el backend NO tienen transformaciones de
-                    Cloudinary (son `/upload/v123/properties/xxx.png` peladas,
-                    sin `q_auto:low` ni `w_`).
-                  · Los archivos originales miden 1536x1024 — de sobra para el
-                    tamaño en pantalla. Tampoco se estaba usando la URL de una
-                    miniatura: es la misma URL original.
+            {/* ── CALIDAD Y ENCUADRE — medido sobre las 80 fotos reales ─────
+                `quality={95}` y NO 85. A partir de 95 next/image deja de
+                recodificar y **devuelve el archivo original tal cual**: medido
+                contra producción, q=95 da el mismo peso, el mismo formato y un
+                error de 0.00/255 respecto de la URL cruda de Cloudinary. Con
+                q=85 el error era 2.01/255. O sea: la doble compresión que se
+                sospechaba existía, y a 95 desaparece del todo sin necesidad de
+                `unoptimized` (que perdería el srcset y el lazy loading).
 
-                Lo que sí pasaba: next/image **recodifica el PNG a WebP**, y a
-                q=75 sobre fotos de arquitectura (líneas de revestimiento,
-                travesaños de ventanas, tejas) el emborronamiento se ve a simple
-                vista. Medido sobre una propiedad real, recortando la misma
-                región y comparando contra el original:
+                ⚠️ NO se agregó `f_auto,q_auto` en la URL de Cloudinary: medido,
+                esa transformación devuelve 82 KB contra los 130 KB del
+                original, o sea comprime MÁS. Hoy Cloudinary no está
+                optimizando nada (las URLs guardadas son `/upload/v123/...`
+                peladas), así que nunca hubo dos capas compitiendo: había una
+                sola, la de Next.
 
-                  q=75 → 170 KB · error medio 3.58/255   ← lo que había
-                  q=80 → 207 KB · error medio 3.28/255
-                  q=85 → 252 KB · error medio 2.98/255   ← elegido
-                  q=90 → 323 KB · error medio 2.71/255
+                ── El encuadre, que es el 90% del problema ──
+                La causa dominante no era la compresión sino la RESOLUCIÓN de
+                los archivos. Auditadas las 80 imágenes de producción: ancho
+                mínimo 261 px, mediana 720 px; 60 de 80 ya se agrandan en
+                pantalla normal. Una foto vertical de 540x960 metida con
+                `object-cover` en este hueco (736x520) se agranda x2.73 y se
+                recorta el 60%.
 
-                Se eligió 85 y no 90 porque visualmente son indistinguibles
-                entre sí (los dos recuperan el detalle fino que q=75 pierde) y
-                85 pesa 22% menos. Importa: las 5 fotos de la galería están
-                todas en el DOM desde el arranque —el slider las superpone con
-                `opacity`, no las monta bajo demanda— así que el navegador se
-                las baja todas, y cada KB se multiplica por 5.
+                Por eso el encuadre se decide POR FOTO (ver `fit()`): las que
+                tienen píxeles de sobra siguen a sangre con `object-cover` —que
+                es como se ve mejor y es el encuadre elegido— y sólo las que no
+                llegan pasan a `object-contain`, donde en vez de agrandarse se
+                REDUCEN y quedan nítidas.
 
-                ── `sizes`: el valor anterior (`62vw`) era incorrecto ──
-                62vw sólo coincide con el ancho real en el breakpoint `lg`
-                (1024px). De ahí para arriba la columna NO sigue creciendo: el
-                contenedor tiene `max-w-6xl` (1152px), así que la galería se
-                clava en ~736px, mientras que 62vw de un monitor de 1920 da
-                1190px. El navegador pedía una variante 60% más grande de la que
-                podía mostrar.
-
-                Se pone `800px` y no `736px` a propósito: con `object-cover`
-                sobre un contenedor de 520px de alto, la imagen se escala por
-                ALTURA (la fuente es 3:2, el contenedor 1.42:1) y se recorta a
-                los costados, así que hacen falta ~780px de ancho de imagen para
-                cubrirlo. 800 deja un margen chico sin volver a sobrepedir.
-
-                ⚠️ Limitación conocida que queda: en mobile (`100vw`) el
-                contenedor es casi cuadrado (100vw x 420px) y `object-cover`
-                necesita ~1.6x el ancho del viewport, pero `sizes` sólo puede
-                declarar el ancho. En un teléfono de 390px con DPR 3 el
-                navegador pide ~1200px cuando le vendrían bien ~1900. Se deja
-                así en vez de poner un `170vw` (legal pero críptico): con q=85 la
-                diferencia ya no se nota, y forzar la variante de 1536px en cada
-                visita desde el celular es peor negocio. */}
+                `sizes="800px"`: la galería se clava en ~736 px por el
+                `max-w-6xl` del contenedor, sin importar cuán ancho sea el
+                monitor. El `62vw` que había antes pedía 1190 px en una pantalla
+                de 1920 — una variante 60% más grande de la que se puede
+                mostrar. */}
             <Image
               src={img.url}
               alt={`${title} - foto ${i + 1}`}
               fill
               sizes="(max-width: 1024px) 100vw, 800px"
-              quality={85}
-              className="object-cover"
+              quality={95}
+              className={fit(img) === 'contain' ? 'object-contain' : 'object-cover'}
               priority={i === 0}
+              onLoad={(e) => medir(img.id, e.currentTarget)}
             />
           </div>
         ))}
@@ -884,10 +951,14 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
 
             <motion.span variants={QUICK_LINK_ITEM} className="text-ink-400" aria-hidden>|</motion.span>
 
+            {/* Valoraciones y "Ver dirección exacta" están intercambiados
+                respecto del orden original, por pedido: valoraciones queda en
+                el 2º lugar (el más visible después de "Volver al catálogo") y
+                la dirección pasa al último. */}
             <motion.div variants={QUICK_LINK_ITEM}>
-              <a href="#mapa-ubicacion" onClick={scrollTo('mapa-ubicacion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700`}>
-                <MapPin size={16} className="shrink-0 text-red-600 transition-transform duration-300 ease-out group-hover:scale-110" />
-                Ver dirección exacta
+              <a href="#valoracion" onClick={scrollTo('valoracion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700`}>
+                <Star size={16} className="shrink-0 fill-amber-400 text-amber-500 transition-transform duration-300 ease-out group-hover:scale-110" />
+                Ver Valoraciones
               </a>
             </motion.div>
 
@@ -903,9 +974,9 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
             <motion.span variants={QUICK_LINK_ITEM} className="text-ink-400" aria-hidden>|</motion.span>
 
             <motion.div variants={QUICK_LINK_ITEM}>
-              <a href="#valoracion" onClick={scrollTo('valoracion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700`}>
-                <Star size={16} className="shrink-0 fill-amber-400 text-amber-500 transition-transform duration-300 ease-out group-hover:scale-110" />
-                Ver Valoraciones
+              <a href="#mapa-ubicacion" onClick={scrollTo('mapa-ubicacion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700`}>
+                <MapPin size={16} className="shrink-0 text-red-600 transition-transform duration-300 ease-out group-hover:scale-110" />
+                Ver dirección exacta
               </a>
             </motion.div>
           </motion.div>
