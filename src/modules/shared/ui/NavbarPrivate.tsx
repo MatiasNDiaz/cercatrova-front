@@ -137,7 +137,7 @@ function UserPanelItems({
 const propiedadesLinks = [
   { label: "Venta",     href: "/properties?operationType=venta" },
   { label: "Alquiler",  href: "/properties?operationType=alquiler" },
-  { label: "Terrenos",  href: "/properties?typeOfPropertyId=5" },
+  { label: "Terrenos",  href: "/properties?typeOfPropertyId=4" },
   { label: "Ver todas", href: "/properties" },
 ];
 

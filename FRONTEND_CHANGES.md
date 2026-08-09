@@ -1492,7 +1492,7 @@ Responde al pedido de que *"si desde la navbar ponemos ventas/alquileres se mues
 resultados de filtros"* y de que *"limpiar filtros cambie la URL a mostrar todas"*.
 
 - **El problema real:** los links del navbar (`/properties?operationType=venta`,
-  `?typeOfPropertyId=5`) **sí** filtraban correctamente — el server component los lee de
+  `?typeOfPropertyId=4`) **sí** filtraban correctamente — el server component los lee de
   `searchParams` y el toggle refleja el estado. Pero salvo el toggle de operación, el resto
   (ej. "Terrenos") no tenía **ninguna señal visible**: el catálogo mostraba menos propiedades
   sin decir por qué.
