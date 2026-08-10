@@ -48,7 +48,7 @@ const slides = [
     id: 2,
     // Archivo LOCAL de `public/` (no Unsplash): estudiante de espaldas en una
     // calle a contraluz. Estaba sin usar en el proyecto.
-    image: '/buenpastor.png',
+    image: '/hipolitoYrigoyen.png',
     title: 'Viví donde todo sucede',
     description:
       'Nueva Córdoba te conecta con shoppings, gastronomía, universidades y espacios verdes en minutos.',
@@ -56,7 +56,7 @@ const slides = [
   {
     id: 3,
     // Casa con jardín cuidado y luz de día plena (nada de atardecer).
-    image: 'https://img.magnific.com/foto-gratis/adorables-padres-hijos-casa_23-2148392255.jpg?t=st=1785150370~exp=1785153970~hmac=d728151a74f76f1c00a805e10bba8b0e22b543b8853e6faeb67aea053b1cc320&w=1480',
+    image: '/HappyFamili.png',
     title: 'Espacios para crecer en familia',
     description:
       'Departamentos amplios y funcionales en las ubicaciones más estratégicas de la ciudad.',
@@ -65,7 +65,7 @@ const slides = [
     id: 4,
     // Casa moderna con galería y muebles de exterior: las "señales de vida"
     // del brief, con luz de día.
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2400&auto=format&fit=crop',
+    image: '/CasaSider.png',
     title: 'Invertí con visión de futuro',
     description:
       'Propiedades con alta demanda y excelente proyección de valor en Córdoba capital.',

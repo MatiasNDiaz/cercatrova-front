@@ -51,6 +51,12 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+       {
+        protocol: 'https',
+        hostname: 'www.destinocordoba.com.ar',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   // Proxy: el navegador le pega a /api/* (mismo dominio que el frontend),
