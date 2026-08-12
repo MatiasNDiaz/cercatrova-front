@@ -46,15 +46,31 @@ export function FeaturedPropertyCard({ property }: { property: Property }) {
     >
       {/* ── IMAGEN ── */}
       <div className="relative h-64 w-full shrink-0 overflow-hidden">
-        {/* `quality={95}` — mismo criterio que el detalle (PARTE 15).
-            `object-cover` se mantiene: las 4 tarjetas de Destacadas tienen
-            que quedar a la misma altura, y el modo "foto completa" del
-            detalle desalinearía la fila. */}
+        {/* ⚠️ SIN `quality` explícito (default 75) — se REVIRTIÓ el `quality={95}`
+            que tenía, y por medición, no por gusto.
+
+            A partir de q=85 el optimizador de Next deja de recodificar y
+            **devuelve el archivo original tal cual**. En el detalle eso es lo
+            deseado (evita la doble compresión sobre una foto que se ve a
+            pantalla completa). Acá es lo contrario: la tarjeta mide ~380px en
+            móvil, y el passthrough sirve el JPEG original entero, sin
+            redimensionar y sin convertir a WebP.
+
+            Medido sobre una imagen real de Destacadas, al ancho que pide un
+            móvil (w=828):
+              q=75 → 134,3 KB  webp   ← default, elegido
+              q=80 → 158,1 KB  webp
+              q=85 → 165,9 KB  jpeg   ← passthrough: más pesado Y formato viejo
+              q=95 → 165,9 KB  jpeg
+
+            Lighthouse lo atribuía a estas 3 imágenes: 322 KiB en
+            "uses-responsive-images" + 108 KiB en "modern-image-formats". El
+            beneficio visual del q alto acá ya se había medido como
+            imperceptible a tamaño de tarjeta. */}
         <Image
           src={cover}
           alt={title}
           fill
-          quality={95}
           sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
         />

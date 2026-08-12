@@ -223,7 +223,10 @@ export default function Resenas() {
         ))}
       </Swiper>
 
-      <div className="reviews-dots mt-4 flex justify-center gap-2" />
+      {/* `gap-0.5` y no `gap-2`: cada punto ocupa ahora una caja fija de 26px
+          (ver `.review-dot` abajo), así que el aire entre puntos ya lo aporta
+          el propio scaleX. */}
+      <div className="reviews-dots mt-4 flex justify-center gap-0.5" />
 
       <style>{`
         /* TODAS las tarjetas con la misma altura (la de la más larga).
@@ -251,17 +254,38 @@ export default function Resenas() {
         @media (prefers-reduced-motion: reduce) {
           .reviews-swiper .swiper-slide { opacity: 1; transition: none; }
         }
+        /* ⚠️ Se anima con transform: scaleX, NO con width.
+           Lighthouse marcaba estos dos puntos en "avoid non-composited
+           animations" con el motivo exacto "Unsupported CSS Property: width":
+           animar el ancho obliga a recalcular layout en el hilo principal en
+           cada cambio de slide, y el carrusel tiene autoplay — o sea que pasaba
+           cada pocos segundos, indefinidamente.
+
+           scaleX corre en el compositor y no toca el layout. El truco para que
+           el resultado se vea igual: el punto SIEMPRE ocupa 26px de ancho, y en
+           reposo se comprime a 8/26 = 0.308. Como el ancho de la caja no
+           cambia, la fila de puntos tampoco se mueve al pasar de slide — que
+           además arregla un salto lateral que el ancho animado provocaba.
+
+           El gap del contenedor bajó de 8px (gap-2) a 2px (gap-0.5) para
+           compensar: los puntos comprimidos dejan ~9px de aire a cada lado
+           dentro de su propia caja, así que con el gap anterior quedaban
+           demasiado separados.
+
+           (Recordatorio: NADA de backticks en estos comentarios — cortan el
+           template literal que los contiene.) */
         .review-dot {
           display: block;
-          width: 8px;
+          width: 26px;
           height: 8px;
           border-radius: 999px;
           background: #b0e2c8;
           cursor: pointer;
-          transition: width 0.4s ease, background 0.4s ease;
+          transform: scaleX(0.308);
+          transition: transform 0.4s ease, background 0.4s ease;
         }
         .review-dot-active {
-          width: 26px;
+          transform: scaleX(1);
           background: #0b7a4b;
         }
       `}</style>

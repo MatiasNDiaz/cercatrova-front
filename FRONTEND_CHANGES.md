@@ -3478,3 +3478,173 @@ build` exit 0 · verificado con datos reales de producción (Expensas
 comprobado visualmente; los 3 subítems de solicitud comparten exactamente
 el mismo mecanismo ya verificado en la PARTE 14 para el resto del grupo,
 que sigue sano tras el agregado).
+
+---
+
+# PARTE 18 — Performance mobile: medido con Lighthouse, no estimado
+
+> Sesión 2026-08-09. Se corrió **Lighthouse localmente** (mobile, throttling
+> simulado) contra producción para tener la línea base, y contra el build local
+> después de cada cambio. Todos los números de acá salen de esas corridas.
+
+## ⚠️ El Bloque 1 partía de una premisa que ya no era cierta
+
+El pedido asumía que un loader con three.js corría en cada transición de
+página. **No existe ningún `loading.tsx` en el proyecto**: el de `(public)/` se
+eliminó en la PARTE 13 para arreglar un soft 404. Sin ese archivo,
+`Loadingpage.tsx` y `Escena3D.tsx` quedaron **sin importadores**, o sea código
+muerto que el tree-shaking ya descartaba.
+
+Verificado por dos vías independientes:
+- `grep` sobre los chunks compilados: cero coincidencias de `WebGLRenderer` /
+  `BufferGeometry`.
+- First Load JS de `/`: 266 kB. Con three en el camino crítico serían ~400 kB.
+
+**Ahorro real de sacar three.js: 0 kB.** Igual se hizo la limpieza (609 líneas
+muertas, 3 keyframes CSS huérfanos, `three` y `@types/three` desinstalados):
+mejora el repo y el tiempo de `npm install`, no el bundle.
+
+⚠️ **NO se agregó ningún `loading.tsx` de reemplazo.** Volver a poner uno en
+`(public)/` reintroduce el soft 404 (Google recibiendo 200 en propiedades
+inexistentes). Queda anotado en `properties/[id]/page.tsx`.
+
+⚠️ Casi se borra `loader-in` junto con los otros keyframes: **sigue en uso** en
+`NavbarPrivate.tsx` (panel de cuenta y backdrop mobile). Se conservó.
+
+## Lo que SÍ movió la aguja
+
+### 1. El favicon pesaba 1,4 MB — el 60% del payload de la landing
+
+Medido con captura de red real (CDP, móvil 412px DPR2, sin caché):
+`/icon.png?v=1` = **1.393,9 KiB**, el recurso más pesado de la página por
+lejos.
+
+| Archivo | Antes | Después |
+|---|---|---|
+| `src/app/icon.png` | 1254x1254, **1.393 KB** | 256x256 con paleta, **29,5 KB** |
+| `public/favicon.ico` | 1408x736 (¡ni cuadrado!), **1.026 KB** | 48x48, **4,7 KB** |
+
+Se probaron seis combinaciones de tamaño/paleta antes de elegir: 512 con paleta
+daba 100,8 KB, 192 daba 17,8 KB. **256 con paleta (29,5 KB)** es el punto donde
+el ícono sigue nítido en cualquier tamaño de pestaña y pesa 47 veces menos.
+Verificado visualmente que el logo no se degradó.
+
+⚠️ Este repo **no tiene git**, así que los binarios originales se respaldaron
+antes de sobrescribirlos.
+
+### 2. Se revirtió el `quality={95}` de las tarjetas — era una regresión propia
+
+Lighthouse atribuía **322 KiB** (`uses-responsive-images`) + **108 KiB**
+(`modern-image-formats`) a tres imágenes de Destacadas. Son exactamente las que
+la PARTE 16 puso en `quality={95}`.
+
+Medido sobre una imagen real, al ancho que pide un móvil (w=828):
+
+| quality | Peso | Formato |
+|---|---|---|
+| **75 (default, elegido)** | **134,3 KB** | webp |
+| 80 | 158,1 KB | webp |
+| 85 | 165,9 KB | **jpeg — passthrough** |
+| 95 (lo que había) | 165,9 KB | jpeg |
+
+**A partir de q=85 el optimizador de Next deja de recodificar y devuelve el
+archivo original entero**: sin redimensionar y sin convertir a WebP. En el
+detalle eso es lo deseado (evita la doble compresión en una foto a pantalla
+completa); en una tarjeta de ~380px es lo peor de ambos mundos.
+
+Se quitó el `quality` explícito de `PropertyCard`, `PropertyRow` y
+`FeaturedPropertyCard`. **El detalle mantiene `quality={95}`** — ahí sí está
+medido y justificado (PARTE 15).
+
+### 3. `priority` en una imagen que está 7 secciones más abajo
+
+`Nosotros.tsx` tenía `priority={index === 0}`. Esa sección es la **7ª** de la
+landing: la foto (136 KB) competía por ancho de banda con el hero, que es el
+elemento LCP real. Se quitó; ahora usa lazy loading.
+
+### 4. Animación no compositable en los puntos del carrusel de reseñas
+
+Lighthouse marcaba dos `<span class="review-dot">` con el motivo exacto
+**"Unsupported CSS Property: width"**. Animar el ancho recalcula layout en el
+hilo principal, y el carrusel tiene autoplay: pasaba cada pocos segundos,
+indefinidamente.
+
+Pasó a `transform: scaleX` (compositable). El punto ahora ocupa siempre 26px y
+en reposo se comprime a 0.308; el `gap` del contenedor bajó de 8px a 2px para
+compensar. Efecto colateral bueno: la fila de puntos ya no se corre al cambiar
+de slide.
+
+⚠️ Al escribir el comentario se rompió el archivo por usar backticks dentro del
+template literal del `<style>` — el propio archivo ya advertía sobre eso. Se
+corrigió y se reforzó el recordatorio.
+
+## Resultados
+
+Lighthouse mobile, throttling simulado:
+
+| Métrica | Producción (antes) | Local (después) |
+|---|---|---|
+| **Performance** | 79 | **84** |
+| **TBT** | 410 ms | **120 ms** (−71%) |
+| **Speed Index** | 4,4 s | **2,0 s** (−55%) |
+| **Peso total** | 2.794 KiB | **813 KiB** (−71%) |
+| CLS | 0,021 | 0,021 |
+
+Captura de red directa: la landing pasó de **2.327 KiB** a **825 KiB**.
+
+### First Load JS: sin cambios (era lo esperado)
+
+| Ruta | Antes | Después |
+|---|---|---|
+| `/` | 266 kB | 266 kB |
+| `/properties` | 239 kB | 239 kB |
+| `/properties/[id]` | 238 kB | 237 kB |
+
+Las mejoras fueron en **assets y payload**, no en el JavaScript. El bundle no
+cambió porque three.js ya no estaba en él.
+
+⚠️ **FCP y LCP no son comparables entre estos dos entornos.** Producción se
+sirve desde el CDN de Vercel con las imágenes ya optimizadas y cacheadas en el
+edge; `next start` en localhost las optimiza on-demand. Por eso el LCP local
+sale peor (4,0 s vs 3,4 s) aunque la página pese un tercio. Las métricas que sí
+son válidas cruzando entornos son las de bytes (peso total) y las de CPU (TBT,
+Speed Index), y todas mejoraron.
+
+## Hallazgo pendiente, con la evidencia de lo que NO funcionó
+
+**La landing descarga 74,4 KiB del chunk de `zod`** (`f053d7f7c100063f.js`,
+331 KB sin comprimir) pese a no tener ningún formulario. Es el recurso no-imagen
+más pesado que queda.
+
+Se verificó que el chunk **no está en el manifest de la landing** (sí en el de
+`/login`), así que llega por otra vía. Se probaron **dos hipótesis y las dos
+fallaron**, medidas con captura de red:
+
+1. **Prefetch del `<Link href="/login">` del navbar** → se puso
+   `prefetch={false}` en los dos links (escritorio y mobile). El chunk se
+   siguió pidiendo. **Revertido.**
+2. **Agrupación de chunks de Turbopack** (`NavbarPublic` y `LoginForm` caen en
+   el mismo chunk) → se pasaron `LoginForm` y `RegisterForm` a `next/dynamic`
+   para forzar un chunk asíncrono propio. El chunk se siguió pidiendo.
+   **Revertido.**
+
+Ambos cambios se revirtieron a propósito: no lograron su objetivo y dejar código
+cuyo comentario afirma algo falso es peor que no tenerlo. El initiator real,
+según CDP, es el runtime de Turbopack (`turbopack-*.js`) resolviendo un import
+anónimo — hace falta seguir tirando de ahí.
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npx next lint` 0 warnings · `npm run build`
+exit 0.
+
+## Anotado, NO aplicado
+
+- **Los PNG del hero pesan 2-3 MB en `public/`** (`CasaSider.png` 3,1 MB,
+  `hipolitoYrigoyen.png` 2,9 MB). next/image ya los sirve como WebP de ~100 KB,
+  así que el visitante no los paga enteros — pero engordan el repo y el deploy.
+  Convertirlos a JPEG/WebP en origen es un ahorro de disco, no de red.
+- **`chicaMudandose.jpg` (10,7 MB)** y otros ~20 PNG de ~2 MB en `public/`:
+  mismo caso.
+- **`legacy-javascript`** (14 KiB) y **`dom-size`** (1.091 elementos) siguen
+  marcados. Son de bajo impacto comparados con lo resuelto.

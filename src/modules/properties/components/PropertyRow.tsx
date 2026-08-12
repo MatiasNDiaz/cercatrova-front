@@ -46,15 +46,14 @@ export function PropertyRow({ property }: { property: Property }) {
     <div className="group relative flex flex-col overflow-hidden rounded-xl border border-ink-100 bg-white shadow-[0_1px_2px_rgba(10,12,11,0.04),0_10px_28px_-14px_rgba(10,12,11,0.12)] transition-all duration-500 ease-out hover:-translate-y-1.5 hover:border-brand-600/50 hover:shadow-[0_32px_65px_-18px_rgba(6,57,35,0.25)] sm:flex-row">
       {/* ── IMAGEN ── */}
       <Link href={`/properties/${id}`} className="relative h-52 w-full shrink-0 overflow-hidden sm:h-auto sm:w-72">
-        {/* `quality={95}` — mismo criterio que el detalle (PARTE 15).
-            `object-cover` se mantiene: la vista lista también depende de un
-            recorte uniforme para que la columna de imagen no salte de alto
-            entre filas. */}
+        {/* ⚠️ SIN `quality` explícito (default 75) — ver la nota extensa en
+            `FeaturedPropertyCard.tsx`. `object-cover` se mantiene: la vista
+            lista depende del recorte uniforme para que la columna de imagen no
+            salte de alto entre filas. */}
         <Image
           src={cover}
           alt={title}
           fill
-          quality={95}
           sizes="(max-width: 640px) 100vw, 288px"
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
         />

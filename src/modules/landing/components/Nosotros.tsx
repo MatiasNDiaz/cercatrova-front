@@ -95,11 +95,19 @@ export default function Nosotros() {
                       index === currentImg ? 'opacity-100' : 'opacity-0'
                     }`}
                   >
+                    {/* ⚠️ SIN `priority`. Lo tenía en la primera foto, pero
+                        "Conocenos" es la 7ª sección de la landing: está muy
+                        por debajo del fold y `priority` le sacaba ancho de
+                        banda al hero, que es el elemento LCP real. Medido: esa
+                        foto se descargaba a 136 KB compitiendo con la primera
+                        slide.
+
+                        Sin `priority`, next/image usa `loading="lazy"` y la
+                        trae recién cuando el visitante se acerca a la sección. */}
                     <Image
                       src={img}
                       alt={`Edgar Díaz — foto ${index + 1}`}
                       fill
-                      priority={index === 0}
                       sizes="460px"
                       className="scale-105 object-cover object-center grayscale-[15%] transition-all duration-700 group-hover:scale-100 group-hover:grayscale-0"
                     />

@@ -69,8 +69,14 @@ const getProperty = cache(async (id: number): Promise<PropertyFull | null> => {
  * Mover la búsqueda a `generateMetadata` **no alcanzó**: se probó y siguió
  * dando 200, porque el shell del `loading` sale antes que los metadatos. Lo
  * único que lo arregla es que no haya frontera de streaming por encima, así que
- * se eliminó ese `loading.tsx` (ver la nota en `Loadingpage.tsx`, que quedó
- * conservado y documentado por si se prefiere revertir el trade-off).
+ * se eliminó ese `loading.tsx`.
+ *
+ * ⚠️ **NO volver a agregar un `loading.tsx` en `(public)/`** sin resolver antes
+ * el soft 404: reintroduce exactamente este bug, y es silencioso — la pantalla
+ * se ve bien, pero Google recibe 200 en propiedades que no existen. El
+ * componente al que apuntaba esta nota (`Loadingpage.tsx`, el loader 3D) se
+ * eliminó del repo por peso; si algún día se quiere un loader acá, tiene que
+ * ser por ruta y no en el segmento `(public)` entero.
  */
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;

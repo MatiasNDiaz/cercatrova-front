@@ -41,18 +41,15 @@ export const PropertyCard = ({ property }: { property: Property }) => {
       <Link href={`/properties/${id}`} className="flex h-full flex-col">
         {/* ── IMAGEN ── */}
         <div className="relative h-60 w-full shrink-0 overflow-hidden">
-          {/* `quality={95}`, mismo criterio que el detalle (PARTE 15):
-              a partir de 95 next/image deja de recomprimir y, cuando el
-              destino pedido es más chico que el original, el ahorro de
-              artefactos de compresión se nota igual aunque SÍ haya
-              reescalado real. Se mantiene `object-cover` a propósito —acá
-              la grilla necesita el recorte uniforme, no la lógica de "foto
-              completa" del detalle, que rompería la alineación del mosaico. */}
+          {/* ⚠️ SIN `quality` explícito (default 75) — ver la nota extensa en
+              `FeaturedPropertyCard.tsx`: a partir de q=85 Next deja de
+              redimensionar y sirve el original en JPEG, que en una tarjeta de
+              ~380px es más pesado y en peor formato. `object-cover` se
+              mantiene: la grilla necesita el recorte uniforme. */}
           <Image
             src={cover}
             alt={title}
             fill
-            quality={95}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
           />
