@@ -3648,3 +3648,73 @@ exit 0.
   mismo caso.
 - **`legacy-javascript`** (14 KiB) y **`dom-size`** (1.091 elementos) siguen
   marcados. Son de bajo impacto comparados con lo resuelto.
+
+---
+
+# PARTE 19 — Accesos rápidos en mobile + tarjeta "Publicada por"
+
+> Sesión 2026-08-09. Dos ajustes visuales en el detalle de propiedad.
+
+## 1) Accesos rápidos: grilla 2x2 en mobile
+
+En mobile los cuatro accesos (Volver al catálogo / Ver Valoraciones / Ver
+Comentarios / Ver dirección exacta) caían uno debajo del otro, alineados a la
+izquierda, con los separadores `|` colgando al final de cada línea: una columna
+larga y despareja.
+
+Ahora el contenedor es `grid grid-cols-2` en mobile y vuelve a
+`sm:flex sm:flex-wrap` desde el breakpoint `sm`, donde la fila horizontal entra
+sin problema y es donde los separadores tienen sentido (se ocultan en mobile
+con `hidden sm:inline`, así no ocupan una celda de la grilla).
+
+Cada acceso pasó a ser un **bloque** que llena su celda: ancho completo,
+contenido centrado y fondo + borde propios (`bg-surface-mint`, `border-ink-100`),
+para que se lea como una pieza y no como texto suelto. `text-xs` en mobile
+porque la celda mide ~165px en un teléfono de 412px y "Ver dirección exacta" no
+entraba a 14px.
+
+### ⚠️ `min-w-0` en cada celda — no es decorativo
+
+Sin él, un item de grilla usa `min-width: auto`, o sea que se niega a achicarse
+por debajo del ancho de su contenido. La columna derecha se desbordaba de la
+tarjeta y los textos quedaban cortados contra el borde de la pantalla.
+
+### Nota sobre cómo se verificó (para la próxima)
+
+Las primeras capturas con `chrome --headless --window-size=412,1600` mostraban
+la columna derecha cortada **incluso después del fix**, y llevaron a dar por
+roto algo que ya estaba bien. Las medidas reales del DOM lo desmintieron:
+tarjeta 380px, grilla 338px, celdas de 165px cada una, `grid-template-columns:
+165px 165px` — nada se desbordaba.
+
+El problema era el método de captura: `--window-size` **no** emula un móvil. La
+captura fiel se obtiene por CDP con
+`Emulation.setDeviceMetricsOverride({width:412, deviceScaleFactor:2,
+mobile:true})` y sacando el screenshot **en esa misma sesión**. Con eso la
+imagen coincidió con las mediciones.
+
+## 2) La tarjeta del agente ahora dice "Publicada por"
+
+⚠️ **El rótulo ya NO dice "Agente a cargo"**, por pedido explícito de la
+inmobiliaria: esa expresión suena a la jerga de las franquicias grandes y no es
+como se presentan.
+
+Estilo, que también se pidió mejorar:
+- **Franja de marca arriba** (`--gradient-brand`), el mismo recurso que la
+  tarjeta de precio — así las dos piezas del sidebar se leen como del mismo
+  sistema en vez de como dos tarjetas blancas sueltas.
+- **El bloque de la persona va contenido** en `bg-brand-50` con borde y
+  `rounded-2xl`: antes la foto y el nombre flotaban sobre el blanco de la
+  tarjeta.
+- **Ícono `ShieldCheck`** junto al rótulo y **`Phone`** junto al teléfono, que
+  además pasó de gris (`ink-500`) a `brand-700`: era el único dato de contacto
+  de la tarjeta y se leía como texto secundario.
+- El `ring-offset` del aro de la foto pasó de blanco a `brand-50` para que
+  coincida con el nuevo fondo del bloque; con offset blanco quedaba un halo que
+  no correspondía a ningún fondo.
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npx next lint` 0 warnings · `npm run build`
+exit 0 · verificado con captura móvil real (412px, DPR 2) contra los datos de
+producción.

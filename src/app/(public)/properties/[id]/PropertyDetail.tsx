@@ -9,7 +9,7 @@ import {
   ChevronRight, User, Calendar, CheckCircle2, XCircle,
   Building2, Navigation, MessageCircle, Send, Pencil,
   Trash2, LogIn, MessageCircleMore, ShieldCheck, Landmark, Eye, EyeOff,
-  PawPrint, Receipt,
+  PawPrint, Receipt, Phone,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BsWhatsapp } from 'react-icons/bs';
@@ -105,8 +105,19 @@ export type PropertyFull = Omit<
 // criterio que el resto del sitio —fondo muy claro + borde/texto más oscuro—
 // así el hover se nota sin gritar. El color propio de cada acceso lo sigue
 // dando su ícono, que no cambia.
+/**
+ * ── MOBILE vs DESKTOP ───────────────────────────────────────────────────────
+ * En mobile cada acceso es un BLOQUE que llena su celda de la grilla 2x2:
+ * ancho completo, contenido centrado, y fondo + borde propios para que se lea
+ * como una pieza y no como texto suelto. `text-xs` porque la celda mide ~165px
+ * en un teléfono de 412px y "Ver dirección exacta" no entraba a 14px.
+ *
+ * A partir de `sm` vuelve al chip de siempre: ancho automático, alineado a la
+ * izquierda, sin fondo ni borde (los aporta el `hover` de cada acceso).
+ */
 const QUICK_LINK_BASE =
-  'group inline-flex items-center gap-2 rounded-lg border border-transparent px-3 py-1.5 text-sm font-semibold transition-all duration-300 ease-out';
+  'group inline-flex w-full items-center justify-center gap-2 rounded-xl border border-ink-100 bg-surface-mint px-2 py-2.5 text-center text-xs font-semibold transition-all duration-300 ease-out ' +
+  'sm:w-auto sm:justify-start sm:rounded-lg sm:border-transparent sm:bg-transparent sm:px-3 sm:py-1.5 sm:text-sm';
 
 /** Entrada de cada acceso rápido: fade + slide corto, escalonado por el padre. */
 const QUICK_LINK_ITEM = {
@@ -938,42 +949,58 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
               se propagan por el árbol de componentes `motion`, y un `<div>`
               común en el medio cortaría la cadena y el stagger no llegaría a
               los accesos. */}
+          {/* ── MOBILE: grilla 2x2 · DESKTOP: fila con separadores ──
+              En mobile el `flex flex-wrap` dejaba los cuatro accesos uno debajo
+              del otro, alineados a la izquierda y con los separadores "|"
+              colgando al final de cada línea: una columna larga y despareja.
+
+              `grid-cols-2` los acomoda en 2 filas x 2 columnas, cada uno
+              ocupando su celda completa. A partir de `sm` vuelve a ser la fila
+              horizontal de siempre (`sm:flex`), que en desktop entra sin
+              problema y es donde los separadores tienen sentido.
+
+              ⚠️ Cada wrapper lleva `min-w-0`. Sin eso, un item de grilla usa
+              `min-width: auto`, o sea que se niega a achicarse por debajo del
+              ancho de su contenido: la columna derecha se desbordaba de la
+              tarjeta y "Ver Valoraciones" / "Ver dirección exacta" quedaban
+              cortados contra el borde de la pantalla. Con `min-w-0` la celda
+              puede encoger y el texto envuelve. */}
           <motion.div
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
-            className="flex flex-wrap items-center gap-x-4 gap-y-2"
+            className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-2"
           >
-            <motion.div variants={QUICK_LINK_ITEM}>
+            <motion.div variants={QUICK_LINK_ITEM} className="min-w-0">
               <Link href="/properties" className={`${QUICK_LINK_BASE} text-brand-700 hover:border-brand-200 hover:bg-brand-50`}>
                 <ArrowLeft size={16} className="shrink-0 transition-transform duration-300 ease-out group-hover:-translate-x-1" />
                 Volver al catálogo
               </Link>
             </motion.div>
 
-            <motion.span variants={QUICK_LINK_ITEM} className="text-ink-400" aria-hidden>|</motion.span>
+            <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 sm:inline" aria-hidden>|</motion.span>
 
             {/* Valoraciones y "Ver dirección exacta" están intercambiados
                 respecto del orden original, por pedido: valoraciones queda en
                 el 2º lugar (el más visible después de "Volver al catálogo") y
                 la dirección pasa al último. */}
-            <motion.div variants={QUICK_LINK_ITEM}>
+            <motion.div variants={QUICK_LINK_ITEM} className="min-w-0">
               <a href="#valoracion" onClick={scrollTo('valoracion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700`}>
                 <Star size={16} className="shrink-0 fill-amber-400 text-amber-500 transition-transform duration-300 ease-out group-hover:scale-110" />
                 Ver Valoraciones
               </a>
             </motion.div>
 
-            <motion.span variants={QUICK_LINK_ITEM} className="text-ink-400" aria-hidden>|</motion.span>
+            <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 sm:inline" aria-hidden>|</motion.span>
 
-            <motion.div variants={QUICK_LINK_ITEM}>
+            <motion.div variants={QUICK_LINK_ITEM} className="min-w-0">
               <a href="#comentarios" onClick={scrollTo('comentarios')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700`}>
                 <MessageCircleMore size={16} className="shrink-0 text-blue-600 transition-transform duration-300 ease-out group-hover:scale-110" />
                 Ver Comentarios
               </a>
             </motion.div>
 
-            <motion.span variants={QUICK_LINK_ITEM} className="text-ink-400" aria-hidden>|</motion.span>
+            <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 sm:inline" aria-hidden>|</motion.span>
 
-            <motion.div variants={QUICK_LINK_ITEM}>
+            <motion.div variants={QUICK_LINK_ITEM} className="min-w-0">
               <a href="#mapa-ubicacion" onClick={scrollTo('mapa-ubicacion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700`}>
                 <MapPin size={16} className="shrink-0 text-red-600 transition-transform duration-300 ease-out group-hover:scale-110" />
                 Ver dirección exacta
@@ -1309,38 +1336,57 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                 </div>
               </div>
 
-              {/* Agente */}
-              {agent && (
-                <div className={`${CARD} p-7`}>
-                  <p className="mb-4 text-[11px] font-bold tracking-[0.14em] text-brand-700 uppercase">Agente a cargo</p>
-                  <div className="flex items-center gap-4">
-                    {/* Circular, no `rounded-2xl`: es una CARA, y el cuadrado
-                        redondeado la recortaba por las mejillas. Además el
-                        <Image> no llenaba el contenedor — sin `h-full w-full`
-                        una foto no cuadrada quedaba descentrada dentro de la
-                        caja. El aro verde la separa del fondo blanco.
+              {/* ── PUBLICADA POR ──
+                  ⚠️ El rótulo dice "Publicada por" y NO "Agente a cargo", por
+                  pedido explícito de la inmobiliaria: "agente a cargo" suena a
+                  la jerga de las franquicias grandes y no es como se presentan.
 
-                        El aro pasó de `brand-200` a `brand-800`: el verde claro
-                        casi no se distinguía del blanco de la tarjeta, así que
-                        el recorte circular se perdía y la foto parecía flotar.
-                        Ahora es el mismo verde oscuro de los bordes del resto
-                        de la ficha. El `ring-offset-2` blanco se mantiene: es lo
-                        que evita que el aro se pegue a la foto y la ensucie. */}
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-800/10 ring-2 ring-brand-800 ring-offset-2 ring-offset-white">
-                      {(agent.photo ?? agent.avatar)
-                        ? <Image src={(agent.photo ?? agent.avatar)!} alt={agent.name} width={64} height={64} className="h-full w-full object-cover" />
-                        : <User size={26} className="text-brand-800" />}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-base font-bold text-ink-900">
-                        {agent.name}{agent.surname ? ` ${agent.surname}` : ''}
-                      </p>
-                      {/* `email` NO viene en la respuesta (no está en
-                          `AGENT_PUBLIC_FIELDS`), así que esa línea nunca se
-                          renderizaba. Se usa `phone`, que sí llega. */}
-                      {agent.phone && (
-                        <p className="mt-0.5 truncate text-xs text-ink-500">{agent.phone}</p>
-                      )}
+                  Estilo: la tarjeta era blanca y plana, con el rótulo y la foto
+                  sueltos sobre el fondo. Ahora tiene una franja de marca arriba
+                  —el mismo recurso que la tarjeta de precio, así las dos piezas
+                  del sidebar se leen como del mismo sistema— y el bloque de la
+                  persona va sobre `brand-50` con borde, de forma que la foto y
+                  el nombre queden contenidos en vez de flotando. */}
+              {agent && (
+                <div className={`overflow-hidden ${CARD}`}>
+                  <div className="h-1.5 w-full" style={{ background: 'var(--gradient-brand)' }} />
+                  <div className="p-7">
+                    <p className="mb-4 flex items-center gap-1.5 text-[11px] font-bold tracking-[0.14em] text-brand-700 uppercase">
+                      <ShieldCheck size={13} className="shrink-0" />
+                      Publicada por
+                    </p>
+                    <div className="flex items-center gap-4 rounded-2xl border border-brand-800/15 bg-brand-50 p-3">
+                      {/* Circular, no `rounded-2xl`: es una CARA, y el cuadrado
+                          redondeado la recortaba por las mejillas. Además el
+                          <Image> no llenaba el contenedor — sin `h-full w-full`
+                          una foto no cuadrada quedaba descentrada dentro de la
+                          caja.
+
+                          El aro `brand-800` (era `brand-200`) es lo que despega
+                          la foto del fondo; el `ring-offset-2` evita que se
+                          pegue a la imagen. Ahora el offset es `brand-50` y no
+                          blanco, porque el bloque que la contiene es verde
+                          claro: con offset blanco quedaba un halo que no
+                          coincidía con ningún fondo. */}
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-2 ring-brand-800 ring-offset-2 ring-offset-brand-50">
+                        {(agent.photo ?? agent.avatar)
+                          ? <Image src={(agent.photo ?? agent.avatar)!} alt={agent.name} width={64} height={64} className="h-full w-full object-cover" />
+                          : <User size={26} className="text-brand-800" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-bold text-brand-900">
+                          {agent.name}{agent.surname ? ` ${agent.surname}` : ''}
+                        </p>
+                        {/* `email` NO viene en la respuesta (no está en
+                            `AGENT_PUBLIC_FIELDS`), así que esa línea nunca se
+                            renderizaba. Se usa `phone`, que sí llega. */}
+                        {agent.phone && (
+                          <p className="mt-1 flex items-center gap-1.5 truncate text-xs font-medium text-brand-700">
+                            <Phone size={11} className="shrink-0" />
+                            {agent.phone}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
