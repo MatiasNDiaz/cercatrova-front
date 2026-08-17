@@ -4595,3 +4595,128 @@ Manejando la instancia real de Swiper por CDP:
 - **El botón "Copiar" sólo está en la ficha.** En el detalle público podría
   tener sentido para un visitante que quiere guardarse una foto, pero se dejó
   acotado a lo pedido.
+
+---
+
+# PARTE 22 bis — La ficha vuelve al lenguaje visual del sitio
+
+> Misma sesión, corrección del Bloque 3. El rediseño anterior (verde muy oscuro
+> con textura) resolvió el "sin vida" pero se pasó para el otro lado y, sobre
+> todo, le inventó a la ficha un lenguaje propio en vez de reusar el del sitio.
+> Esta pasada la alinea con el detalle de propiedad.
+
+## 1) Fondo: `surface-mint`
+
+`ficha/layout.tsx`: `.surface-brand-deepest` → **`bg-surface-mint`** (`#dbeee4`).
+
+Es el mismo verde de sección que ya usan el detalle de propiedad, el catálogo,
+`/publicaciones` y la landing. Verificado en el DOM renderizado:
+`rgb(219, 238, 228)`.
+
+Historial completo del fondo, para que nadie lo revierta sin querer:
+
+| | Fondo | Problema |
+|---|---|---|
+| Original | `bg-surface` (#f5f7f5) | Tarjetas blancas sobre gris casi blanco: nada se despegaba |
+| PARTE 22 | `.surface-brand-deepest` | Resolvía el contraste, pero demasiado fuerte |
+| **Actual** | **`bg-surface-mint`** | Punto medio, y ya existía como token |
+
+## 2) Badges del encabezado: los mismos del detalle
+
+Antes eran tres rectángulos hechos a mano —dos grises y uno verde— que no
+distinguían nada entre sí. Ahora usan las tres familias de
+`properties/lib/badgeStyles`, en su variante **suave** (borde saturado de 2px
+sobre fondo `-50`), que es exactamente la que el detalle usa cuando los badges
+van sobre una tarjeta clara y no sobre una foto:
+
+- **Operación** → rosa (venta) / azul (alquiler) / violeta (temporal)
+- **Tipo** → celeste (depto) / naranja (terreno) / rojo (comercial) / esmeralda…
+- **Estado** → chip con punto de color + `ShieldCheck` cuando está disponible
+
+⚠️ Se **importan**, no se copian. Es un cruce de módulo consciente
+(`app/ficha` → `modules/properties/lib`): son strings de clases puros, sin
+lógica ni dependencias, y duplicarlos garantizaba que el día que alguien cambie
+la gama de "alquiler" en el sitio, la ficha se quede con la vieja.
+
+Ninguna de estas gamas identifica a la inmobiliaria: son las mismas que
+cualquier portal usa para clasificar avisos.
+
+## 3) Características y Documentación, en UNA sección
+
+Documentación tenía una barra de encabezado entera para **tres booleanos**.
+Ahora sigue la estructura del detalle público:
+
+```
+CARACTERÍSTICAS
+  ├─ grilla de specs numéricas (ambientes, baños, sup., antigüedad, expensas)
+  └─ "COMODIDADES Y DOCUMENTACIÓN"  ← rótulo chico, no otra sección
+       └─ 6 tarjetas sí/no: cochera · patio · mascotas · escritura ·
+          tracto abreviado · boleto
+```
+
+Son todos atributos sí/no de la propiedad: se leen mejor como un bloque que
+como dos listas idénticas separadas por un título.
+
+De paso, las dos piezas de adentro también pasaron a ser las del detalle:
+
+- **`Spec`**: borde `brand-800` sobre fondo `brand-50`, con el ícono en un
+  círculo SÓLIDO blanco-sobre-verde. Antes era un ícono suelto sobre tarjeta
+  blanca con borde gris — la única grilla del proyecto con ese tratamiento.
+- **`BoolRow`**: el par verde/rojo saturado del detalle, con el ícono en
+  círculo y el ✓/✗ a la derecha. Conserva el `title` por accesibilidad: el
+  color no puede ser el único portador de la información (WCAG 1.4.1).
+
+## 4) Títulos de sección: todos en BLANCO
+
+El problema reportado: Características y Ubicación tenían el título oscuro
+sobre verde claro, y Documentación y Descripción lo tenían blanco sobre verde
+oscuro. Esa inconsistencia venía de la PARTE 22, donde el fondo de la página era
+verde oscuro y obligaba a usar los pasos CLAROS de la escala — y en `brand-500`
+(3.25:1) y `brand-600` (4.33:1) el blanco no llega al mínimo AA de 4.5:1.
+
+Con el fondo ahora claro, se pueden usar los pasos oscuros y el blanco entra
+holgado en los tres. **Medido sobre el DOM renderizado**, no calculado a mano:
+
+| Sección | Barra | Texto | Contraste | AA |
+|---|---|---|---|---|
+| Características | `brand-700` `rgb(11,122,75)` | blanco | **5.39:1** | ✓ |
+| Ubicación | `brand-800` `rgb(8,80,49)` | blanco | **9.54:1** | ✓ |
+| Descripción | `brand-900` `rgb(6,57,35)` | blanco | **12.98:1** | ✓ |
+
+Son rótulos de 14px en negrita: no llegan al umbral de "texto grande" de WCAG
+(18.66px en negrita), así que no aplica la excepción y el mínimo real es 4.5:1.
+
+Se conserva la progresión de tres tonos para que las secciones se distingan
+entre sí, que era el pedido de variedad de la pasada anterior.
+
+## 5) Resto de ajustes por el fondo claro
+
+- Título, ubicación corta, "Ref. #" y pie vuelven a la escala `ink`.
+- Tarjetas de sección con `border-ink-100` + la sombra en dos capas que ya usa
+  el detalle, en vez del `ring-white/10` que sólo tenía sentido sobre oscuro.
+- **`FichaGallery`**: marco `border-ink-100` con la sombra del detalle,
+  miniatura activa en `brand-700` (era `brand-400`, pensado para fondo oscuro) y
+  las inactivas con borde `ink-200`; el estado vacío pasó de `bg-white/5` a
+  tarjeta blanca.
+- **El precio no se tocó**: sigue siendo el panel con `--gradient-brand`, el
+  único elemento con ese tratamiento, y sigue funcionando igual de bien sobre
+  claro.
+
+## Verificación
+
+Sin marca, comprobado por código sobre el DOM renderizado en cada captura:
+`/Cerca\s*Trova/i.test(document.body.innerText)` → **`false`** en 1100px y en
+414px. `document.scrollWidth === clientWidth` en los dos anchos.
+
+`npx tsc --noEmit` sin errores · `npx next lint` 0 warnings, 0 errores ·
+`npm run build` exit 0 · `/ficha/[id]` 146 kB.
+
+## Anotado, NO aplicado
+
+- **Las píldoras de ubicación del detalle** (`DIRECCIÓN · Rondeau 430` con el
+  ícono en círculo blanco) quedarían muy bien en el encabezado de la ficha, y es
+  el estilo que se mostró como referencia. No se aplicó porque la ficha ya tiene
+  una sección "Ubicación" completa con los cinco campos: ponerlas arriba
+  duplicaría los mismos datos dos veces en una hoja de una sola página. La
+  alternativa sería reemplazar las filas de esa sección por píldoras — es un
+  cambio acotado si se prefiere ese look.

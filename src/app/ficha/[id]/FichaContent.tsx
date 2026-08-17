@@ -1,10 +1,13 @@
 import {
   Bed, Bath, Maximize, Home, Hourglass, MapPin, Car, TreePine,
   FileCheck, Landmark, ScrollText, CheckCircle2, XCircle, Building2,
-  PawPrint, Receipt,
+  PawPrint, Receipt, ShieldCheck,
 } from 'lucide-react';
 import { fechaLarga } from '@/modules/shared/lib/fecha';
 import { priceParts, formatExpensas } from '@/modules/shared/lib/money';
+import {
+  BADGE_BASE, operationBadgeSoft, propertyTypeBadgeSoft, statusBadgeColor, statusDotColor,
+} from '@/modules/properties/lib/badgeStyles';
 import { FichaGallery } from './FichaGallery';
 import type { FichaProperty } from './types';
 
@@ -39,21 +42,21 @@ import type { FichaProperty } from './types';
  * que es justo lo que esta página tiene que evitar. Mostrar comentarios o
  * valoraciones delataría que la ficha sale de un portal con usuarios.
  *
- * ── SIN MARCA ≠ SIN VIDA ────────────────────────────────────────────────────
- * "Genérica" acá significa una sola cosa: **cero logo, cero "Cerca Trova", cero
- * dato que permita reconocer de qué inmobiliaria salió**. No significa sobria.
+ * ── SIN MARCA ≠ SIN VIDA, pero tampoco un lenguaje aparte ───────────────────
+ * "Genérica" significa una sola cosa: **cero logo, cero "Cerca Trova", cero
+ * dato que permita reconocer de qué inmobiliaria salió**. No significa sobria,
+ * pero tampoco justifica inventarle un diseño propio.
  *
- * El rediseño de esta pantalla parte de ahí: antes era texto gris sobre fondo
- * casi blanco con tarjetas blancas, y se leía como un PDF exportado. Ahora va
- * sobre el verde profundo con textura (`.surface-brand-deepest`, el mismo de la
- * franja de estudiantes y del footer de la landing) con las tarjetas de datos
- * en claro encima: el contraste alto es lo que le da vida, y de paso hace que
- * la información quede MÁS legible que antes, no menos.
+ * Por eso esta pantalla ahora reusa las MISMAS piezas visuales que el detalle
+ * público —badges suaves, tarjetas de specs con el círculo del ícono, la grilla
+ * verde/rojo de comodidades y el fondo `surface-mint`— en vez de tener su
+ * versión paralela de cada una. Ninguna de esas piezas identifica a nadie: son
+ * verdes, grises y blancos del sistema de tokens.
  *
- * Todos los colores salen de los tokens ya existentes (`brand-50…950`,
- * `ink-*`). No se inventó ninguno. La variedad viene de usar más pasos de la
- * misma escala —cada sección tiene su propio tono de encabezado— en vez de
- * repetir `brand-700` en todo.
+ * ⚠️ Los estilos de badge se IMPORTAN de `properties/lib/badgeStyles` en lugar
+ * de copiarse. Es un cruce de módulo consciente: son strings de clases puros,
+ * sin lógica ni dependencias, y duplicarlos garantizaba que el día que alguien
+ * cambie la gama de "alquiler" en el sitio, la ficha se quede con la vieja.
  */
 
 /** Etiqueta legible de cada estado. Se muestran todos, incluso los no públicos. */
@@ -73,82 +76,91 @@ const OPERACION_LABEL: Record<string, string> = {
 };
 
 /**
- * Tono del encabezado de cada sección.
+ * Tono de la barra de encabezado de cada sección.
  *
- * Es lo que da la "variedad" del rediseño: cuatro pasos distintos de la MISMA
- * escala verde, no cuatro colores nuevos. Van aclarándose hacia arriba en
- * importancia (características es el más vivo) y se oscurecen hacia el final,
- * así la página tiene una progresión y no un salteado al azar.
+ * ⚠️ **Los tres arrancan en `brand-700` o más oscuro, y no es capricho.** El
+ * título va en BLANCO en las tres —antes dos eran oscuras y dos claras, y esa
+ * inconsistencia era justamente lo que se veía mal— así que el fondo tiene que
+ * dar el contraste mínimo de WCAG AA (4.5:1) contra blanco. Calculado:
  *
- * ⚠️ El paso más oscuro es `brand-800` (#085031) y NO `brand-900` (#063923).
- * Se probó con 900 y el encabezado de "Descripción" quedaba prácticamente
- * invisible: el fondo de la página es `.surface-brand-deepest`, que arranca en
- * #042a19 — o sea a 3 puntos de luminancia del 900. La barra existía pero no se
- * leía como barra. 800 es el escalón más oscuro que todavía se despega.
- *
- * ⚠️ **El color del texto cambia con el tono, y no es decorativo.** Calculado
- * el contraste contra blanco de cada paso:
- *
- *   brand-500 (#14a366) → 3.25:1   ✗
- *   brand-600 (#0f8b57) → 4.33:1   ✗
+ *   brand-500 (#14a366) → 3.25:1   ✗  quedaba fuera
+ *   brand-600 (#0f8b57) → 4.33:1   ✗  quedaba fuera
  *   brand-700 (#0b7a4b) → 5.44:1   ✓
  *   brand-800 (#085031) → 8.9:1    ✓
+ *   brand-900 (#063923) → 11.9:1   ✓
  *
- * El mínimo de WCAG AA para texto normal es 4.5:1, y estos rótulos son de
- * 14px: aunque van en negrita, no llegan al umbral de "texto grande" (18.66px
- * en negrita), así que no aplica la excepción. Los dos verdes claros llevan
- * texto `brand-950` (5.2:1 y 6.9:1) en vez de blanco. Efecto colateral bueno:
- * la alternancia clara/oscura suma variedad, que es justo lo que se pedía.
+ * Son rótulos de 14px: van en negrita pero no llegan al umbral de "texto
+ * grande" (18.66px en negrita), así que no aplica la excepción de WCAG.
+ *
+ * Que ahora el fondo de la página sea claro (`surface-mint`) es lo que permite
+ * usar los tres pasos oscuros sin que las barras se pierdan — con el fondo
+ * verde oscuro anterior pasaba lo contrario y había que ir hacia los claros.
  */
 const TONO_SECCION = {
-  esmeralda: 'bg-brand-500 text-brand-950',
-  bosque:    'bg-brand-600 text-brand-950',
-  pino:      'bg-brand-700 text-white',
-  noche:     'bg-brand-800 text-white',
+  bosque: 'bg-brand-700',
+  pino:   'bg-brand-800',
+  noche:  'bg-brand-900',
 } as const;
 
 type TonoSeccion = keyof typeof TONO_SECCION;
 
-/** Dato numérico con ícono. */
+/**
+ * Dato numérico con ícono.
+ *
+ * Misma pieza que las tarjetas de "Características" del detalle público:
+ * borde `brand-800` sobre fondo `brand-50`, el ícono en un círculo SÓLIDO
+ * blanco-sobre-verde y el valor en `brand-900`. Antes acá era un ícono suelto
+ * sobre una tarjeta blanca con borde gris — la única grilla del proyecto con
+ * ese tratamiento.
+ */
 function Spec({
   icon: Icon, label, value,
 }: {
   icon: React.ElementType; label: string; value: string | number;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 rounded-xl border border-brand-700/25 bg-brand-50 px-3 py-4 text-center">
-      <Icon size={18} className="text-brand-700" />
+    <div className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-brand-800 bg-brand-50 px-3 py-6">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-800 text-white">
+        <Icon size={20} />
+      </span>
       <span className="text-lg leading-none font-bold text-brand-900">{value}</span>
-      <span className="text-[10px] font-bold tracking-wider text-brand-700 uppercase">{label}</span>
+      <span className="text-center text-[10px] leading-none font-bold tracking-[0.1em] text-brand-700 uppercase">
+        {label}
+      </span>
     </div>
   );
 }
 
 /**
- * Atributo booleano. Se listan SIEMPRE los cinco, tengan `true` o `false`:
+ * Atributo booleano. Se listan SIEMPRE los seis, tengan `true` o `false`:
  * que una propiedad NO tenga escritura es un dato tan relevante como que la
  * tenga, y quien recibe la ficha necesita saberlo sin ambigüedad.
  *
- * El contraste entre los dos estados se subió a propósito: antes "no tiene" era
- * gris clarito sobre gris clarito y había que fijarse en el ícono para
- * distinguirlo. Ahora el sí es verde saturado y el no es rojo suave — el mismo
- * par que ya usa la grilla de Comodidades del detalle público, así que no es un
- * criterio nuevo.
+ * Idéntica a la grilla de comodidades del detalle: el color hace todo el
+ * trabajo (verde saturado vs. rojo) y el ícono sólo confirma. El `title` no es
+ * decorativo — el color no puede ser el único portador de la información
+ * (WCAG 1.4.1), así que quien no distingue rojo de verde sigue teniendo el ✓/✗
+ * y el texto del tooltip.
  */
 function BoolRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: boolean }) {
   return (
     <div
-      className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-3 ${
-        value ? 'border-brand-600 bg-brand-50' : 'border-red-300 bg-red-50'
+      title={value ? `Esta propiedad tiene: ${label}` : `Esta propiedad NO tiene: ${label}`}
+      className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 ${
+        value ? 'border-brand-800 bg-brand-50 text-brand-900' : 'border-red-600 bg-red-50 text-red-800'
       }`}
     >
-      <Icon size={16} className={value ? 'text-brand-700' : 'text-red-500'} />
-      <span className={`flex-1 text-sm font-semibold ${value ? 'text-brand-900' : 'text-red-700'}`}>
-        {label}
+      <span
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white ${
+          value ? 'bg-brand-800' : 'bg-red-600'
+        }`}
+      >
+        <Icon size={16} />
       </span>
+      <span className="text-sm font-semibold">{label}</span>
       {value
-        ? <CheckCircle2 size={16} className="shrink-0 text-brand-600" />
-        : <XCircle size={16} className="shrink-0 text-red-400" />}
+        ? <CheckCircle2 size={17} className="ml-auto shrink-0 text-brand-800" />
+        : <XCircle size={17} className="ml-auto shrink-0 text-red-600" />}
     </div>
   );
 }
@@ -156,22 +168,22 @@ function BoolRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
 /** Fila de ubicación. */
 function LocRow({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-brand-100 py-2.5 last:border-0 odd:bg-brand-50/70">
+    <div className="flex items-baseline justify-between gap-4 px-3 py-2.5 odd:bg-brand-50/70">
       <span className="shrink-0 text-xs font-bold tracking-wider text-brand-700 uppercase">{label}</span>
       <span className="text-right text-sm font-semibold wrap-anywhere text-brand-900">
-        {value?.trim() ? value : <span className="font-normal text-ink-300">Sin especificar</span>}
+        {value?.trim() ? value : <span className="font-normal text-ink-400">Sin especificar</span>}
       </span>
     </div>
   );
 }
 
 /**
- * Tarjeta de sección.
+ * Tarjeta de sección: barra de encabezado sólida + cuerpo blanco.
  *
- * El encabezado dejó de ser un renglón de texto verde sobre blanco y pasó a ser
- * una BARRA sólida a todo el ancho, con su propio tono. Es lo que separa una
- * sección de la siguiente de un vistazo cuando se scrollea rápido en el
- * teléfono, que es como se lee una ficha que llega por WhatsApp.
+ * La barra a todo el ancho es lo que separa una sección de la siguiente de un
+ * vistazo cuando se scrollea rápido en el teléfono, que es como se lee una
+ * ficha que llega por WhatsApp. El título va SIEMPRE en blanco (ver
+ * `TONO_SECCION`).
  */
 function Section({
   icon: Icon, title, tono, children,
@@ -179,8 +191,8 @@ function Section({
   icon: React.ElementType; title: string; tono: TonoSeccion; children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl bg-white shadow-[0_20px_45px_-25px_rgba(0,0,0,0.75)] ring-1 ring-white/10">
-      <h2 className={`flex items-center gap-2.5 px-6 py-3.5 text-sm font-bold tracking-wider uppercase ${TONO_SECCION[tono]}`}>
+    <section className="overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-[0_2px_4px_-2px_rgba(10,12,11,0.06),0_14px_34px_-14px_rgba(10,12,11,0.20)]">
+      <h2 className={`flex items-center gap-2.5 px-6 py-3.5 text-sm font-bold tracking-wider text-white uppercase ${TONO_SECCION[tono]}`}>
         <Icon size={16} />{title}
       </h2>
       <div className="p-6 sm:p-7">{children}</div>
@@ -198,58 +210,64 @@ export function FichaContent({ p }: { p: FichaProperty }) {
   const imagenes = p.images ?? [];
   const ubicacionCorta = [p.barrio, p.localidad].filter(Boolean).join(', ');
   const precio = priceParts(p.price, p.currency);
+  const disponible = p.status === 'disponible';
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
 
-      {/* ── ENCABEZADO ──
-          Va directo sobre el verde profundo, sin tarjeta: el título en blanco
-          contra ese fondo es el mayor contraste de la página y por eso es lo
-          primero que se lee. */}
+      {/* ── ENCABEZADO ── */}
       <header className="mb-7">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          {/* Operación: la pastilla más viva de las tres — es el dato que
-              define de qué se trata el aviso (venta vs alquiler). */}
-          <span className="rounded-md bg-brand-500 px-2.5 py-1 text-[10px] font-bold tracking-[0.12em] text-brand-950 uppercase">
+        {/* ── BADGES ──
+            Las mismas tres píldoras del detalle público, con sus mismas gamas:
+            operación (rosa/azul/violeta), tipo (celeste/naranja/…) y estado
+            (verde/ámbar/…). Todas con el tratamiento SUAVE —borde saturado de
+            2px sobre fondo `-50`— que es el que se usa cuando los badges van
+            sobre una tarjeta clara y no sobre una foto.
+
+            Antes acá eran tres rectángulos verdes y grises hechos a mano que no
+            distinguían nada entre sí. */}
+        <div className="mb-4 flex flex-wrap items-center gap-2.5">
+          <span className={`${BADGE_BASE} ${operationBadgeSoft(p.operationType)}`}>
             {OPERACION_LABEL[p.operationType] ?? p.operationType}
           </span>
-          <span className="rounded-md bg-white/12 px-2.5 py-1 text-[10px] font-bold tracking-[0.12em] text-brand-100 uppercase ring-1 ring-white/20">
+          <span className={`${BADGE_BASE} ${propertyTypeBadgeSoft(p.typeOfProperty?.name)}`}>
             {p.typeOfProperty?.name ?? 'Propiedad'}
           </span>
-          <span className="rounded-md bg-white/12 px-2.5 py-1 text-[10px] font-bold tracking-[0.12em] text-brand-100 uppercase ring-1 ring-white/20">
+          <span className={`${BADGE_BASE} gap-1.5 ${statusBadgeColor(p.status)}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${statusDotColor(p.status)}`} aria-hidden />
+            {disponible && <ShieldCheck size={13} />}
             {ESTADO_LABEL[p.status] ?? p.status}
           </span>
           {/* Número de referencia: sirve para que dos personas hablen de la
               misma propiedad por teléfono sin mandarse el link. */}
-          <span className="ml-auto text-[11px] font-semibold text-brand-200/70">
+          <span className="ml-auto text-[11px] font-semibold text-ink-400">
             Ref. #{p.id}
           </span>
         </div>
 
-        <h1 className="text-3xl leading-tight font-bold tracking-tight wrap-anywhere text-white sm:text-4xl">
+        <h1 className="text-3xl leading-tight font-bold tracking-tight wrap-anywhere text-ink-900 sm:text-4xl">
           {p.title}
         </h1>
 
         {ubicacionCorta && (
-          <p className="mt-2.5 flex items-center gap-1.5 text-sm font-medium text-brand-200">
-            <MapPin size={15} className="shrink-0 text-brand-400" />
+          <p className="mt-2.5 flex items-center gap-1.5 text-sm font-medium text-ink-500">
+            <MapPin size={15} className="shrink-0 text-brand-700" />
             {ubicacionCorta}
           </p>
         )}
 
         {/* ── PRECIO ──
             El elemento más brillante de la ficha, a propósito: es el primer
-            dato que busca cualquiera que la reciba. Antes era un texto verde
-            más entre otros; ahora es un panel con el gradiente de marca, que no
-            compite con nada porque es lo único con ese tratamiento. */}
+            dato que busca cualquiera que la reciba. Es lo único con el
+            gradiente de marca, así que no compite con nada. */}
         <div
-          className="mt-6 inline-flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-2xl px-6 py-4 shadow-[0_18px_40px_-18px_rgba(20,163,102,0.6)]"
+          className="mt-6 inline-flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-2xl px-6 py-4 shadow-[0_18px_40px_-18px_rgba(11,122,75,0.55)]"
           style={{ background: 'var(--gradient-brand)' }}
         >
           <span className="text-3xl font-black tracking-tight text-white sm:text-4xl">
             {precio.amount}
           </span>
-          <span className="text-sm font-bold tracking-wide text-white/80">{precio.code}</span>
+          <span className="text-sm font-bold tracking-wide text-white/85">{precio.code}</span>
         </div>
       </header>
 
@@ -262,8 +280,17 @@ export function FichaContent({ p }: { p: FichaProperty }) {
 
       <div className="flex flex-col gap-5">
 
-        {/* ── CARACTERÍSTICAS ── */}
-        <Section icon={Building2} title="Características" tono="esmeralda">
+        {/* ── CARACTERÍSTICAS + DOCUMENTACIÓN, EN UNA SOLA SECCIÓN ──
+            Antes eran dos tarjetas separadas, y la de documentación tenía tres
+            filas y nada más: una barra de encabezado entera para tres booleanos.
+
+            Ahora siguen la estructura del detalle público: la grilla de specs
+            numéricas arriba, y debajo —bajo un rótulo chico, no bajo otro
+            encabezado de sección— las seis comodidades y documentos juntos en
+            una sola grilla. Son todos atributos sí/no de la propiedad, así que
+            se leen mejor como un bloque que como dos listas iguales separadas
+            por un título. */}
+        <Section icon={Building2} title="Características" tono="bosque">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <Spec icon={Bed} label="Ambientes" value={p.rooms ?? 0} />
             <Spec icon={Bath} label="Baños" value={p.bathrooms ?? 0} />
@@ -278,32 +305,28 @@ export function FichaContent({ p }: { p: FichaProperty }) {
             )}
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+          <p className="mt-8 mb-4 text-[11px] font-bold tracking-[0.14em] text-ink-500 uppercase">
+            Comodidades y documentación
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <BoolRow icon={Car} label="Cochera" value={!!p.garage} />
             <BoolRow icon={TreePine} label="Patio" value={!!p.patio} />
             <BoolRow icon={PawPrint} label="Apto mascotas" value={!!p.aptoMascotas} />
+            <BoolRow icon={FileCheck} label="Escritura" value={!!p.property_deed} />
+            <BoolRow icon={Landmark} label="Tracto abreviado" value={!!p.tractoAbreviado} />
+            <BoolRow icon={ScrollText} label="Boleto" value={!!p.boleto} />
           </div>
         </Section>
 
         {/* ── UBICACIÓN COMPLETA — dirección exacta incluida ──
-            Sube al 2º lugar: después del precio, "dónde queda" es lo que más
-            se pregunta. Antes estaba tercera, detrás de documentación. */}
-        <Section icon={MapPin} title="Ubicación" tono="bosque">
-          <div className="-mx-2 flex flex-col overflow-hidden rounded-xl">
+            Va 2ª: después del precio, "dónde queda" es lo que más se pregunta. */}
+        <Section icon={MapPin} title="Ubicación" tono="pino">
+          <div className="overflow-hidden rounded-xl border border-brand-100">
             <LocRow label="Dirección" value={p.direccion} />
             <LocRow label="Barrio" value={p.barrio} />
             <LocRow label="Zona" value={p.zone} />
             <LocRow label="Localidad" value={p.localidad} />
             <LocRow label="Provincia" value={p.provincia} />
-          </div>
-        </Section>
-
-        {/* ── DOCUMENTACIÓN ── */}
-        <Section icon={ScrollText} title="Documentación" tono="pino">
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-            <BoolRow icon={FileCheck} label="Escritura" value={!!p.property_deed} />
-            <BoolRow icon={Landmark} label="Tracto abreviado" value={!!p.tractoAbreviado} />
-            <BoolRow icon={ScrollText} label="Boleto" value={!!p.boleto} />
           </div>
         </Section>
 
@@ -313,7 +336,7 @@ export function FichaContent({ p }: { p: FichaProperty }) {
             {/* `wrap-anywhere`: las descripciones que carga el admin suelen
                 traer links pegados, que sin regla de corte desbordan la
                 tarjeta. Mismo criterio que el detalle público. */}
-            <p className="text-sm leading-relaxed wrap-anywhere whitespace-pre-line text-ink-700">
+            <p className="text-sm leading-relaxed wrap-anywhere whitespace-pre-line text-ink-600">
               {p.description}
             </p>
           </Section>
@@ -323,7 +346,7 @@ export function FichaContent({ p }: { p: FichaProperty }) {
       {/* ── PIE ──
           Sin marca ni logo. Sólo las fechas de la propiedad, que son parte de
           su información y le dan contexto a quien recibe la ficha. */}
-      <footer className="mt-8 border-t border-white/12 pt-5 text-xs text-brand-200/60">
+      <footer className="mt-8 border-t border-ink-200 pt-5 text-xs text-ink-400">
         <p>Publicada el {fechaLarga(p.created_at)}</p>
         {p.updated_at && p.updated_at !== p.created_at && (
           <p className="mt-0.5">Última actualización: {fechaLarga(p.updated_at)}</p>

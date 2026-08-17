@@ -52,8 +52,8 @@ export function FichaGallery({ images, title }: { images: FichaImage[]; title: s
 
   if (images.length === 0) {
     return (
-      <div className="flex h-56 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/5">
-        <Home size={40} className="text-white/25" />
+      <div className="flex h-56 w-full items-center justify-center rounded-2xl border border-ink-100 bg-white">
+        <Home size={40} className="text-ink-300" />
       </div>
     );
   }
@@ -75,7 +75,10 @@ export function FichaGallery({ images, title }: { images: FichaImage[]; title: s
       )}
 
       {/* ── VISOR PRINCIPAL ── */}
-      <div className="group relative h-72 w-full overflow-hidden rounded-2xl border border-white/12 bg-ink-950 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.85)] sm:h-105">
+      {/* El marco sigue el criterio del detalle público: borde `ink-100` y
+          sombra en dos capas sobre fondo `ink-950`, para que la foto se lea
+          como una pieza apoyada en el fondo claro y no como un recorte. */}
+      <div className="group relative h-72 w-full overflow-hidden rounded-2xl border border-ink-100 bg-ink-950 shadow-[0_2px_4px_-2px_rgba(10,12,11,0.08),0_12px_28px_-16px_rgba(10,12,11,0.28)] sm:h-105">
         <Swiper
           modules={[EffectFade, Navigation, Keyboard]}
           effect="fade"
@@ -149,8 +152,8 @@ export function FichaGallery({ images, title }: { images: FichaImage[]; title: s
               aria-current={i === actual}
               className={`relative h-14 w-20 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition-all duration-200 ${
                 i === actual
-                  ? 'border-brand-400 opacity-100'
-                  : 'border-transparent opacity-55 hover:opacity-90'
+                  ? 'border-brand-700 opacity-100'
+                  : 'border-ink-200 opacity-60 hover:opacity-100'
               }`}
             >
               <Image

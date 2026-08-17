@@ -16,24 +16,19 @@
  * incluso cuando la ficha es corta.
  *
  * ── El fondo ────────────────────────────────────────────────────────────────
- * Pasó de `bg-surface` (un gris casi blanco) a `.surface-brand-deepest`: verde
- * muy oscuro con textura —gradiente diagonal, halo radial y trama de puntos—,
- * la misma clase que usan la franja de estudiantes del hero y el footer de la
- * landing. No es un color nuevo: es el token más oscuro de la escala de marca.
+ * `bg-surface-mint` (#dbeee4), el MISMO verde de sección que usan el detalle de
+ * propiedad, el catálogo y la landing. Con eso la ficha deja de tener un fondo
+ * propio y pasa a compartir el del resto del sistema.
  *
- * El cambio es lo que le da vida a la ficha, porque convierte cada tarjeta de
- * datos en un bloque claro que salta contra el fondo, en vez de blanco sobre
- * gris clarito donde nada se despegaba. Y sigue siendo genérico: un verde
- * oscuro no identifica a ninguna inmobiliaria.
+ * ⚠️ Historial, para que no se vuelva atrás sin querer: primero fue
+ * `bg-surface` (gris casi blanco), donde las tarjetas blancas no se despegaban
+ * de nada; después `.surface-brand-deepest` (verde muy oscuro con textura), que
+ * resolvía el contraste pero resultó demasiado fuerte. `surface-mint` es el
+ * punto medio y además ya estaba definido: las tarjetas blancas saltan contra
+ * él sin que el fondo grite.
  *
- * ⚠️ `relative` + `isolate`: `.surface-brand-deepest` dibuja su trama en un
- * `::before` posicionado con `inset: 0`. Sin contexto de apilamiento propio,
- * esa capa podía quedar por encima del contenido en vez de detrás.
+ * Sigue siendo genérico: un verde claro no identifica a ninguna inmobiliaria.
  */
 export default function FichaLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="surface-brand-deepest relative isolate min-h-screen">
-      <div className="relative z-10">{children}</div>
-    </div>
-  );
+  return <div className="min-h-screen bg-surface-mint">{children}</div>;
 }
