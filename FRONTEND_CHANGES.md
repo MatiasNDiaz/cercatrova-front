@@ -4041,3 +4041,175 @@ PARTE 19, no emula un teléfono y lleva a conclusiones falsas).
   chico de los CTA al cambiar de slide, no una rotura. No se ajustó porque
   implicaría subir la reserva y perder parte de lo ganado en el encuadre de las
   fotos, para un ancho de pantalla prácticamente extinto.
+
+---
+
+# PARTE 20 bis — La barra de accesos rápidos en una sola fila (corrección del Bloque 1)
+
+> Misma sesión. El Bloque 1 quedó bien en mobile pero **mal en escritorio**: en
+> pantallas grandes el botón "Guardar" caía solo a una segunda fila. Se pidió que
+> las seis piezas queden en un único renglón.
+
+## Por qué se partía: faltaban 4px
+
+Medido a 1280px (Chrome headless, CDP), con el layout que había quedado:
+
+| Concepto | px |
+|---|---|
+| 5 accesos + 4 separadores, con `gap-x-4` | 959 |
+| separación hasta Guardar (`gap-4`) | 16 |
+| botón Guardar | 109 |
+| **total necesario** | **1084** |
+| **ancho interno disponible** | **1080** |
+
+El hueco es `min(1152, viewport − 32) − 40`: el `max-w-6xl` del contenedor menos
+su `px-4` y menos el `px-5` de la propia barra. O sea que la fila se pasaba por
+**4 píxeles** — y como el contenedor es `flex-wrap`, flexbox prefiere mandar el
+último item a otro renglón antes que comprimir. De ahí el "Guardar" solitario
+abajo a la izquierda.
+
+## Qué se cambió
+
+**1. Separación entre piezas: `gap-x-4` → `gap-x-3`.** Son 8 huecos (5 accesos +
+4 separadores = 9 items) de 4px menos cada uno: **−32px**. La fila baja a 1052px
+contra 1080 disponibles, con 28px de margen. Es exactamente lo que se pidió
+—"achicá el margen con las `|` si hace falta"— y visualmente los separadores
+siguen respirando.
+
+**2. El corte pasó de `sm` a `xl`.** Antes la fila horizontal arrancaba en `sm`
+(640px), donde nunca entró: de 640 a 1279 se veía como una fila que envolvía mal.
+Ahora hay **tres formatos**, y cada uno es exacto para seis piezas:
+
+| Ancho | Formato | Verificado |
+|---|---|---|
+| `< sm` | grilla **2 columnas x 3 filas** | 390px → celdas de 154px |
+| `sm` – `xl` | grilla **3 columnas x 2 filas** | 640 / 768 / 1024px → celdas de 183 / 226 / 311px |
+| `xl` + | **una sola fila** con separadores | 1280 / 1366 / 1440 / 1920px → 1 renglón |
+
+3x2 es la otra descomposición exacta de seis, así que en tablet tampoco queda
+ninguna celda huérfana.
+
+**3. Detalles de la fila de `xl`:** los accesos recuperan el chip (`xl:w-auto`,
+sin fondo ni borde, `xl:px-3 xl:py-1.5`) y suman `xl:whitespace-nowrap` para que
+ninguna etiqueta parta en dos renglones. Los separadores `|` pasaron de
+`hidden sm:inline` a `hidden xl:inline`. El botón Guardar hace lo mismo:
+`sm:w-auto sm:rounded-2xl` → `xl:w-auto xl:rounded-2xl`, conservando el salto de
+`text-xs` a `sm:text-sm` (en las celdas de tablet, que miden 183px o más, 14px se
+lee mejor que 12px).
+
+## Por qué el corte es `xl` y no `lg`
+
+Se evaluó y se descartó con números. En `lg` (1024px) el hueco interno es de
+**952px** y la fila pide 1052px: falta por ~100px. Para forzarla ahí habría que
+bajar los accesos a `px-1.5` y los separadores a `gap-x-1.5`, lo que deja **8px**
+de margen total y las piezas prácticamente pegadas — justo lo contrario de "que
+respiren los espacios". Una grilla 3x2 de bloques parejos en ese rango se lee
+mejor que un renglón apretado.
+
+En la práctica el corte no molesta: los anchos de laptop habituales (1366, 1440,
+1536, 1920) están todos por encima de `xl`.
+
+## Por qué se conserva `xl:flex-wrap` (y no `nowrap`)
+
+Con `nowrap`, si algún día una etiqueta se alarga y la fila deja de entrar, se
+desbordaría de la tarjeta — y ese desborde lo taparía el `overflow-x: clip` de
+`globals.css`, dejando texto cortado **sin que nadie se entere**. Con `wrap`
+degrada a dos renglones: feo, pero visible y legible. Se prefiere el modo de
+falla ruidoso.
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npx next lint` 0 warnings, 0 errores ·
+`npm run build` exit 0, 39 rutas.
+
+Verificado en **390 / 640 / 768 / 1024 / 1280 / 1366 / 1440 / 1920 px** con
+emulación por CDP, leyendo el `top` real de cada pieza para contar renglones (no
+a ojo). En los cuatro anchos de control (390 / 768 / 1280 / 1920) se confirmó
+además que `document.scrollWidth === clientWidth`, o sea que el cambio no
+reintrodujo desborde horizontal.
+
+---
+
+# PARTE 20 ter — "Publicá tu propiedad" en mobile: centrado y ritmo (ampliación del Bloque 3)
+
+> Misma sesión. Después de ocultar las 3 pastillas flotantes (Bloque 3), quedó a
+> la vista el problema de fondo de la sección en mobile: **el contenido alineado a
+> la izquierda y enormes vacíos entre las partes**.
+
+## Lo que estaba mal, y por qué
+
+**1. Era la única sección de la landing fuera de la escala común.** Verificado por
+grep sobre las 8 secciones:
+
+| Sección | `py` |
+|---|---|
+| Featuredproperties, Servicios, Confianza, Reseñas, Nosotros, FAQ | `py-24 md:py-28` |
+| **PublicarPropiedad** | **`py-28` plano** |
+
+Lo mismo con la tipografía: el `SectionHeading` compartido —el que usan las otras
+cinco secciones— define `text-3xl sm:text-4xl md:text-5xl` para el `h2` y
+`text-base md:text-lg` para el subtítulo. Esta sección tenía su propio encabezado
+a mano, clavado en `text-5xl` y `text-xl`. **En escritorio coincidía**, así que
+nunca se notó; en mobile este título entraba con 48px mientras todos los demás de
+la página entraban con 30px. De ahí la sensación de sección aislada.
+
+**2. El bloque de texto era el único sin centrar.** La foto llevaba `mx-auto`; el
+texto, no. Como en mobile el grid colapsa a una columna, el resultado era una foto
+centrada con el título, el párrafo y el CTA pegados al margen izquierdo.
+
+**3. `gap-38` = 152px.** En dos columnas es la separación **horizontal** entre foto
+y texto, y ahí está bien. Al colapsar a una columna ese mismo valor pasa a ser
+separación **vertical**: 152px de vacío entre la foto y el título. Ese era el
+hueco de la captura. Igual el `mb-18` (72px) debajo del badge.
+
+## Qué se cambió (todo `< lg`; de `lg` para arriba queda idéntico)
+
+| | Antes | Ahora |
+|---|---|---|
+| `<section>` | `py-28` | `py-24 md:py-28` |
+| Badge → contenido | `mb-18` (72px) | `mb-10 lg:mb-18` (40px) |
+| Grid | `gap-38` (152px) | `gap-10 lg:gap-38` (40px) |
+| Bloque de texto | `max-w-xl` | `mx-auto max-w-xl text-center lg:mx-0 lg:text-left` |
+| `h2` | `text-5xl` | `text-3xl sm:text-4xl md:text-5xl` |
+| `p` | `mt-8 text-xl` | `mt-4 text-base md:text-lg lg:mt-8 lg:text-xl` |
+| CTA | `mt-10` | `mt-8 lg:mt-10` |
+
+El CTA se centra solo: `CtaButton` es `inline-flex`, así que lo alinea el
+`text-align` del padre — no hizo falta un flex extra ni un `mx-auto` propio.
+
+## Resultado medido (390px)
+
+| Hueco | Antes | Ahora |
+|---|---|---|
+| badge → imagen | 72px | **40px** |
+| imagen → título | 152px | **40px** |
+| título → párrafo | 32px | **16px** |
+| párrafo → botón | 40px | **32px** |
+
+- **Alto de la sección: ~1464px → 1139px (−22%).**
+- Centrado verificado comparando `left` contra `viewport − right` en las cinco
+  piezas (badge, imagen, título, párrafo, botón): las cinco centradas a ±2px.
+- `h2` a 30px y `p` a 16px en mobile — ya idénticos al resto de la landing.
+
+## Verificado que escritorio NO cambió
+
+A 1440px: `text-align: left` en `h2` y `p`, `h2` a 48px, `p` a 20px, las dos
+columnas en su lugar (imagen 104→644, texto 796→1336) y la sección en 828px de
+alto. Igual que antes.
+
+A 768px (tablet, todavía una columna): contenido centrado, `h2` a 48px — el
+`md:text-5xl` del `SectionHeading` estándar.
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npx next lint` 0 warnings, 0 errores ·
+`npm run build` exit 0.
+
+## Anotado, NO aplicado
+
+- **La foto sigue midiendo 500px de alto en mobile** (`h-[500px]` fijo). Con un
+  ancho de 342px eso da un recorte bastante vertical de una foto apaisada, y la
+  imagen se lleva el 44% del alto de la sección. No se tocó porque el pedido fue
+  explícitamente "centrar y sacar padding", y la altura de la imagen no es
+  padding — pero es el próximo candidato si la sección todavía se siente pesada
+  en el teléfono.

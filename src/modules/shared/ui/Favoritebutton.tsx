@@ -87,11 +87,16 @@ export function FavoriteButton({ propertyId, variant = 'default' }: FavoriteButt
   // ⚠️ Solo la usa la barra de accesos rápidos del detalle de propiedad, así que
   // se maqueta para encajar en ESA fila:
   //
-  //  · **Mobile**: `w-full` + `justify-center`. Es una celda más de la grilla
-  //    2x3 de accesos rápidos, y tiene que llenarla igual que los otros cinco
-  //    (si no, quedaba un botón angosto y descentrado en la última fila).
-  //    `rounded-xl` + `py-2.5` + `text-xs` para que coincida exactamente con
-  //    `QUICK_LINK_BASE`; a partir de `sm` vuelve a su geometría propia.
+  //  · **Mientras la barra es grilla** (`< xl`): `w-full` + `justify-center`. Es
+  //    una celda más —la sexta— y tiene que llenarla igual que los otros cinco
+  //    accesos (si no, quedaba un botón angosto y descentrado en la última
+  //    fila). `rounded-xl` + `py-2.5` para que coincida con `QUICK_LINK_BASE`,
+  //    y su mismo salto de `text-xs` a `sm:text-sm`.
+  //
+  //  · **En `xl`**, que es donde la barra pasa a ser una sola fila horizontal,
+  //    recupera su geometría propia (ancho automático, `rounded-2xl`). El corte
+  //    es `xl` y no `sm` porque es ahí donde las seis piezas entran en un
+  //    renglón — el cálculo está en `QUICK_LINK_BASE` de `PropertyDetail.tsx`.
   //
   //  · **Gris base más oscuro**: era `border-gray-200 text-gray-500` sobre
   //    blanco — contra la tarjeta blanca de la barra el borde casi no existía y
@@ -104,7 +109,7 @@ export function FavoriteButton({ propertyId, variant = 'default' }: FavoriteButt
       onClick={handleToggle}
       disabled={loading}
       aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-      className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold transition-all duration-300 active:scale-95 disabled:opacity-50 sm:w-auto sm:rounded-2xl sm:text-sm
+      className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold transition-all duration-300 active:scale-95 disabled:opacity-50 sm:text-sm xl:w-auto xl:rounded-2xl
         ${isFavorite
           ? 'bg-red-50 border-red-200 text-red-500 hover:bg-red-100'
           : 'bg-white border-ink-300 text-ink-700 hover:border-red-300 hover:text-red-500'

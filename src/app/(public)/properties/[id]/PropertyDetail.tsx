@@ -152,18 +152,48 @@ export type PropertyFull = Omit<
 // así el hover se nota sin gritar. El color propio de cada acceso lo sigue
 // dando su ícono, que no cambia.
 /**
- * ── MOBILE vs DESKTOP ───────────────────────────────────────────────────────
- * En mobile cada acceso es un BLOQUE que llena su celda de la grilla 2x2:
- * ancho completo, contenido centrado, y fondo + borde propios para que se lea
- * como una pieza y no como texto suelto. `text-xs` porque la celda mide ~165px
- * en un teléfono de 412px y "Ver dirección exacta" no entraba a 14px.
+ * ── TRES FORMATOS, Y POR QUÉ EL CORTE ESTÁ EN `xl` ──────────────────────────
  *
- * A partir de `sm` vuelve al chip de siempre: ancho automático, alineado a la
- * izquierda, sin fondo ni borde (los aporta el `hover` de cada acceso).
+ * La barra tiene SEIS piezas (5 accesos + el botón Guardar) y se maqueta de
+ * tres maneras según cuánto ancho haya:
+ *
+ *   · `< sm`  → grilla de 2 columnas x 3 filas.
+ *   · `sm`–`xl` → grilla de 3 columnas x 2 filas.
+ *   · `xl+`  → UNA sola fila horizontal, con los separadores `|`.
+ *
+ * En los dos formatos de grilla cada acceso es un BLOQUE que llena su celda:
+ * ancho completo, contenido centrado, y fondo + borde propios para que se lea
+ * como una pieza y no como texto suelto. `text-xs` sólo en mobile, porque la
+ * celda mide ~165px en un teléfono de 412px y "Ver dirección exacta" no entraba
+ * a 14px; de `sm` para arriba la celda ya da para `text-sm`.
+ *
+ * En `xl` vuelve al chip de siempre: ancho automático, alineado a la izquierda,
+ * sin fondo ni borde (los aporta el `hover`), y `whitespace-nowrap` para que
+ * ninguna etiqueta parta en dos renglones dentro de la fila.
+ *
+ * ⚠️ **El corte es `xl` (1280px) y no `sm` ni `lg`, y el número sale de medir**,
+ * no de gusto. Con la fila armada, las piezas ocupan:
+ *
+ *     5 accesos + 4 separadores ................ 927px
+ *   + separación hasta el botón Guardar ........  16px
+ *   + botón Guardar ...........................  109px
+ *   ────────────────────────────────────────────────────
+ *                                        total  1052px
+ *
+ * y el ancho interno disponible es `min(1152, viewport − 32) − 40` (el
+ * `max-w-6xl` del contenedor menos su `px-4` y el `px-5` de la barra). Para que
+ * entren 1052px hace falta un viewport de **≥1124px**: en `lg` (1024px) el hueco
+ * es de 952px y la fila NO entra por ~100px. Por eso `lg` sigue siendo grilla.
+ *
+ * Con la separación anterior (`gap-x-4`) la fila pedía 1084px contra los 1080px
+ * disponibles: se pasaba por **4px** y por eso Guardar caía a una segunda fila
+ * incluso en pantallas grandes. Bajar la separación de los separadores a
+ * `gap-x-3` recorta 8 huecos de 4px = 32px y deja 28px de margen.
  */
 const QUICK_LINK_BASE =
   'group inline-flex w-full items-center justify-center gap-2 rounded-xl border border-ink-100 bg-surface-mint px-2 py-2.5 text-center text-xs font-semibold transition-all duration-300 ease-out ' +
-  'sm:w-auto sm:justify-start sm:rounded-lg sm:border-transparent sm:bg-transparent sm:px-3 sm:py-1.5 sm:text-sm';
+  'sm:px-3 sm:text-sm ' +
+  'xl:w-auto xl:justify-start xl:rounded-lg xl:border-transparent xl:bg-transparent xl:px-3 xl:py-1.5 xl:whitespace-nowrap';
 
 /** Entrada de cada acceso rápido: fade + slide corto, escalonado por el padre. */
 const QUICK_LINK_ITEM = {
@@ -990,34 +1020,51 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
             el `staggerChildren` hace que los accesos aparezcan uno detrás de
             otro en vez de todos de golpe.
 
-            ── MOBILE: grilla 2 columnas x 3 filas · DESKTOP: fila horizontal ──
+            ── 2x3 en mobile · 3x2 en tablet · UNA FILA en `xl` ──
             Los accesos pasaron de 4 a 5 ("Ver Características") y, contando el
             botón de Guardar, son SEIS piezas. En la grilla 2x2 anterior el
             botón de favorito quedaba fuera —era el otro hijo del flex— y con
             seis elementos la fila se comprimía o desbordaba.
 
             Ahora la grilla vive en ESTE contenedor y las seis piezas son celdas
-            hermanas: 2 columnas x 3 filas exactas. A partir de `sm` vuelve a
-            ser la fila horizontal de siempre, con los accesos a la izquierda y
-            Guardar a la derecha (`sm:justify-between`). */}
+            hermanas, así que los dos formatos de grilla salen exactos: 2x3 en
+            mobile y 3x2 en tablet, sin celdas huérfanas.
+
+            De `xl` para arriba pasa a ser una sola fila horizontal, con los
+            accesos a la izquierda y Guardar a la derecha (`xl:justify-between`).
+            El porqué del `xl` —y no `sm`— está medido en la nota de
+            `QUICK_LINK_BASE`: la fila necesita 1052px de ancho interno y recién
+            los hay a partir de un viewport de ~1124px.
+
+            ⚠️ Se conserva `xl:flex-wrap` a propósito. Si algún día una etiqueta
+            se alarga y la fila deja de entrar, con `wrap` degrada a dos renglones
+            (feo pero legible); con `nowrap` se desbordaría de la tarjeta, y ese
+            desborde lo taparía el `overflow-x: clip` de `globals.css` dejando
+            texto cortado sin que nadie se entere. */}
         <motion.div
           initial="hidden"
           animate="show"
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } } }}
-          className={`mb-8 grid grid-cols-2 items-stretch gap-2 px-5 py-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 ${CARD} rounded-2xl`}
+          className={`mb-8 grid grid-cols-2 items-stretch gap-2 px-5 py-3 sm:grid-cols-3 xl:flex xl:flex-wrap xl:items-center xl:justify-between xl:gap-4 ${CARD} rounded-2xl`}
         >
           {/* Contenedor intermedio también `motion`: las variantes de framer
               se propagan por el árbol de componentes `motion`, y un `<div>`
               común en el medio cortaría la cadena y el stagger no llegaría a
               los accesos.
 
-              ⚠️ `contents` en mobile (`display: contents`) — no es decorativo.
+              ⚠️ `contents` (`display: contents`) hasta `xl` — no es decorativo.
               Este div tiene que existir para agrupar los cinco accesos en la
-              fila de escritorio (si no, `sm:justify-between` los separaría uno
-              de otro en vez de separarlos del botón Guardar), pero en mobile no
-              debe generar caja propia: con `display: contents` desaparece del
-              layout y sus hijos pasan a ser celdas directas de la grilla de
-              arriba, que es lo que permite el 2x3 con Guardar incluido.
+              fila de escritorio (si no, `xl:justify-between` los separaría uno
+              de otro en vez de separarlos del botón Guardar), pero mientras el
+              layout es grilla no debe generar caja propia: con
+              `display: contents` desaparece del layout y sus hijos pasan a ser
+              celdas directas de la grilla de arriba, que es lo que permite el
+              2x3 y el 3x2 con Guardar incluido como una celda más.
+
+              ⚠️ `gap-x-3` y no `gap-x-4` en la fila de `xl`: son los 4px por
+              hueco que faltaban para que las seis piezas entraran en un renglón
+              (ver el cálculo en `QUICK_LINK_BASE`). El `gap-y-2` queda como
+              salvavidas por si alguna vez tuviera que envolver.
 
               ⚠️ Cada wrapper lleva `min-w-0`. Sin eso, un item de grilla usa
               `min-width: auto`, o sea que se niega a achicarse por debajo del
@@ -1026,7 +1073,7 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
               pantalla. Con `min-w-0` la celda puede encoger y el texto envuelve. */}
           <motion.div
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
-            className="contents sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-2"
+            className="contents xl:flex xl:w-auto xl:flex-wrap xl:items-center xl:gap-x-3 xl:gap-y-2"
           >
             <motion.div variants={QUICK_LINK_ITEM} className="min-w-0">
               <Link href="/properties" className={`${QUICK_LINK_BASE} text-brand-700 hover:border-brand-200 hover:bg-brand-50`}>
@@ -1035,7 +1082,7 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
               </Link>
             </motion.div>
 
-            <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 sm:inline" aria-hidden>|</motion.span>
+            <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 xl:inline" aria-hidden>|</motion.span>
 
             {/* ── VER CARACTERÍSTICAS ──
                 Va 2º, entre "Volver al catálogo" y "Ver Valoraciones", por
@@ -1058,7 +1105,7 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
               </a>
             </motion.div>
 
-            <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 sm:inline" aria-hidden>|</motion.span>
+            <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 xl:inline" aria-hidden>|</motion.span>
 
             {/* Valoraciones y "Ver dirección exacta" están intercambiados
                 respecto del orden original, por pedido: valoraciones queda
@@ -1070,7 +1117,7 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
               </a>
             </motion.div>
 
-            <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 sm:inline" aria-hidden>|</motion.span>
+            <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 xl:inline" aria-hidden>|</motion.span>
 
             <motion.div variants={QUICK_LINK_ITEM} className="min-w-0">
               <a href="#comentarios" onClick={scrollTo('comentarios')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700`}>
@@ -1079,7 +1126,7 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
               </a>
             </motion.div>
 
-            <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 sm:inline" aria-hidden>|</motion.span>
+            <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 xl:inline" aria-hidden>|</motion.span>
 
             <motion.div variants={QUICK_LINK_ITEM} className="min-w-0">
               <a href="#mapa-ubicacion" onClick={scrollTo('mapa-ubicacion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700`}>
