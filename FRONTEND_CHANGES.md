@@ -4325,3 +4325,273 @@ En escritorio (1440px) el precio sigue en `y = 228`, **dentro** del sidebar
 Verificado por CDP con emulación móvil (414x896, DPR 2) y en 1440px, midiendo
 posiciones absolutas en el documento y `getClientRects()` para distinguir "está
 en el DOM" de "se ve". `document.scrollWidth === clientWidth` en las dos.
+
+---
+
+# PARTE 22 — Visor con zoom (detalle + ficha) y rediseño visual de la ficha
+
+> Sesión 2026-08-17. Tres bloques. Todo verificado con Chrome headless por CDP,
+> manejando la instancia real de Swiper y leyendo el `transform` computado, no a
+> ojo.
+
+## ⚠️ Corrección de premisa: el lightbox NO existía
+
+El pedido decía "ya existe un lightbox del detalle de propiedad, implementado en
+una sesión anterior; ahora hay que sumarle zoom". **No existía.** Verificado por
+grep sobre `PropertyDetail.tsx`: cero coincidencias de `lightbox`, `modal`,
+`createPortal` o `fullscreen`. La galería del detalle tenía flechas, contador y
+miniaturas, pero la foto no se podía ampliar.
+
+La nota al pie del propio pedido lo confirmaba ("hay que tener la opción de
+hacerle click y poder agrandarla"), así que el Bloque 1 se hizo **desde cero**,
+no como una capa sobre algo previo.
+
+---
+
+## Bloque 1 — Visor a pantalla completa con zoom y arrastre
+
+### `modules/shared/ui/ImageLightbox.tsx` (nuevo)
+
+Componente **compartido**, no del módulo de propiedades: lo usan el detalle
+público y la ficha, y la experiencia de "ver la foto grande" tiene que ser la
+misma en las dos. Mismo criterio que `ConfirmDialog` y `DashboardShell`.
+
+Trae: portal a `document.body`, contador `n / total`, flechas, cierre por botón
+y por Escape, bloqueo del scroll de fondo (compensando el ancho de la scrollbar,
+igual que `FiltersModal`), navegación por teclado, y una línea de ayuda que
+**cambia según el dispositivo** — en un teléfono no existe el doble click ni la
+rueda, y en escritorio no existe el pellizco; decirle a cada uno el gesto del
+otro es ruido.
+
+### Zoom: módulo `Zoom` de Swiper, como se pidió
+
+`swiper` ya era dependencia (hero de la landing y carrusel de reseñas). Su
+módulo `Zoom` aporta sin código propio: pellizco en táctil, doble toque / doble
+click, **arrastre para desplazar la foto ampliada** (le pone `cursor: move` y
+`touch-action: none` al slide) y el reseteo al cambiar de slide.
+
+⚠️ **La rueda del mouse NO viene incluida** — el módulo sólo trae pellizco y
+doble click. Se cableó a mano, con dos detalles que no son obvios:
+
+1. **Listener nativo con `{ passive: false }`, no el `onWheel` de React.** Hace
+   falta `preventDefault()` para que la rueda no scrollee la página de atrás, y
+   React registra sus handlers de `wheel` como pasivos: ahí `preventDefault()`
+   no hace nada y el navegador tira un warning.
+2. **Se le pasa un RATIO a `zoom.in()`, no el evento.** Las dos formas funcionan
+   en runtime — `zoom.mjs` hace `typeof e === 'number' ? e : null` para
+   distinguirlas — pero **los tipos de Swiper sólo declaran el número**, así que
+   pasar el evento no compila. Y queda mejor: con el evento salta directo a
+   `maxRatio` de una sola vez, mientras que con el ratio se acerca de a poco,
+   que es lo que uno espera de la rueda.
+
+`maxRatio: 4` y no el 3 por defecto: las fotos de producción tienen una mediana
+de 720px de ancho, y a 3x sobre un teléfono todavía no se lee el número de una
+puerta, que es para lo que la gente amplía.
+
+### Reseteo del zoom al cambiar de imagen
+
+Pedido explícito. `onSlideChange` → `swiper.zoom.out()`. **Verificado**: con la
+foto 1 en 3x, al pulsar la flecha el slide activo pierde la clase
+`swiper-slide-zoomed` y el `transform` de la imagen vuelve a `none`.
+
+### ⚠️ `z-index: 10000`, y por qué no un `z-50` cualquiera
+
+La primera captura del visor abierto mostraba el **botón flotante de "ir arriba"
+dibujado encima de la foto**. `.button` está clavado en `z-index: 9999` en
+`globals.css`. El visor tiene que estar por sobre todo lo que flota en la
+página, así que va en 10000. Se encontró mirando la captura, no razonando.
+
+### Carga bajo demanda — `next/dynamic`
+
+Medido, el import estático subía el First Load JS de `/properties/[id]` de
+**204 kB a 241 kB**: Swiper entero entraba en el bundle inicial de una de las
+rutas más visitadas, para una función que la mayoría de las visitas no usa.
+
+Con `next/dynamic` (`ssr: false`, porque el visor es un portal a
+`document.body`) la ruta quedó en **206 kB** — el visor cuesta ~2 kB hasta que
+alguien lo abre.
+
+⚠️ Por eso `AmpliarHint` (la etiqueta "Ampliar" de la esquina) vive en **su
+propio archivo** y no dentro de `ImageLightbox.tsx`, aunque sean la misma
+funcionalidad: hay que pintarla en el primer render, y un import estático desde
+el archivo del visor volvería a meter Swiper en el bundle inicial, anulando todo.
+
+### El botón de abrir, y por qué va donde va
+
+Es un `<button>` que cubre la foto entera (no un `onClick` en el contenedor):
+así el gesto queda anunciado a lectores de pantalla y es alcanzable por teclado.
+
+Va **antes** de las flechas y del contador en el DOM a propósito. Los tres son
+`absolute` sin `z-index`, o sea que el orden de pintado lo decide el orden del
+documento: al ir primero, las flechas quedan encima y un click en ellas cambia
+de foto en vez de abrir el visor, sin necesidad de `stopPropagation`.
+
+También se le puso `pointer-events-none` al degradado decorativo que cubría
+`inset-0` — si no, se comía todos los clicks.
+
+---
+
+## Bloque 2 — Galería deslizable + zoom + copiado en la ficha
+
+### `app/ficha/[id]/FichaGallery.tsx` (nuevo, cliente)
+
+`FichaContent` sigue siendo Server Component; sólo la galería se extrajo a un
+componente cliente. Reemplaza los dos bloques estáticos que había (una portada
+grande + una grilla de miniaturas que no hacían nada).
+
+- **Carrusel** con flechas, arrastre, teclado y contador.
+- **Miniaturas** que hacen de índice (cambian la foto grande, no abren el visor).
+- **`EffectFade`** y no el deslizamiento por defecto, por dos razones: es la
+  misma transición del hero de la landing, así que las dos galerías del sitio se
+  sienten iguales; y con fotos de proporciones mezcladas —fachadas apaisadas con
+  ambientes verticales, muy común acá— el desplazamiento lateral hace saltar el
+  encuadre mientras que el fundido cambia la imagen sin mover nada.
+- **El mismo `ImageLightbox`**, no una copia. La única diferencia es
+  `allowCopy`, que acá va en `true`.
+
+### Copiar la imagen al portapapeles
+
+Pedido para la ficha: quien la recibe suele ser otro martillero que necesita la
+foto para su propia publicación. Dos detalles hacen que funcione de verdad:
+
+1. **Se pide la URL de `/_next/image`, no la de Cloudinary.** Es del mismo
+   origen, así que no depende de los headers CORS del CDN ni "contamina" el
+   canvas (un canvas con píxeles de otro origen sin CORS lanza `SecurityError`
+   al leerlo). De paso llega ya redimensionada.
+2. **Se convierte a PNG** con canvas. `ClipboardItem` sólo acepta `image/png` de
+   forma confiable; pasarle el JPEG/WebP original falla con `NotAllowedError`.
+
+Si algo no está disponible (Safari viejo, contexto no seguro), cae a copiar el
+**link** de la imagen como texto, y el toast dice cuál de las dos cosas se
+copió — nunca miente sobre lo que quedó en el portapapeles.
+
+---
+
+## Bloque 3 — Rediseño de la ficha: viva, y todavía genérica
+
+### La aclaración que ordenó el diseño
+
+"Genérica" acá significa **una sola cosa**: cero logo, cero "Cerca Trova", cero
+dato que permita reconocer de qué inmobiliaria salió. No significa sobria. Antes
+era texto gris sobre fondo casi blanco con tarjetas blancas: se leía como un PDF
+exportado.
+
+### Fondo oscuro
+
+`ficha/layout.tsx`: `bg-surface` (gris casi blanco) → **`.surface-brand-deepest`**
+— verde muy oscuro con textura (gradiente diagonal + halo radial + trama de
+puntos), la misma clase que ya usan la franja de estudiantes del hero y el
+footer de la landing. **No es un color nuevo**: es el extremo oscuro de la
+escala de marca.
+
+Es el cambio que da vida, porque convierte cada tarjeta de datos en un bloque
+claro que salta contra el fondo, en vez de blanco sobre gris clarito donde nada
+se despegaba. Y un verde oscuro no identifica a ninguna inmobiliaria.
+
+⚠️ El layout necesitó `relative isolate` + un hijo `relative z-10`: la clase
+dibuja su trama en un `::before` con `inset: 0`, y sin contexto de apilamiento
+propio esa capa podía quedar por encima del contenido.
+
+### Variedad: cuatro tonos de la MISMA escala
+
+Cada sección tiene su encabezado como **barra sólida a todo el ancho** (antes
+era un renglón de texto verde sobre blanco). Es lo que separa una sección de la
+siguiente de un vistazo cuando se scrollea rápido en el teléfono, que es como se
+lee una ficha que llega por WhatsApp.
+
+| Sección | Barra | Texto |
+|---|---|---|
+| Características | `brand-500` | `brand-950` |
+| Ubicación | `brand-600` | `brand-950` |
+| Documentación | `brand-700` | blanco |
+| Descripción | `brand-800` | blanco |
+
+**Dos correcciones que salieron de mirar la primera captura y de calcular:**
+
+1. La escala arrancaba en `brand-600…900`, y el encabezado de Descripción
+   (`brand-900`, #063923) quedaba **prácticamente invisible**: el fondo arranca
+   en #042a19, a 3 puntos de luminancia. Se corrió toda la escala un paso más
+   clara; `brand-800` es el escalón más oscuro que todavía se despega.
+2. El texto **no es blanco en todas**. Calculado el contraste contra blanco:
+
+   | Paso | Contraste | ¿AA? |
+   |---|---|---|
+   | `brand-500` | 3.25:1 | ✗ |
+   | `brand-600` | 4.33:1 | ✗ |
+   | `brand-700` | 5.44:1 | ✓ |
+   | `brand-800` | 8.9:1 | ✓ |
+
+   El mínimo AA para texto normal es 4.5:1 y estos rótulos son de 14px: van en
+   negrita pero no llegan al umbral de "texto grande" (18.66px en negrita), así
+   que no aplica la excepción. Los dos verdes claros llevan texto `brand-950`
+   (5.2:1 y 6.9:1). Efecto colateral bueno: la alternancia clara/oscura suma
+   variedad, que era justo lo que se pedía.
+
+### El resto de la jerarquía
+
+- **Precio**: el elemento más brillante de la página, en un panel con
+  `--gradient-brand`. Antes era un texto verde más entre otros. No compite con
+  nada porque es lo único con ese tratamiento — que es exactamente lo que se
+  pidió al decir "el precio sigue siendo lo más importante".
+- **Encabezado** sin tarjeta, directo sobre el verde profundo: el título en
+  blanco contra ese fondo es el mayor contraste de la página.
+- **Ubicación subió al 2º lugar**, delante de Documentación: después del precio,
+  "dónde queda" es lo que más se pregunta.
+- **`BoolRow`**: el "no tiene" pasó de gris-sobre-gris (había que mirar el ícono
+  para distinguirlo) al par verde/rojo que ya usa la grilla de Comodidades del
+  detalle público. No es un criterio nuevo.
+- **`wrap-anywhere`** en título, descripción y valores de ubicación — mismo
+  arreglo que la PARTE 20, para que un link pegado no desborde la tarjeta.
+
+### Sin marca: verificado por código, no de memoria
+
+En cada captura se corrió `/Cerca\s*Trova/i.test(document.body.innerText)` sobre
+el DOM renderizado. Resultado: **`false`** en escritorio y en mobile.
+
+---
+
+## Verificación del flujo completo
+
+Manejando la instancia real de Swiper por CDP:
+
+**Detalle** (1440px y 414px con emulación táctil):
+
+| Paso | Resultado |
+|---|---|
+| Abrir visor | `abierto: true`, 3 zoom containers, contador `1 / 3`, flechas presentes, `body.overflow: hidden` |
+| Zoom 3x | `transform: matrix(3,0,0,3,0,0)`, clase `swiper-slide-zoomed`, `cursor: move` |
+| Flecha siguiente | contador `2 / 3`, **`transform: none`** ← zoom reseteado |
+| Escape | `abierto: false`, scroll del body restaurado |
+
+**Ficha** (1280px):
+
+| Paso | Resultado |
+|---|---|
+| Carrusel | Swiper montado, `effect: fade`, 5 slides, flechas y 5 miniaturas |
+| Flecha siguiente | `activeIndex: 1`, contador `2 / 5` |
+| Miniatura 4 | `activeIndex: 3` |
+| Abrir visor | `abierto: true`, contador `1 / 5`, botón Copiar presente |
+| Zoom 2.5x | `matrix(2.5,...)`, `cursor: move` |
+| Copiar imagen | toast **"Imagen copiada al portapapeles"** |
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npx next lint` 0 warnings, 0 errores ·
+`npm run build` exit 0.
+
+| Ruta | First Load JS |
+|---|---|
+| `/properties/[id]` | 206 kB (era 204 antes del visor; 241 con import estático) |
+| `/ficha/[id]` | 146 kB |
+
+## Anotado, NO aplicado
+
+- **El visor no tiene miniaturas propias.** Con 9 fotos, saltar de la 1 a la 8
+  son 7 clicks en la flecha. Una tira de miniaturas abajo lo resolvería, pero
+  agrega un segundo Swiper sincronizado y el pedido no lo mencionaba.
+- **`ImageLightbox` no precarga la foto siguiente.** Al pasar de imagen hay un
+  parpadeo la primera vez, hasta que `next/image` la resuelve. Se arregla con
+  `preload` de los vecinos inmediatos.
+- **El botón "Copiar" sólo está en la ficha.** En el detalle público podría
+  tener sentido para un visitante que quiere guardarse una foto, pero se dejó
+  acotado a lo pedido.

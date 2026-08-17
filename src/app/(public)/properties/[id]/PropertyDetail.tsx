@@ -12,6 +12,7 @@ import {
   PawPrint, Receipt, Phone,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import dynamic from 'next/dynamic';
 import { BsWhatsapp } from 'react-icons/bs';
 import { toast } from 'sonner';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
@@ -20,6 +21,7 @@ import { useAuth } from '@/modules/shared/context/AuthContext';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { FavoriteButton } from '@/modules/shared/ui/Favoritebutton';
+import { AmpliarHint } from '@/modules/shared/ui/AmpliarHint';
 import { whatsappLink } from '@/modules/shared/lib/contact';
 import { priceParts, formatExpensas } from '@/modules/shared/lib/money';
 import { PropertyCard } from '@/modules/properties/components/PropertyCard';
@@ -278,6 +280,8 @@ const TOLERANCIA_AMPLIACION = 1.15;
 // ── SLIDER ────────────────────────────────────────────────────────────────────
 function ImageSlider({ images, title }: { images: PropertyImage[]; title: string }) {
   const [current, setCurrent] = useState(0);
+  /** Visor a pantalla completa con zoom — ver `shared/ui/ImageLightbox`. */
+  const [lightbox, setLightbox] = useState(false);
   const cajaRef = useRef<HTMLDivElement>(null);
 
   /**
@@ -346,7 +350,19 @@ function ImageSlider({ images, title }: { images: PropertyImage[]; title: string
   return (
     // Sombra aliviada: antes era `0_20px_50px_-24px` verde y caía como un
     // bloque pesado debajo de la galería.
-    <div className="relative w-full overflow-hidden rounded-3xl border border-ink-100 bg-ink-950 shadow-[0_2px_4px_-2px_rgba(10,12,11,0.08),0_12px_28px_-16px_rgba(10,12,11,0.28)]">
+    <div className="group relative w-full overflow-hidden rounded-3xl border border-ink-100 bg-ink-950 shadow-[0_2px_4px_-2px_rgba(10,12,11,0.08),0_12px_28px_-16px_rgba(10,12,11,0.28)]">
+      {/* ── VISOR A PANTALLA COMPLETA ──
+          Se monta sólo cuando está abierto: mientras está cerrado no hay ni
+          portal ni instancia de Swiper ni listener de teclado dando vueltas. */}
+      {lightbox && (
+        <ImageLightbox
+          images={images}
+          initialIndex={current}
+          title={title}
+          onClose={() => setLightbox(false)}
+        />
+      )}
+
       <div ref={cajaRef} className="relative h-105 w-full md:h-130">
         {images.map((img, i) => (
           <div key={img.id} className={`absolute inset-0 transition-opacity duration-500 ${i === current ? 'opacity-100' : 'opacity-0'}`}>
@@ -416,7 +432,29 @@ function ImageSlider({ images, title }: { images: PropertyImage[]; title: string
             />
           </div>
         ))}
-        <div className="absolute inset-0 bg-linear-to-t from-ink-950/50 via-transparent to-transparent" />
+        {/* `pointer-events-none`: el degradado es decorativo y cubre `inset-0`,
+            así que sin esto se comía todos los clicks del botón de ampliar que
+            va justo debajo. */}
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-ink-950/50 via-transparent to-transparent" />
+
+        {/* ── ABRIR EL VISOR ──
+            Es un `<button>` que cubre la foto entera, y no un `onClick` en el
+            contenedor: así el gesto queda anunciado a lectores de pantalla y es
+            alcanzable con el teclado.
+
+            Va ANTES de las flechas y del contador en el DOM a propósito. Los
+            tres son `absolute` sin `z-index`, o sea que el orden de pintado lo
+            decide el orden del documento: al ir primero, las flechas quedan por
+            encima y un click en ellas cambia de foto en vez de abrir el visor,
+            sin necesidad de `stopPropagation`. */}
+        <button
+          type="button"
+          onClick={() => setLightbox(true)}
+          aria-label="Ampliar imagen"
+          className="absolute inset-0 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-inset"
+        />
+        <AmpliarHint className="absolute top-5 right-5" />
+
         {images.length > 1 && (
           <>
             <button onClick={prev} className="absolute top-1/2 left-4 -translate-y-1/2 cursor-pointer rounded-full bg-white/90 p-3 text-brand-700 shadow-lg backdrop-blur-sm transition-transform hover:scale-110" aria-label="Foto anterior">
@@ -427,7 +465,7 @@ function ImageSlider({ images, title }: { images: PropertyImage[]; title: string
             </button>
           </>
         )}
-        <div className="absolute right-5 bottom-5 rounded-full bg-ink-950/60 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-sm">
+        <div className="pointer-events-none absolute right-5 bottom-5 rounded-full bg-ink-950/60 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-sm">
           {current + 1} / {images.length}
         </div>
       </div>
@@ -450,6 +488,23 @@ function ImageSlider({ images, title }: { images: PropertyImage[]; title: string
     </div>
   );
 }
+
+/**
+ * Visor a pantalla completa, cargado BAJO DEMANDA.
+ *
+ * `ImageLightbox` arrastra Swiper + su módulo Zoom: medido, ponerlo como import
+ * estático subía el First Load JS de esta ruta de 204 kB a 241 kB. Y la enorme
+ * mayoría de las visitas nunca abre el visor — mira las fotos en la galería
+ * embebida y sigue de largo.
+ *
+ * Con `next/dynamic` el chunk se pide recién en el click de "Ampliar", que es
+ * justo el momento en que el usuario ya está esperando algo. `ssr: false`
+ * porque el visor es un portal a `document.body`: no existe en el servidor.
+ */
+const ImageLightbox = dynamic(
+  () => import('@/modules/shared/ui/ImageLightbox').then((m) => m.ImageLightbox),
+  { ssr: false },
+);
 
 // ── TARJETA DE PRECIO + CTA ───────────────────────────────────────────────────
 /**
