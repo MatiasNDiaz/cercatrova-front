@@ -154,6 +154,59 @@ export function propertyTypeBadgeSoft(typeName?: string): string {
   return 'border-emerald-200 bg-emerald-50 text-emerald-700';
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   VARIANTES VIVAS — para la FICHA compartible
+   ───────────────────────────────────────────────────────────────────────────
+   Un tercer tratamiento, entre el suave del detalle y el sólido del catálogo.
+
+   ¿Por qué no se reusa el sólido del catálogo (`*BadgeColor`)? Porque está
+   pensado para ir SOBRE UNA FOTO, donde el fondo es impredecible y hace falta
+   un relleno opaco. Fuera de ese contexto sus contrastes no dan: `bg-sky-400`
+   (#38bdf8) con texto blanco queda en ~1.9:1, y `bg-orange-400` en ~2.1:1 —muy
+   por debajo del 4.5:1 de WCAG AA— y en la ficha estos badges van sobre una
+   tarjeta clara, no sobre una imagen. En el catálogo se tolera porque el badge
+   se apoya en el degradado oscuro que cubre la foto; acá no habría nada que lo
+   sostenga.
+
+   Estas variantes suben la saturación por el lado que NO cuesta legibilidad:
+   borde `-600` (fuerte, marcado) sobre fondo `-100` (más saturado que el `-50`
+   del suave) y texto `-800`. Resultado: se ven claramente más vivas que las
+   suaves y todas quedan por encima de 7:1.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Operación en tono vivo. Misma gama que las otras dos familias de operación. */
+export function operationBadgeVivid(operationType?: string): string {
+  switch ((operationType ?? '').toLowerCase()) {
+    case 'venta':
+      return 'border-rose-600 bg-rose-100 text-rose-800';
+    case 'alquiler':
+      return 'border-blue-600 bg-blue-100 text-blue-800';
+    case 'temporal':
+      return 'border-violet-600 bg-violet-100 text-violet-800';
+    default:
+      return 'border-rose-600 bg-rose-100 text-rose-800';
+  }
+}
+
+/** Tipo de propiedad en tono vivo. Misma gama que `propertyTypeBadgeSoft`. */
+export function propertyTypeBadgeVivid(typeName?: string): string {
+  const n = (typeName ?? '').toLowerCase();
+
+  if (n.includes('terreno') || n.includes('lote') || n.includes('baldio') || n.includes('baldío'))
+    return 'border-orange-600 bg-orange-100 text-orange-800';
+
+  if (n.includes('emprendimiento') || n.includes('pozo') || n.includes('duplex'))
+    return 'border-violet-600 bg-violet-100 text-violet-800';
+
+  if (n.includes('local') || n.includes('comercial') || n.includes('oficina') || n.includes('galpon') || n.includes('galpón'))
+    return 'border-red-600 bg-red-100 text-red-800';
+
+  if (n.includes('departamento') || n.includes('depto'))
+    return 'border-sky-600 bg-sky-100 text-sky-800';
+
+  return 'border-emerald-600 bg-emerald-100 text-emerald-800';
+}
+
 /**
  * Color según la categoría/tipo de propiedad. Se matchea por palabra clave porque
  * `typeOfProperty.name` es texto libre cargado por el admin (no un enum fijo).
