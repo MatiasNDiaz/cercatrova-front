@@ -4213,3 +4213,115 @@ A 768px (tablet, todavía una columna): contenido centrado, `h2` a 48px — el
   explícitamente "centrar y sacar padding", y la altura de la imagen no es
   padding — pero es el próximo candidato si la sección todavía se siente pesada
   en el teléfono.
+
+---
+
+# PARTE 21 — Botón "ir arriba" (color y posición) + el precio arriba en mobile
+
+> Misma sesión. Tres ajustes pedidos después de ver el sitio en un teléfono real
+> (414x896). Se confirmó de paso que el arreglo de la navbar de la PARTE 20
+> funciona en producción: el detalle ya no se rompe.
+
+## 1) Botón flotante: verde más claro (todas las resoluciones)
+
+Este gradiente se ajustó dos veces en la misma sesión, así que queda el
+historial completo en `globals.css`:
+
+| Paso | Gradiente | Problema |
+|---|---|---|
+| Original | `#11b06d → #0b7a4b` | El `#11b06d` **no existe en la escala `brand-*`** (cae entre el 400 y el 500 sin ser ninguno). Era el único elemento del sitio con ese tono |
+| PARTE 20 | `brand-700 → brand-900` (`#0b7a4b → #063923`) | Entró en la paleta pero quedó **demasiado oscuro**: casi negro sobre los fondos claros de la landing, más una mancha que un botón |
+| **Actual** | **`brand-600 → brand-800`** (`#0f8b57 → #085031`) | Un paso más claro en **las dos paradas**. Sigue siendo verde de marca y vuelve a leerse como botón |
+
+Verificado en el DOM: `background-image: linear-gradient(135deg, rgb(15,139,87) 0%, rgb(8,80,49) 100%)`.
+
+## 2) Botón flotante: pegado al borde derecho (solo mobile)
+
+`right: 70px` está pensado para escritorio. En un teléfono de 414px ese margen
+es el **17% de la pantalla**: el botón flotaba a media distancia entre el centro
+y el borde y se leía como suelto en el medio del contenido.
+
+Pasa a `right: 18px` por debajo de 640px — el mismo aire que el `px-4` (16px) de
+los contenedores de la zona pública, así que queda alineado con el margen visual
+del resto de la página en vez de ser un número suelto. Medido: margen derecho
+real de **18px** a 414px de ancho.
+
+### ⚠️ Efecto secundario que había que resolver primero
+
+La expansión en hover (60px → 150px, revelando "IR ARRIBA") se compensa con
+`margin-right: -45px`, o sea que **corre el botón 45px hacia la derecha**. Con
+`right: 70px` sobraban 25px; con `right: 18px` lo empujaría **27px fuera de la
+pantalla** — y ese desborde lo taparía el `overflow-x: clip` de la PARTE 20, así
+que ni siquiera se vería el síntoma.
+
+En vez de inventar un `margin-right` distinto por breakpoint, las tres reglas de
+la expansión se movieron dentro de
+**`@media (hover: hover) and (pointer: fine)`**. Beneficio doble:
+
+1. Donde no hay puntero real, no hay expansión → no puede salirse.
+2. Se elimina el **hover pegado** de las pantallas táctiles: al tocar el botón,
+   `:hover` quedaba activo y el botón se quedaba estirado con el texto visible
+   hasta que tocabas otra cosa. Es un gesto de escritorio que en el teléfono
+   nunca aportó nada.
+
+En escritorio no cambia absolutamente nada.
+
+## 3) La tarjeta de precio, arriba de la descripción (solo mobile)
+
+### El problema, medido
+
+El precio vive en el sidebar sticky, que en escritorio es lo correcto. Pero en
+mobile el grid colapsa a una columna y ese sidebar cae **después de toda la
+columna izquierda**: galería, ficha, descripción, características, comentarios
+y mapa.
+
+Medido a 414px con datos reales: la tarjeta de precio arrancaba en **y = 4446px**
+sobre una página de 7515px. En una pantalla de 896px de alto eso son **cinco
+pantallazos de scroll** para ver el dato que la persona vino a buscar.
+
+### La solución: un componente, dos puntos de montaje
+
+Se extrajo el bloque a una función `PriceCard({ precio, operationType, wa, className })`
+y se renderiza dos veces, con las clases invertidas:
+
+| Instancia | Clases | Dónde |
+|---|---|---|
+| Mobile | `lg:hidden` | En la columna izquierda, **justo antes de la Descripción** |
+| Escritorio | `hidden lg:block` | En el sidebar sticky, donde siempre estuvo |
+
+⚠️ **Es la misma función en los dos casos, a propósito.** Copiar el JSX habría
+dejado dos tarjetas que se desincronizan en cuanto alguien toque el copy del CTA
+o el formato del precio. Y no cuesta nada duplicar el nodo: `PriceCard` no tiene
+estado ni efectos, es markup puro derivado de props.
+
+Las dos son excluyentes por breakpoint, así que **nunca se ven las dos a la vez**.
+Verificado: 2 en el DOM, **1 visible**, tanto a 414px como a 1440px.
+
+### De paso, un desborde latente en la tarjeta
+
+El importe estaba en `text-[2.6rem]` (41.6px) fijo. Con un precio de 9 dígitos
+("$ 185.000.000") eso no entra en el ancho de un teléfono y el código de moneda
+se iba a otro renglón. Ahora es `text-4xl sm:text-[2.6rem]` y el `<p>` lleva
+`flex-wrap`. En escritorio queda igual.
+
+### Resultado
+
+| | Antes | Ahora |
+|---|---|---|
+| Precio en mobile (414px) | y = **4446px** | y = **1319px** |
+| Scroll hasta el precio | ~5 pantallas | **~1,5 pantallas** |
+
+Orden verificado en mobile: `h1` (944) → **precio (1319)** → descripción (1661)
+→ características (1949).
+
+En escritorio (1440px) el precio sigue en `y = 228`, **dentro** del sidebar
+(`sidebar.contains(tarjeta) === true`) — idéntico a antes.
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npx next lint` 0 warnings, 0 errores ·
+`npm run build` exit 0.
+
+Verificado por CDP con emulación móvil (414x896, DPR 2) y en 1440px, midiendo
+posiciones absolutas en el documento y `getClientRects()` para distinguir "está
+en el DOM" de "se ve". `document.scrollWidth === clientWidth` en las dos.

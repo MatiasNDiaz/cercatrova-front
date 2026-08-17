@@ -280,17 +280,24 @@ body {
   /* Mantenemos tu efecto de burbuja 3D */
   /* background: linear-gradient(135deg, #10b981 0%, #059669 100%); */
   /*
-   * ── Verde más oscuro y dentro de la paleta ──
-   * Antes: `#11b06d → #0b7a4b`. El `#11b06d` del arranque es un verde brillante
-   * que NO pertenece a la escala `brand-*` (queda entre el 500 y el 400 sin ser
-   * ninguno), y siendo un botón flotante que se ve encima de todas las
-   * secciones, era el único elemento del sitio con ese tono: cantaba.
+   * ── Verde de la paleta, en su punto ──
+   * Historial de este gradiente, porque se ajustó dos veces:
    *
-   * Ahora usa dos pasos reales de la escala, `brand-700 → brand-900`
-   * (`#0b7a4b → #063923`), o sea el verde de marca oscureciéndose. Se escriben
-   * con `var()` y no con el hex a mano para que siga a la paleta si cambia.
+   *  1. Original `#11b06d → #0b7a4b`. El `#11b06d` del arranque es un verde
+   *     brillante que NO pertenece a la escala `brand-*` (cae entre el 400 y el
+   *     500 sin ser ninguno), y siendo un botón flotante que se ve encima de
+   *     todas las secciones era el único elemento del sitio con ese tono.
+   *  2. `brand-700 → brand-900` (`#0b7a4b → #063923`). Entró en la paleta, pero
+   *     quedó DEMASIADO oscuro: casi negro sobre los fondos claros de la
+   *     landing, más un peso que un acento.
+   *  3. **Actual: `brand-600 → brand-800`** (`#0f8b57 → #085031`). Es un paso
+   *     más claro que el anterior en las dos paradas — sigue siendo verde de
+   *     marca, pero vuelve a leerse como un botón y no como una mancha.
+   *
+   * Se escriben con `var()` y no con el hex a mano para que sigan a la paleta
+   * si alguna vez cambia.
    */
-  background: linear-gradient(135deg, var(--color-brand-700) 0%, var(--color-brand-900) 100%);
+  background: linear-gradient(135deg, var(--color-brand-600) 0%, var(--color-brand-800) 100%);
   
   box-shadow: 
     0 10px 20px rgba(0, 0, 0, 0.2),
@@ -326,21 +333,6 @@ body {
   fill: #ffffff;
 }
 
-/* --- ESTA ES LA PARTE QUE SOLUCIONA TU PROBLEMA --- */
-.button:hover {
-  width: 150px;
-  border-radius: 40px;
-  /* Ajustamos el margen negativo a la mitad del incremento de ancho */
-  /* Si el ancho sube de 60px a 150px (sube 90px), movemos -45px a la derecha */
-  margin-right: -45px; 
-  transform: translateY(-5px);
-}
-
-.button:hover .svgIcon {
-  transform: translateY(-200%);
-  opacity: 0;
-}
-
 .button::before {
   position: absolute;
   bottom: -20px;
@@ -351,10 +343,62 @@ body {
   transition: 0.3s;
 }
 
-.button:hover::before {
-  font-size: 13px;
-  opacity: 1;
-  bottom: 22px; 
+/**
+ * ── EXPANSIÓN EN HOVER — solo en dispositivos con puntero real ──────────────
+ *
+ * El botón crece de 60px a 150px y revela el texto "IR ARRIBA". Va detrás de
+ * `@media (hover: hover) and (pointer: fine)` por DOS motivos:
+ *
+ *  1. En pantallas táctiles el `:hover` se queda "pegado" después de tocar: el
+ *     botón quedaba estirado y con el texto visible hasta que tocabas otra
+ *     cosa. Es un gesto de escritorio que en el teléfono nunca aportó nada.
+ *  2. Y sobre todo: la expansión se compensa con `margin-right: -45px` (la
+ *     mitad de los 90px que crece), o sea que el botón se corre 45px hacia la
+ *     derecha. Eso funcionaba con `right: 70px` porque quedaban 25px de
+ *     sobra — pero en mobile ahora está a 18px del borde, y ahí la expansión lo
+ *     empujaría 27px FUERA de la pantalla. En vez de inventar un margen
+ *     distinto por breakpoint, directamente no expande donde no se puede.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .button:hover {
+    width: 150px;
+    border-radius: 40px;
+    /* Ajustamos el margen negativo a la mitad del incremento de ancho */
+    /* Si el ancho sube de 60px a 150px (sube 90px), movemos -45px a la derecha */
+    margin-right: -45px;
+    transform: translateY(-5px);
+  }
+
+  .button:hover .svgIcon {
+    transform: translateY(-200%);
+    opacity: 0;
+  }
+
+  .button:hover::before {
+    font-size: 13px;
+    opacity: 1;
+    bottom: 22px;
+  }
+}
+
+/**
+ * ── MOBILE: pegado al borde derecho ─────────────────────────────────────────
+ *
+ * Los 70px de `right` están pensados para escritorio, donde sobra ancho. En un
+ * teléfono de 414px ese margen es el 17% de la pantalla: el botón terminaba
+ * flotando a media distancia entre el centro y el borde, y se leía como si
+ * estuviera suelto en el medio del contenido en vez de anclado a un costado.
+ *
+ * 18px lo deja contra el lateral sin que llegue a tocarlo — el mismo aire que
+ * usan los contenedores de la zona pública (`px-4` = 16px), así que queda
+ * alineado con el margen visual del resto de la página en vez de ser un valor
+ * suelto. La expansión en hover está desactivada acá (ver el bloque de arriba),
+ * así que no hay riesgo de que se salga al tocarlo.
+ */
+@media (max-width: 640px) {
+  .button {
+    right: 18px;
+  }
 }
 
 /* Animación de flotado sutil */

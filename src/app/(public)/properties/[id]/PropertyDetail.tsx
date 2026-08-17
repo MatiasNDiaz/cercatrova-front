@@ -451,6 +451,83 @@ function ImageSlider({ images, title }: { images: PropertyImage[]; title: string
   );
 }
 
+// ── TARJETA DE PRECIO + CTA ───────────────────────────────────────────────────
+/**
+ * Precio, tipo de operación y el botón de WhatsApp.
+ *
+ * ── Por qué es un componente y se renderiza DOS veces ───────────────────────
+ * En escritorio vive en el sidebar sticky, que es donde corresponde: acompaña
+ * el scroll y queda siempre a la vista.
+ *
+ * En mobile el grid colapsa a una columna y el sidebar cae DESPUÉS de toda la
+ * columna izquierda — o sea después de la galería, la ficha, la descripción,
+ * las características, los comentarios Y el mapa. El precio, que es el primer
+ * dato que alguien busca, quedaba a varias pantallas de scroll del principio.
+ *
+ * Por eso en mobile se renderiza una segunda instancia arriba, justo antes de
+ * la descripción. Las dos salen de esta misma función y se excluyen entre sí
+ * (`lg:hidden` / `hidden lg:block`), así que nunca se ven las dos a la vez y no
+ * pueden divergir: si cambia el precio o el copy del CTA, cambia en los dos
+ * lugares porque es un solo bloque de JSX.
+ *
+ * No lleva estado ni efectos, así que duplicar el nodo no duplica ningún
+ * trabajo: es markup puro derivado de props.
+ */
+function PriceCard({
+  precio, operationType, wa, className = '',
+}: {
+  precio: { amount: string; code: string };
+  operationType?: string;
+  wa: string;
+  className?: string;
+}) {
+  return (
+    <div className={`overflow-hidden ${CARD} ${className}`}>
+      {/* Franja de marca arriba: le da jerarquía a la tarjeta de
+          precio, que es el dato más importante del sidebar. */}
+      <div className="h-1.5 w-full" style={{ background: 'var(--gradient-brand)' }} />
+      {/* El precio es el dato más importante del sidebar, pero antes
+          era solo un número grande sobre blanco con un rótulo gris
+          encima — se leía como un dato más de la lista. Ahora vive en
+          su propio panel verde clarísimo: la etiqueta es una píldora
+          de marca, el monto está separado del código de moneda en su
+          propia línea de base, y debajo va el tipo de operación, que
+          antes solo aparecía arriba en los badges del título.
+          El símbolo (`$` / `US$`) y el código (`ARS` / `USD`) salen de
+          `currency`, no de un "USD" escrito a mano como antes. */}
+      <div className="border-b border-brand-100 bg-brand-50/60 px-7 pt-6 pb-6">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-700 px-3 py-1 text-[10px] font-bold tracking-[0.16em] text-white uppercase">
+          <Landmark size={12} />
+          Precio
+        </span>
+        {/* `text-4xl` en mobile y `sm:text-[2.6rem]`: con un importe de
+            9 dígitos ("$ 185.000.000") los 41.6px se comían el ancho de un
+            teléfono y el código de moneda se iba a otro renglón. */}
+        <p className="mt-3 flex flex-wrap items-baseline gap-x-1.5 leading-none">
+          <span className="text-4xl font-black tracking-tight text-brand-800 sm:text-[2.6rem]">
+            {precio.amount}
+          </span>
+          <span className="text-sm font-bold tracking-wide text-brand-600">{precio.code}</span>
+        </p>
+        {operationType && (
+          <p className="mt-2.5 text-xs font-semibold text-ink-500">
+            Publicada en <span className="text-brand-700 capitalize">{operationType}</span>
+          </p>
+        )}
+      </div>
+      <div className="px-7 pb-7">
+        <a href={wa} target="_blank" rel="noopener noreferrer"
+          className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl py-4 text-base font-bold text-white shadow-[0_10px_24px_-8px_rgba(6,57,35,0.6)] transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98]"
+          style={{ background: 'var(--gradient-brand)' }}>
+          <span aria-hidden className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
+          <BsWhatsapp size={20} /><span className="relative">Consultar por WhatsApp</span>
+        </a>
+        <p className="mt-3 text-center text-xs text-ink-500">Respondemos en menos de 24hs</p>
+      </div>
+    </div>
+  );
+}
+
 // ── MAPA ──────────────────────────────────────────────────────────────────────
 function GoogleMapSection({ address }: { address: string }) {
   const encodedAddress = encodeURIComponent(address);
@@ -1268,6 +1345,22 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
              </div>
             </Reveal>
 
+            {/* ── PRECIO + CTA (SOLO MOBILE) ──
+                En escritorio el precio vive en el sidebar sticky y está siempre
+                a la vista. En mobile el grid colapsa a una columna y ese sidebar
+                cae al final de todo: había que scrollear la galería, la ficha,
+                la descripción, las características, los comentarios y el mapa
+                para llegar al precio — el dato que la persona vino a buscar.
+
+                Acá queda arriba de la descripción: apenas debajo del título y
+                la ubicación, o sea dentro de la primera pantalla o la siguiente.
+                Es la MISMA `PriceCard` del sidebar, con las clases invertidas
+                (`lg:hidden` contra `hidden lg:block`), así que las dos no pueden
+                mostrarse a la vez ni quedar desincronizadas. */}
+            <Reveal y={18} className="lg:hidden">
+              <PriceCard precio={precio} operationType={operationType} wa={wa} />
+            </Reveal>
+
             {/* Descripción */}
             <Reveal y={18}>
               <div className={`${CARD} p-8`}>
@@ -1440,47 +1533,16 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
           <div className="lg:col-span-1">
             <div className="sticky top-28 flex flex-col gap-5">
 
-              {/* Precio + CTA */}
-              <div className={`overflow-hidden ${CARD}`}>
-                {/* Franja de marca arriba: le da jerarquía a la tarjeta de
-                    precio, que es el dato más importante del sidebar. */}
-                <div className="h-1.5 w-full" style={{ background: 'var(--gradient-brand)' }} />
-                {/* El precio es el dato más importante del sidebar, pero antes
-                    era solo un número grande sobre blanco con un rótulo gris
-                    encima — se leía como un dato más de la lista. Ahora vive en
-                    su propio panel verde clarísimo: la etiqueta es una píldora
-                    de marca, el monto está separado del código de moneda en su
-                    propia línea de base, y debajo va el tipo de operación, que
-                    antes solo aparecía arriba en los badges del título.
-                    El símbolo (`$` / `US$`) y el código (`ARS` / `USD`) salen de
-                    `currency`, no de un "USD" escrito a mano como antes. */}
-                <div className="border-b border-brand-100 bg-brand-50/60 px-7 pt-6 pb-6">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-700 px-3 py-1 text-[10px] font-bold tracking-[0.16em] text-white uppercase">
-                    <Landmark size={12} />
-                    Precio
-                  </span>
-                  <p className="mt-3 flex items-baseline gap-1.5 leading-none">
-                    <span className="text-[2.6rem] font-black tracking-tight text-brand-800">
-                      {precio.amount}
-                    </span>
-                    <span className="text-sm font-bold tracking-wide text-brand-600">{precio.code}</span>
-                  </p>
-                  {operationType && (
-                    <p className="mt-2.5 text-xs font-semibold text-ink-500">
-                      Publicada en <span className="text-brand-700 capitalize">{operationType}</span>
-                    </p>
-                  )}
-                </div>
-                <div className="px-7 pb-7">
-                  <a href={wa} target="_blank" rel="noopener noreferrer"
-                    className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl py-4 text-base font-bold text-white shadow-[0_10px_24px_-8px_rgba(6,57,35,0.6)] transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98]"
-                    style={{ background: 'var(--gradient-brand)' }}>
-                    <span aria-hidden className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
-                    <BsWhatsapp size={20} /><span className="relative">Consultar por WhatsApp</span>
-                  </a>
-                  <p className="mt-3 text-center text-xs text-ink-500">Respondemos en menos de 24hs</p>
-                </div>
-              </div>
+              {/* ── PRECIO + CTA (escritorio) ──
+                  `hidden lg:block` porque en mobile esta misma tarjeta ya se
+                  renderiza arriba, antes de la descripción — ver `PriceCard`.
+                  Las dos son excluyentes: nunca se ven las dos a la vez. */}
+              <PriceCard
+                precio={precio}
+                operationType={operationType}
+                wa={wa}
+                className="hidden lg:block"
+              />
 
               {/* ── PUBLICADA POR ──
                   ⚠️ El rótulo dice "Publicada por" y NO "Agente a cargo", por
