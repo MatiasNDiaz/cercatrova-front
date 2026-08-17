@@ -95,6 +95,52 @@ export type PropertyFull = Omit<
   ratings?: Rating[];
 };
 
+/**
+ * ── TEXTO LIBRE: por qué cada nodo de contenido lleva `wrap-anywhere` ──────────
+ *
+ * Esta pantalla es la ÚNICA de la zona pública que imprime texto escrito por
+ * personas (título y descripción del admin, comentarios de los usuarios,
+ * dirección). El resto del sitio muestra copy controlado, y por eso el bug de
+ * abajo se veía sólo acá.
+ *
+ * Sin regla de corte, una sola palabra sin espacios —típicamente un link pegado
+ * en un comentario— es indivisible: el `<p>` que la contiene declara ese ancho
+ * como su MÍNIMO y ninguna caja de arriba puede achicarlo.
+ *
+ * ⚠️ La utilidad es `wrap-anywhere` (`overflow-wrap: anywhere`) y NO
+ * `break-words` (`overflow-wrap: break-word`). Se probaron las dos y sólo la
+ * primera arregla esto: por especificación, `break-word` parte la palabra al
+ * PINTAR pero **no** cambia el tamaño `min-content` que el elemento declara
+ * hacia arriba, así que el grid/flex que lo contiene sigue reservándole los
+ * 673px y el documento sigue desbordado. `anywhere` sí afecta el `min-content`,
+ * que es justo el número del que cuelga todo el problema. Medido: con
+ * `break-words` el `<main>` seguía en `scrollWidth: 690`; con `wrap-anywhere`
+ * baja a 390.
+ *
+ * Medido con Chrome en emulación mobile (390px, DPR 2), un comentario con una
+ * URL de Google Maps daba esta cadena:
+ *
+ *   <p> del comentario ................ ancho mínimo 673px
+ *   → columna izquierda del grid ...... scrollWidth 674px
+ *   → div.mx-auto.max-w-6xl.px-4 ...... scrollWidth 690px
+ *   → document ........................ scrollWidth 690px  (viewport: 390px)
+ *
+ * Y el último paso es el que rompía la navbar: cuando el documento supera el
+ * ancho de pantalla, el navegador móvil **agranda el bloque contenedor inicial**
+ * a ese ancho. La navbar es `fixed` con `w-[96%]`, así que ese 96% pasó a
+ * calcularse sobre 690px en vez de 390px: se maquetó 662px de ancho y la
+ * hamburguesa quedó en x≈659, fuera de la pantalla, sólo alcanzable
+ * scrolleando de costado. El botón flotante de "ir arriba" (`fixed right:70px`)
+ * se corría por exactamente lo mismo.
+ *
+ * O sea: la navbar nunca estuvo rota. Era contenido de ESTA página empujando el
+ * viewport. Por eso el fix va en los nodos de texto y no en la navbar.
+ *
+ * (Como red de seguridad hay además un `overflow-x: clip` en `html`/`body`
+ * —ver `globals.css`—, para que ningún contenido futuro pueda volver a mover la
+ * navbar. Es defensa en profundidad, no el arreglo.)
+ */
+
 // ── ESTILOS DE LA BARRA DE ACCESOS RÁPIDOS ────────────────────────────────────
 // Cada acceso es un chip que en hover se tiñe MUY suave.
 //
@@ -382,7 +428,7 @@ function GoogleMapSection({ address }: { address: string }) {
   return (
     <div className={`scroll-mt-28 ${CARD} p-8`}>
       <SectionHeader icon={MapPin} title="Ubicación" id="mapa-ubicacion" className="mb-3" tono="rojo" />
-      <p className="mb-6 flex items-center gap-2 text-sm font-medium text-ink-600">
+      <p className="mb-6 flex items-center gap-2 text-sm font-medium wrap-anywhere text-ink-600">
         <Navigation size={14} className="shrink-0 text-brand-700" />{address}
       </p>
       <div className="overflow-hidden rounded-2xl border border-brand-700/15 shadow-lg transition-all duration-500 hover:shadow-[0_0_40px_-6px_rgba(11,122,75,0.25)]">
@@ -812,7 +858,11 @@ function CommentsAndRatings({
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm leading-relaxed text-ink-600">{comment.message}</p>
+                      /* `wrap-anywhere` — ver "TEXTO LIBRE". ESTE es el nodo que
+                         rompía la navbar en mobile: un comentario con un link
+                         pegado medía 673px de ancho mínimo y arrastraba el
+                         documento entero a 690px. */
+                      <p className="text-sm leading-relaxed wrap-anywhere text-ink-600">{comment.message}</p>
                     )}
                   </div>
                 </div>
@@ -937,37 +987,46 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
             `motion.div` directo y no `<Reveal>`: esta barra ya está dentro del
             viewport al cargar, así que un `whileInView` dispararía igual pero
             dependiendo del margen de detección. Con `animate` entra siempre, y
-            el `staggerChildren` hace que los cuatro accesos aparezcan uno detrás
-            de otro en vez de todos de golpe. */}
+            el `staggerChildren` hace que los accesos aparezcan uno detrás de
+            otro en vez de todos de golpe.
+
+            ── MOBILE: grilla 2 columnas x 3 filas · DESKTOP: fila horizontal ──
+            Los accesos pasaron de 4 a 5 ("Ver Características") y, contando el
+            botón de Guardar, son SEIS piezas. En la grilla 2x2 anterior el
+            botón de favorito quedaba fuera —era el otro hijo del flex— y con
+            seis elementos la fila se comprimía o desbordaba.
+
+            Ahora la grilla vive en ESTE contenedor y las seis piezas son celdas
+            hermanas: 2 columnas x 3 filas exactas. A partir de `sm` vuelve a
+            ser la fila horizontal de siempre, con los accesos a la izquierda y
+            Guardar a la derecha (`sm:justify-between`). */}
         <motion.div
           initial="hidden"
           animate="show"
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } } }}
-          className={`mb-8 flex flex-wrap items-center justify-between gap-4 px-5 py-3 ${CARD} rounded-2xl`}
+          className={`mb-8 grid grid-cols-2 items-stretch gap-2 px-5 py-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 ${CARD} rounded-2xl`}
         >
           {/* Contenedor intermedio también `motion`: las variantes de framer
               se propagan por el árbol de componentes `motion`, y un `<div>`
               común en el medio cortaría la cadena y el stagger no llegaría a
-              los accesos. */}
-          {/* ── MOBILE: grilla 2x2 · DESKTOP: fila con separadores ──
-              En mobile el `flex flex-wrap` dejaba los cuatro accesos uno debajo
-              del otro, alineados a la izquierda y con los separadores "|"
-              colgando al final de cada línea: una columna larga y despareja.
+              los accesos.
 
-              `grid-cols-2` los acomoda en 2 filas x 2 columnas, cada uno
-              ocupando su celda completa. A partir de `sm` vuelve a ser la fila
-              horizontal de siempre (`sm:flex`), que en desktop entra sin
-              problema y es donde los separadores tienen sentido.
+              ⚠️ `contents` en mobile (`display: contents`) — no es decorativo.
+              Este div tiene que existir para agrupar los cinco accesos en la
+              fila de escritorio (si no, `sm:justify-between` los separaría uno
+              de otro en vez de separarlos del botón Guardar), pero en mobile no
+              debe generar caja propia: con `display: contents` desaparece del
+              layout y sus hijos pasan a ser celdas directas de la grilla de
+              arriba, que es lo que permite el 2x3 con Guardar incluido.
 
               ⚠️ Cada wrapper lleva `min-w-0`. Sin eso, un item de grilla usa
               `min-width: auto`, o sea que se niega a achicarse por debajo del
               ancho de su contenido: la columna derecha se desbordaba de la
-              tarjeta y "Ver Valoraciones" / "Ver dirección exacta" quedaban
-              cortados contra el borde de la pantalla. Con `min-w-0` la celda
-              puede encoger y el texto envuelve. */}
+              tarjeta y los textos quedaban cortados contra el borde de la
+              pantalla. Con `min-w-0` la celda puede encoger y el texto envuelve. */}
           <motion.div
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
-            className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-2"
+            className="contents sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-2"
           >
             <motion.div variants={QUICK_LINK_ITEM} className="min-w-0">
               <Link href="/properties" className={`${QUICK_LINK_BASE} text-brand-700 hover:border-brand-200 hover:bg-brand-50`}>
@@ -978,10 +1037,32 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
 
             <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 sm:inline" aria-hidden>|</motion.span>
 
+            {/* ── VER CARACTERÍSTICAS ──
+                Va 2º, entre "Volver al catálogo" y "Ver Valoraciones", por
+                pedido explícito.
+
+                Color: verde PROFUNDO (`brand-800` / `brand-900`), no el
+                `brand-700` de "Volver al catálogo". La regla de la barra es que
+                cada acceso comparta señal visual con la sección a la que lleva
+                —por eso valoraciones es ámbar, comentarios azul y ubicación
+                roja— y el encabezado de "Características" es verde de marca
+                (`tono='brand'`). Un ámbar/azul/rojo nuevo rompería esa
+                correspondencia y además saldría de la paleta (verde/gris/blanco);
+                un `brand-700` lo volvería indistinguible de "Volver al catálogo".
+                El paso oscuro resuelve las dos cosas: mismo idioma verde, tono
+                propio, y el ícono `Building2` es el mismo de la sección destino. */}
+            <motion.div variants={QUICK_LINK_ITEM} className="min-w-0">
+              <a href="#caracteristicas" onClick={scrollTo('caracteristicas')} className={`${QUICK_LINK_BASE} text-brand-900 hover:border-brand-800/40 hover:bg-brand-100 hover:text-brand-900`}>
+                <Building2 size={16} className="shrink-0 text-brand-800 transition-transform duration-300 ease-out group-hover:scale-110" />
+                Ver Características
+              </a>
+            </motion.div>
+
+            <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 sm:inline" aria-hidden>|</motion.span>
+
             {/* Valoraciones y "Ver dirección exacta" están intercambiados
-                respecto del orden original, por pedido: valoraciones queda en
-                el 2º lugar (el más visible después de "Volver al catálogo") y
-                la dirección pasa al último. */}
+                respecto del orden original, por pedido: valoraciones queda
+                arriba (más visible) y la dirección pasa al último. */}
             <motion.div variants={QUICK_LINK_ITEM} className="min-w-0">
               <a href="#valoracion" onClick={scrollTo('valoracion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700`}>
                 <Star size={16} className="shrink-0 fill-amber-400 text-amber-500 transition-transform duration-300 ease-out group-hover:scale-110" />
@@ -1008,8 +1089,10 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
             </motion.div>
           </motion.div>
 
-          {/* ── FAVORITOS (reusa el componente compartido) ── */}
-          <motion.div variants={QUICK_LINK_ITEM}>
+          {/* ── FAVORITOS (reusa el componente compartido) ──
+              6ª celda de la grilla en mobile; a la derecha de la fila en
+              escritorio. */}
+          <motion.div variants={QUICK_LINK_ITEM} className="flex min-w-0 items-stretch">
             <FavoriteButton propertyId={property.id} />
           </motion.div>
         </motion.div>
@@ -1045,7 +1128,10 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                   ocupaba cuatro renglones y empujaba toda la ficha hacia abajo.
                   Sigue siendo el elemento más grande del bloque, que es lo que
                   tiene que seguir destacando. */}
-              <h1 className="text-2xl leading-tight font-bold tracking-tight text-ink-900 md:text-3xl">
+              {/* `wrap-anywhere` — ver la nota de "TEXTO LIBRE" arriba del archivo.
+                  El título lo escribe el admin y puede traer una palabra sin
+                  espacios más ancha que el teléfono. */}
+              <h1 className="text-2xl leading-tight font-bold tracking-tight wrap-anywhere text-ink-900 md:text-3xl">
                 {title}
               </h1>
 
@@ -1091,9 +1177,16 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                 ]
                   .filter((seg) => seg.value)
                   .map(({ icon: Icon, label, value }) => (
+                    /* `max-w-full` + `min-w-0`: la píldora es `inline-flex`, o
+                       sea que se dimensiona por su contenido. Con una dirección
+                       larga (o una calle escrita sin espacios) se estiraba más
+                       que la tarjeta y empujaba el documento — medido, la fila
+                       de píldoras daba `clientWidth 292` / `scrollWidth 427` en
+                       un teléfono de 390px. Con estas dos la píldora puede
+                       encoger hasta el ancho disponible y el texto envuelve. */
                     <span
                       key={label}
-                      className="group inline-flex items-center gap-2.5 rounded-full border border-brand-800 bg-brand-50 py-1.5 pr-5 pl-1.5 transition-colors duration-200 hover:bg-brand-100"
+                      className="group inline-flex max-w-full min-w-0 items-center gap-2.5 rounded-full border border-brand-800 bg-brand-50 py-1.5 pr-5 pl-1.5 transition-colors duration-200 hover:bg-brand-100"
                     >
                       {/* Pastilla BLANCA con el ícono en verde oscuro (y no un
                           `brand-800/10`, que sobre el fondo `brand-50` de la
@@ -1107,11 +1200,11 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-brand-800 transition-colors duration-200 group-hover:bg-brand-800 group-hover:text-white">
                         <Icon size={15} />
                       </span>
-                      <span className="flex flex-col gap-1">
+                      <span className="flex min-w-0 flex-col gap-1">
                         <span className="text-[10px] leading-none font-bold tracking-[0.12em] text-brand-700 uppercase">
                           {label}
                         </span>
-                        <span className="text-sm leading-none font-semibold text-brand-900">{value}</span>
+                        <span className="text-sm leading-none font-semibold wrap-anywhere text-brand-900">{value}</span>
                       </span>
                     </span>
                   ))}
@@ -1132,13 +1225,19 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
             <Reveal y={18}>
               <div className={`${CARD} p-8`}>
                 <SectionHeader icon={Home} title="Descripción" className="mb-5" />
-                <p className="leading-relaxed whitespace-pre-line text-ink-600">{description}</p>
+                {/* `wrap-anywhere` — ver "TEXTO LIBRE". Las descripciones suelen
+                    traer links pegados ("mas info en https://..."), que sin
+                    regla de corte son una sola palabra de 600px. */}
+                <p className="leading-relaxed wrap-anywhere whitespace-pre-line text-ink-600">{description}</p>
               </div>
             </Reveal>
 
             {/* Características */}
             <Reveal y={18}>
-             <div className={`${CARD} p-8`}>
+             {/* `id` + `scroll-mt-28` como valoraciones/comentarios/ubicación:
+                 el margen de scroll compensa la navbar fija, que si no tapa el
+                 encabezado al aterrizar desde el acceso rápido. */}
+             <div id="caracteristicas" className={`scroll-mt-28 ${CARD} p-8`}>
               <SectionHeader icon={Building2} title="Características" />
 
               {/* ── SPECS NUMÉRICAS ──
@@ -1445,7 +1544,7 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
                       className="flex items-center justify-between gap-4 px-3 py-2.5 odd:bg-brand-50/60"
                     >
                       <span className="shrink-0 font-medium text-brand-700">{item.label}</span>
-                      <span className="text-right font-semibold text-brand-900 capitalize">{item.value}</span>
+                      <span className="min-w-0 text-right font-semibold wrap-anywhere text-brand-900 capitalize">{item.value}</span>
                     </li>
                   ))}
                 </ul>

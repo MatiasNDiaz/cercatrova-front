@@ -233,8 +233,17 @@ export const NavbarPublic = () => {
       {/* ── MOBILE: Overlay ── */}
       <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 xl:hidden z-60 ${isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`} onClick={toggleMenu} />
 
-      {/* ── MOBILE: Drawer ── */}
-      <div className={`fixed top-0 right-0 h-full w-75 rounded-2xl rounded-tr-none bg-white shadow-2xl transform transition-transform duration-300 ease-out xl:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
+      {/* ── MOBILE: Drawer ──
+          `overflow-hidden`: los dos submenús deslizables de adentro son
+          `absolute inset-0 translate-x-full`, o sea que en reposo viven 300px a
+          la derecha del cajón. Medido, el cajón tenía `clientWidth: 300` y
+          `scrollWidth: 600`. Hoy eso no genera scroll en la página porque el
+          cajón es `fixed` (y lo `fixed` no cuenta para el desborde del
+          documento), pero es un desborde igual: alcanza con que algún ancestro
+          gane un `transform` para que el cajón deje de ser fixed-respecto-al-
+          viewport y ese medio ancho de pantalla pase a empujar la página.
+          Recortarlo acá lo vuelve imposible por construcción. */}
+      <div className={`fixed top-0 right-0 h-full w-75 overflow-hidden rounded-2xl rounded-tr-none bg-white shadow-2xl transform transition-transform duration-300 ease-out xl:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-6 border-b-2 border-gray-200 shadow-md">
             <span className="font-bold text-[#0b7a4b] text-xl">Menú</span>

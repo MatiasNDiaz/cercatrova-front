@@ -3718,3 +3718,326 @@ Estilo, que también se pidió mejorar:
 `npx tsc --noEmit` sin errores · `npx next lint` 0 warnings · `npm run build`
 exit 0 · verificado con captura móvil real (412px, DPR 2) contra los datos de
 producción.
+
+---
+
+# PARTE 20 — Ajustes estéticos y de responsive (detalle de propiedad + landing)
+
+> Sesión 2026-08-17. Cinco bloques pedidos. **Todo lo que sigue está medido**, no
+> estimado: se levantó el dev server y se instrumentó Chrome headless por CDP con
+> `Emulation.setDeviceMetricsOverride({mobile:true, deviceScaleFactor:2})` —el
+> método que la PARTE 19 dejó anotado como el único fiable— para leer
+> `getBoundingClientRect()`, `scrollWidth`/`clientWidth` y `getComputedStyle()`
+> reales en 320 / 360 / 390 / 412 / 768 / 1440 px.
+
+## Cómo se verificó (banco de pruebas, y por qué hizo falta)
+
+`/properties/:id` es Server Component: hace `GET /properties/:id` server-side, así
+que sin el backend NestJS levantado no renderiza nada que se pueda medir. En vez
+de montar el backend + la base, se creó una ruta **temporal**
+`(public)/diag-overflow/page.tsx` que renderizaba `<PropertyDetail>` con una
+propiedad mock, con el mismo `layout.tsx` del grupo `(public)` (misma navbar,
+mismo `BackToTopButton`).
+
+⚠️ **La ruta ya se borró** — no está en el build final (39 rutas, sin
+`diag-overflow`). Queda anotada acá porque es reproducible y ahorra media hora la
+próxima vez que haya que diagnosticar layout de esta pantalla.
+
+⚠️ Detalle que costó tiempo: la primera versión se llamó `__overflow-test` y daba
+**404**. Next trata cualquier carpeta que empiece con `_` como *private folder* y
+la excluye del routing. Renombrada a `diag-overflow`, funcionó.
+
+---
+
+## Bloque 1 — Nuevo acceso rápido "Ver Características" + grilla 2x3
+
+### `PropertyDetail.tsx` — el acceso nuevo
+
+Se agregó "Ver Características" como **2º** de la fila, entre "Volver al
+catálogo" y "Ver Valoraciones", con scroll suave a la sección de la misma página
+(`scrollIntoView({behavior:'smooth'})`, igual que los otros tres anclajes). La
+tarjeta de Características recibió `id="caracteristicas"` y `scroll-mt-28`, el
+mismo margen de scroll que valoraciones/comentarios/ubicación para que la navbar
+fija no tape el encabezado al aterrizar.
+
+**Color: `brand-900` con ícono `brand-800`** (verde profundo). La decisión no es
+arbitraria — la barra ya tenía una regla: *cada acceso comparte señal visual con
+la sección a la que lleva* (por eso valoraciones es ámbar, comentarios azul y
+ubicación roja, igual que sus `SectionHeader`). El encabezado de Características
+es `tono='brand'`, o sea verde. Entonces:
+
+- un ámbar/azul/rojo nuevo habría roto esa correspondencia **y** salido de la
+  paleta pedida (verde/gris/blanco);
+- un `brand-700` lo habría dejado idéntico a "Volver al catálogo".
+
+El paso oscuro de la escala resuelve las dos cosas: mismo idioma verde, tono
+propio y distinguible. El ícono es `Building2`, el mismo de la sección destino.
+
+### Responsive: la grilla pasó a ser 2 columnas x 3 filas
+
+Antes la grilla `grid-cols-2` vivía en el contenedor *interno* de los accesos, y
+el botón de Guardar era el **otro hijo** del flex exterior — o sea que quedaba
+fuera de la grilla. Con 4 accesos eso daba un 2x2 + el botón aparte; al pasar a 5
+accesos, seis piezas no entraban.
+
+Ahora la grilla vive en el contenedor **exterior** y las seis piezas son celdas
+hermanas. El contenedor intermedio sigue existiendo (hace falta en escritorio:
+sin él, `sm:justify-between` separaría los accesos entre sí en vez de separarlos
+del botón Guardar), pero en mobile se le puso **`contents`**
+(`display: contents`): desaparece del layout y sus hijos suben a ser celdas
+directas de la grilla de arriba. De `sm` para arriba vuelve a ser la fila
+horizontal de siempre.
+
+Verificado a 390px: 2 columnas x 3 filas exactas, sin desborde.
+
+### Botón Guardar/Favorito — gris base más oscuro
+
+`Favoritebutton.tsx`, variante `default` (que **solo** usa esta barra — las
+tarjetas del catálogo usan `variant="card"`, así que el cambio no toca el
+catálogo):
+
+| | Antes | Ahora |
+|---|---|---|
+| Borde | `border-gray-200` | `border-ink-300` |
+| Texto | `text-gray-500` | `text-ink-700` |
+
+Sobre la tarjeta **blanca** de la barra, el `gray-200` prácticamente no existía y
+el `gray-500` se leía como deshabilitado — siendo el único botón con acción real
+de toda la fila. La escala `ink` es además la del sistema de diseño; `gray` era
+una de las escalas nativas de Tailwind que la tokenización venía reemplazando.
+
+También se le agregó `w-full justify-center rounded-xl text-xs` en mobile (con
+`sm:` de vuelta a su geometría propia) para que llene su celda igual que los
+otros cinco y la última fila no quede con un botón angosto y descentrado.
+
+---
+
+## Bloque 2 — FIX: la navbar rota en mobile del detalle de propiedad
+
+### El diagnóstico, con los números
+
+Primero se descartó lo obvio midiendo, no mirando código:
+
+| Página | `document.scrollWidth` a 390px |
+|---|---|
+| Landing `/` | **390** OK |
+| Detalle, comentario con texto normal | **390** OK |
+| Detalle, comentario con una URL pegada | **690** ROTO |
+
+O sea: **la navbar nunca estuvo rota**, y tampoco había ningún ancho fijo ni
+badge culpable. Lo que fallaba era contenido de esta página empujando el viewport.
+
+La cadena completa, medida:
+
+```
+<p> del comentario ................ ancho mínimo 673px   <- una URL sin espacios
+-> columna izquierda del grid ..... scrollWidth 674px
+-> div.mx-auto.max-w-6xl.px-4 ..... scrollWidth 690px
+-> document ....................... scrollWidth 690px    (viewport: 390px)
+```
+
+Y el último paso es el que movía la navbar: **cuando el documento supera el ancho
+de pantalla, el navegador móvil agranda el bloque contenedor inicial hasta ese
+ancho**. `NAV_SHELL` es `fixed` con `w-[96%]`, así que ese 96% dejó de medirse
+contra los 390px de pantalla y pasó a medirse contra los 690px del documento: la
+barra se maquetó **662px de ancho** y la hamburguesa quedó en **x≈659**, fuera de
+la vista, alcanzable sólo scrolleando de costado. El botón flotante de "ir
+arriba" (`.button`, `fixed right: 70px`) se corría por exactamente lo mismo.
+
+**Por qué solo pasaba acá:** el detalle de propiedad es la única pantalla de la
+zona pública que imprime **texto escrito por personas** (título y descripción del
+admin, comentarios de los usuarios, dirección). El resto del sitio muestra copy
+controlado, que nunca trae una palabra de 600px.
+
+### El arreglo: `wrap-anywhere`, y por qué NO `break-words`
+
+Se probaron las dos utilidades y **sólo la primera funciona**:
+
+| Utilidad | CSS | `<main>.scrollWidth` a 390px |
+|---|---|---|
+| `break-words` | `overflow-wrap: break-word` | **690** NO SIRVE |
+| `wrap-anywhere` | `overflow-wrap: anywhere` | **390** OK |
+
+Por especificación, `break-word` parte la palabra **al pintar** pero *no* cambia
+el tamaño `min-content` que el elemento declara hacia arriba. El grid que lo
+contiene le sigue reservando los 673px y el documento sigue desbordado.
+`anywhere` sí afecta el `min-content`, que es el número del que cuelga todo el
+problema. (Utilidades de Tailwind 4.1 — verificado contra
+`node_modules/tailwindcss/dist/lib.js`, no asumido.)
+
+Nodos que lo recibieron en `PropertyDetail.tsx`: `<h1>` del título, `<p>` de la
+descripción, `<p>` del mensaje de cada comentario, dirección del mapa, valores de
+las píldoras de ubicación y valores del Resumen.
+
+**Segundo desborde encontrado de paso** (lo tapaba el primero): las píldoras de
+ubicación son `inline-flex`, o sea que se dimensionan por su contenido, y con una
+dirección larga se estiraban más que la tarjeta — `clientWidth 292` /
+`scrollWidth 427`. Se les puso `max-w-full min-w-0` (y `min-w-0` a la columna de
+texto de adentro).
+
+### Red de seguridad: `overflow-x: clip` en `html`/`body`
+
+En `globals.css`. **No es el arreglo** — es el piso que impide que un desborde
+futuro vuelva a mover la navbar. Se documentó explícitamente como defensa en
+profundidad para que nadie lo lea como "el fix".
+
+⚠️ **`clip` y no `hidden`, a propósito.** `overflow-x: hidden` convierte al
+elemento en **contenedor de scroll**, y eso rompe `position: sticky` en los
+descendientes: el sidebar del detalle (`sticky top-28`: precio + WhatsApp +
+agente) dejaría de acompañar el scroll. `overflow: clip` recorta sin crear scroll
+container.
+
+Verificado que sticky sobrevive: a 1440px, con `scrollY = 1200`, el sidebar queda
+en `top: 112px` = `top-28` (7rem). OK.
+
+⚠️ Safari iOS < 16 no soporta `overflow: clip` e ignora la declaración. Ahí no hay
+red de seguridad — pero tampoco hay bug, porque el arreglo real es el
+`wrap-anywhere`. Se prefiere degradar en iOS viejo antes que romper el sidebar
+sticky en **todos** los navegadores usando `hidden`.
+
+### Tercer hallazgo: el cajón mobile de las dos navbars
+
+Medido: el cajón (`fixed top-0 right-0 w-75`) tenía `clientWidth: 300` y
+`scrollWidth: 600`. Son sus dos submenús deslizables (`absolute inset-0
+translate-x-full`), que en reposo viven 300px a la derecha.
+
+**No era la causa** —lo `fixed` no cuenta para el desborde del documento, y la
+landing lo confirma con `docW: 390` teniendo el mismo cajón—, pero es un desborde
+igual: alcanza con que algún ancestro gane un `transform` para que el cajón deje
+de ser fixed-respecto-al-viewport y ese medio ancho de pantalla empuje la página.
+Se le puso `overflow-hidden` a los dos (`NavbarPublic` y `NavbarPrivate`).
+
+### Resultado
+
+| Ancho | `docW` | Navbar | Hamburguesa |
+|---|---|---|---|
+| 320px | 320 | 6 -> 314 | visible OK |
+| 360px | 360 | 7 -> 353 | visible OK |
+| 390px | 390 | 8 -> 382 | visible OK (x: 321->365) |
+| 412px | 412 | 8 -> 404 | visible OK |
+
+Y se comprobó que el arreglo real funciona **solo**: con `wrap-anywhere` puesto,
+`<main>` ya no aparece entre los elementos con `scrollWidth > clientWidth` — no
+es el `clip` el que está tapando nada.
+
+---
+
+## Bloque 3 — Landing: las 3 pastillas de "Publicá tu propiedad" en mobile
+
+`PublicarPropiedad.tsx`. Las pastillas están en `absolute right-[-96px]`, o sea
+96px **fuera** del borde derecho de la foto. Ese voladizo funciona cuando sobra
+ancho al costado (dos columnas, de `lg` para arriba), pero en mobile la foto ya
+ocupa todo el ancho: las tres caían encima de la imagen, montadas entre sí y
+cortadas por el `overflow-hidden` de la sección.
+
+`flex` -> `hidden md:flex`.
+
+Se ocultan en vez de reacomodarlas porque son un refuerzo decorativo del mensaje
+("publicación rápida", "revisión profesional", "mayor visibilidad"), no
+información que el visitante necesite para entender la sección ni para llegar al
+CTA. Apilarlas debajo de la foto sólo habría alargado la sección en el formato
+donde menos espacio hay.
+
+Verificado: `display: none` a 390 y 640px; `display: flex` a 768 y 1440px.
+
+---
+
+## Bloque 4 — Landing: el Hero recortado en mobile
+
+### El número del problema
+
+Las 5 fotos del carrusel son apaisadas (ratio ~1.51). Con `object-cover`, cuanto
+más vertical es la caja, más ancho de foto se recorta. Medido a 390px:
+
+| | Antes | Ahora |
+|---|---|---|
+| Alto del hero | 640px (`h-160`) | **560px** (`h-140`) |
+| Ratio de la caja | 0.61 | **0.70** |
+| **% del ancho de la foto visible** | **40%** | **46%** |
+
+O sea: antes el 60% de cada foto quedaba fuera de cuadro. Por eso se leían
+"cortadas".
+
+### De dónde salió el espacio
+
+No se podía bajar el hero sin más, porque el contenido superpuesto ocupaba 420px.
+Midiendo los **cinco** slides a 390px salió el dato clave: la reserva anti-salto
+(`min-h-64`, 256px) está muy sobredimensionada — el texto más alto (título +
+descripción) mide **181px**.
+
+| Slide | h1 | p | Total |
+|---|---|---|---|
+| 1, 2, 5 | 79 | 78 | **181** |
+| 3, 4 | 79 | 52 | 155 |
+
+Se bajó la reserva a `min-h-56` (224px) **solo en mobile** (`sm:min-h-64` de ahí
+para arriba, donde el hero tiene alto de sobra y no hay nada que ganar). Sigue
+dejando 43px de margen sobre el peor caso, así que conserva su función: los CTA
+no saltan al cambiar de slide.
+
+Eso bajó el contenido de 420px a 388px, y con eso el hero pudo bajar de 640 a 560.
+
+### Los dos topes, medidos
+
+- **Arriba:** el borde inferior de la navbar flotante está en `y = 86`. Con 560px
+  el título arranca en `y = 114` -> 28px de aire. ⚠️ Se probó con **520px** y el
+  título quedaba en `y = 78`, o sea **tapado por la navbar** — se descartó por eso,
+  no por gusto.
+- **Abajo:** los puntos del carrusel (`bottom-8`). Los CTA terminan 46px por
+  encima.
+
+### El `object-position` NO se tocó, y no es un olvido
+
+Cuando el recorte es **horizontal** (que es este caso: la foto es más ancha que la
+caja en proporción), la imagen ya cubre exactamente el alto del contenedor y el
+componente **vertical** de `object-position` no tiene ningún efecto. El
+horizontal se deja en 50% (centrado), que es lo correcto sin saber dónde cae el
+sujeto de cada una de las 5 fotos. Cambiarlo habría sido un cambio que no hace
+nada, con un comentario afirmando que sí.
+
+Verificado también a 360px: 43% visible (contra ~37% que daba antes).
+
+---
+
+## Bloque 5 — Botón flotante "ir arriba"
+
+`globals.css`, `.button`:
+
+```diff
+- background: linear-gradient(135deg, #11b06d 0%, #0b7a4b 100%);
++ background: linear-gradient(135deg, var(--color-brand-700) 0%, var(--color-brand-900) 100%);
+```
+
+El `#11b06d` del arranque es un verde brillante que **no pertenece** a la escala
+`brand-*` (cae entre el 400 y el 500 sin ser ninguno). Siendo un botón flotante
+que se ve encima de todas las secciones, era el único elemento del sitio con ese
+tono: por eso "no pegaba".
+
+Ahora usa dos pasos reales de la escala, `brand-700 -> brand-900`
+(`#0b7a4b -> #063923`), o sea el verde de marca oscureciéndose. Se escribe con
+`var()` y no con el hex a mano para que siga a la paleta si cambia.
+
+---
+
+## Estado
+
+`npx tsc --noEmit` sin errores · `npx next lint` **0 warnings, 0 errores** ·
+`npm run build` exit 0, 39 rutas · ruta temporal de diagnóstico borrada y
+confirmada ausente del build.
+
+Verificado con emulación móvil real (CDP, `mobile:true`, DPR 2) en **320 / 360 /
+390 / 412 / 768 / 1440 px**, no con `--window-size` (que, como ya advertía la
+PARTE 19, no emula un teléfono y lleva a conclusiones falsas).
+
+## Anotado, NO aplicado
+
+- **El mismo desborde por texto libre existe en `/publicaciones`**: `PostCard`
+  imprime el cuerpo del post y los comentarios, que son texto de usuario, y no
+  tiene `wrap-anywhere`. Hoy no rompe la navbar porque el `overflow-x: clip` de
+  `globals.css` lo contiene, pero el contenido igual se recorta contra el borde
+  en vez de envolver. Merece el mismo tratamiento que el detalle.
+- **La reserva `min-h-56` del hero podría quedar corta por debajo de ~340px de
+  ancho**, donde el texto envuelve más líneas. La consecuencia sería un salto
+  chico de los CTA al cambiar de slide, no una rotura. No se ajustó porque
+  implicaría subir la reserva y perder parte de lo ganado en el encuadre de las
+  fotos, para un ancho de pantalla prácticamente extinto.

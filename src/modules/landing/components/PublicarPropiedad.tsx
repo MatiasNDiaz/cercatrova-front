@@ -43,9 +43,22 @@ export default function PublicarPropiedad() {
                 />
               </div>
 
-              {/* Badges flotantes */}
+              {/* ── Badges flotantes — SOLO desde `md` ──
+                  Están posicionados `absolute right-[-96px]`, o sea 96px FUERA
+                  del borde derecho de la foto. Ese voladizo funciona cuando
+                  sobra ancho al costado (dos columnas, de `lg` para arriba),
+                  pero en mobile la foto ya ocupa todo el ancho disponible: las
+                  tres pastillas caían encima de la imagen, montadas entre sí y
+                  cortadas por el `overflow-hidden` de la sección.
 
-              <div className="absolute right-[-96px] top-1/2 flex -translate-y-1/2 flex-col gap-7">
+                  Se ocultan por debajo de `md` en vez de reacomodarlas: son un
+                  refuerzo decorativo del mensaje ("publicación rápida",
+                  "revisión profesional", "mayor visibilidad"), no información
+                  que el visitante necesite para entender la sección ni para
+                  llegar al CTA. Apilarlas debajo de la foto sólo habría alargado
+                  la sección en el formato donde menos espacio hay. */}
+
+              <div className="absolute right-[-96px] top-1/2 hidden -translate-y-1/2 flex-col gap-7 md:flex">
 
                 {badges.map((item) => (
                   <div

@@ -225,6 +225,41 @@ html {
   /* scroll-behavior: smooth !important; */
 }
 
+/**
+ * ── RED DE SEGURIDAD CONTRA EL DESBORDE HORIZONTAL EN MOBILE ────────────────
+ *
+ * NO es el arreglo de ningún bug puntual: los desbordes se arreglan en su
+ * origen (ver la nota "TEXTO LIBRE" en `properties/[id]/PropertyDetail.tsx`).
+ * Esto es el piso que evita que un desborde futuro vuelva a mover la NAVBAR.
+ *
+ * El mecanismo que se está bloqueando: si el documento termina más ancho que la
+ * pantalla, el navegador móvil agranda el bloque contenedor inicial hasta ese
+ * ancho. Y como la navbar es `position: fixed` con `w-[96%]`, ese 96% deja de
+ * medirse contra la pantalla y pasa a medirse contra el documento desbordado:
+ * la barra se maqueta más ancha que el visor y la hamburguesa queda fuera de
+ * la vista, alcanzable sólo scrolleando de costado. Lo mismo le pasa al botón
+ * flotante de "ir arriba" (`.button`, `fixed right: 70px`).
+ *
+ * ⚠️ `clip` y NO `hidden`, a propósito. `overflow-x: hidden` convierte al
+ * elemento en un CONTENEDOR DE SCROLL, y eso rompe `position: sticky` en los
+ * descendientes — el sidebar del detalle de propiedad (`sticky top-28`, precio
+ * + WhatsApp + agente) dejaría de acompañar el scroll. `overflow: clip` recorta
+ * sin crear scroll container, así que sticky sigue funcionando.
+ *
+ * Va en `html` Y en `body`: sólo en `body` no alcanza, porque el que scrollea
+ * es el elemento raíz.
+ *
+ * ⚠️ Safari iOS < 16 no soporta `overflow: clip` y se ignora la declaración
+ * (queda `visible`). Ahí no hay red de seguridad — pero tampoco hay bug, porque
+ * el arreglo real es el `break-words` de los nodos de texto. Se prefiere
+ * degradar en iOS viejo antes que romper el sidebar sticky en TODOS los
+ * navegadores usando `hidden`.
+ */
+html,
+body {
+  overflow-x: clip;
+}
+
 
 .button {
   position: fixed;
@@ -244,7 +279,18 @@ html {
   
   /* Mantenemos tu efecto de burbuja 3D */
   /* background: linear-gradient(135deg, #10b981 0%, #059669 100%); */
-  background: linear-gradient(135deg, #11b06d 0%, #0b7a4b 100%);
+  /*
+   * ── Verde más oscuro y dentro de la paleta ──
+   * Antes: `#11b06d → #0b7a4b`. El `#11b06d` del arranque es un verde brillante
+   * que NO pertenece a la escala `brand-*` (queda entre el 500 y el 400 sin ser
+   * ninguno), y siendo un botón flotante que se ve encima de todas las
+   * secciones, era el único elemento del sitio con ese tono: cantaba.
+   *
+   * Ahora usa dos pasos reales de la escala, `brand-700 → brand-900`
+   * (`#0b7a4b → #063923`), o sea el verde de marca oscureciéndose. Se escriben
+   * con `var()` y no con el hex a mano para que siga a la paleta si cambia.
+   */
+  background: linear-gradient(135deg, var(--color-brand-700) 0%, var(--color-brand-900) 100%);
   
   box-shadow: 
     0 10px 20px rgba(0, 0, 0, 0.2),

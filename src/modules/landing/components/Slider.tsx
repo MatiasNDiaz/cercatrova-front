@@ -96,7 +96,32 @@ export const PropertySlider = () => {
 
   return (
     <>
-      <section className="relative h-160 w-full overflow-hidden bg-ink-950 md:h-180">
+      {/* ── ALTURA DEL HERO — por qué mobile es MÁS BAJO ──────────────────────
+          Las fotos del carrusel son apaisadas (ratio ~1.5). Con `object-cover`,
+          cuanto más VERTICAL es la caja, más ancho de foto se recorta.
+
+          Medido en un teléfono de 390px: con los 640px de alto que tenía antes
+          la caja quedaba en ratio 0.61 contra una foto de 1.51, o sea que sólo
+          se veía el **40%** del ancho de la imagen — el 60% restante quedaba
+          fuera de cuadro, y por eso se leían "cortadas".
+
+          Bajando a 560px el ratio sube a 0.70 y pasa a verse el **46%**.
+
+          El piso lo marca el contenido superpuesto (título + descripción + los
+          dos CTA), y hay dos topes que respetar, los dos medidos:
+            · arriba, el borde inferior de la navbar flotante, en y=86;
+            · abajo, los puntos del carrusel, en `bottom-8`.
+          Con 560px el título arranca en y=114 (28px de aire bajo la navbar) y
+          los botones terminan 46px por encima de los puntos. Se probó con 520px
+          y el título quedaba en y=78, o sea TAPADO por la navbar: por eso no se
+          baja más.
+
+          ⚠️ El `object-position` NO se toca, y no es un olvido: cuando el
+          recorte es horizontal, la foto ya cubre exactamente el alto de la caja
+          y el componente vertical de `object-position` no tiene ningún efecto.
+          El horizontal se deja en 50% (centrado), que es lo correcto sin saber
+          dónde cae el sujeto de cada una de las 5 fotos. */}
+      <section className="relative h-140 w-full overflow-hidden bg-ink-950 sm:h-160 md:h-180">
         {/* Capa base: el carrusel ocupa el alto real de la sección. */}
         <Swiper
           modules={[Autoplay, EffectFade, Navigation, Pagination]}
@@ -141,8 +166,19 @@ export const PropertySlider = () => {
             
 
             {/* Altura mínima fija: el texto de cada slide tiene distinto largo,
-                y sin esto los botones "saltaban" de posición en cada cambio. */}
-            <div className="mt-7 flex min-h-64 flex-col md:min-h-68">
+                y sin esto los botones "saltaban" de posición en cada cambio.
+
+                ⚠️ En mobile la reserva baja de `min-h-64` (256px) a `min-h-56`
+                (224px). Medidos los CINCO slides a 390px, el texto más alto
+                —título + descripción— ocupa **181px**: los 256 anteriores
+                dejaban 75px de aire muerto dentro del hero, que es justo lo que
+                obligaba a que el hero fuera tan alto y a que las fotos se
+                recortaran. 224px sigue dejando 43px de margen sobre el peor
+                caso, así que la reserva sigue cumpliendo su función.
+
+                De `sm` para arriba se mantiene el valor original: ahí el hero ya
+                tiene alto de sobra y no hay nada que ganar. */}
+            <div className="mt-7 flex min-h-56 flex-col sm:min-h-64 md:min-h-68">
               {/* key={active} re-dispara la animación en cada cambio de slide */}
               <motion.h1
                 key={`t-${active}`}

@@ -481,8 +481,13 @@ export const NavbarPrivate = () => {
         <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 xl:hidden z-60 ${isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`}
           onClick={toggleMenu} />
 
-        {/* MOBILE: Drawer */}
-        <div className={`fixed top-0 right-0 h-full w-75 rounded-2xl rounded-tr-none bg-white shadow-2xl transform transition-transform duration-300 ease-out xl:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
+        {/* MOBILE: Drawer
+            `overflow-hidden` por el mismo motivo que en `NavbarPublic`: los
+            submenús deslizables (`absolute inset-0 translate-x-full`) viven en
+            reposo 300px a la derecha del cajón (`clientWidth 300` /
+            `scrollWidth 600`). Recortarlos acá evita que ese desborde pueda
+            llegar al documento si algún ancestro gana un `transform`. */}
+        <div className={`fixed top-0 right-0 h-full w-75 overflow-hidden rounded-2xl rounded-tr-none bg-white shadow-2xl transform transition-transform duration-300 ease-out xl:hidden z-70 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
           <div className="flex flex-col h-full">
 
             <div className="flex items-center justify-between p-6 border-b-2 border-gray-200 shadow-md">

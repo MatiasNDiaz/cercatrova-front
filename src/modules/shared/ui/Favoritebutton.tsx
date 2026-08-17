@@ -83,19 +83,35 @@ export function FavoriteButton({ propertyId, variant = 'default' }: FavoriteButt
   }
 
   // ── Variante default — botón con texto ──
+  //
+  // ⚠️ Solo la usa la barra de accesos rápidos del detalle de propiedad, así que
+  // se maqueta para encajar en ESA fila:
+  //
+  //  · **Mobile**: `w-full` + `justify-center`. Es una celda más de la grilla
+  //    2x3 de accesos rápidos, y tiene que llenarla igual que los otros cinco
+  //    (si no, quedaba un botón angosto y descentrado en la última fila).
+  //    `rounded-xl` + `py-2.5` + `text-xs` para que coincida exactamente con
+  //    `QUICK_LINK_BASE`; a partir de `sm` vuelve a su geometría propia.
+  //
+  //  · **Gris base más oscuro**: era `border-gray-200 text-gray-500` sobre
+  //    blanco — contra la tarjeta blanca de la barra el borde casi no existía y
+  //    el texto se leía como deshabilitado, cuando es el único botón con acción
+  //    real de toda la fila. Ahora usa la escala `ink` del sistema
+  //    (`border-ink-300` / `text-ink-700`), que es el mismo peso visual que los
+  //    íconos de los accesos rápidos de al lado.
   return (
     <button
       onClick={handleToggle}
       disabled={loading}
       aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-      className={`flex cursor-pointer items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition-all duration-300 active:scale-95 disabled:opacity-50
+      className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold transition-all duration-300 active:scale-95 disabled:opacity-50 sm:w-auto sm:rounded-2xl sm:text-sm
         ${isFavorite
           ? 'bg-red-50 border-red-200 text-red-500 hover:bg-red-100'
-          : 'bg-white border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-400'
+          : 'bg-white border-ink-300 text-ink-700 hover:border-red-300 hover:text-red-500'
         }`}>
       <Heart
         size={16}
-        className={`transition-all duration-300 ${isFavorite ? 'scale-110 fill-red-500 text-red-500' : ''}`}
+        className={`shrink-0 transition-all duration-300 ${isFavorite ? 'scale-110 fill-red-500 text-red-500' : ''}`}
       />
       {loading ? 'Cargando...' : isFavorite ? 'En favoritos' : 'Guardar'}
     </button>
