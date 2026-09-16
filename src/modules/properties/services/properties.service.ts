@@ -130,6 +130,27 @@ export const propertiesService = {
   },
 
   /**
+   * Todas las propiedades DISPONIBLES, recorriendo la paginación de
+   * `/properties/filter` (que ya fuerza `status: 'disponible'` — a diferencia
+   * de `getEveryProperty()`, que usa `/properties` y trae también pausadas,
+   * vendidas y alquiladas).
+   *
+   * Uso: `app/sitemap.ts`, que necesita el catálogo público completo y nada más.
+   */
+  getAllAvailable: async (): Promise<Property[]> => {
+    const first = await propertiesService.getFilteredProperties({ page: 1, limit: MAX_PAGE_SIZE });
+    const totalPages = Math.min(first.meta?.totalPages ?? 1, 50);
+    if (totalPages <= 1) return first.data;
+
+    const rest = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, i) =>
+        propertiesService.getFilteredProperties({ page: i + 2, limit: MAX_PAGE_SIZE }).then((r) => r.data).catch(() => [])
+      )
+    );
+    return [first.data, ...rest].flat();
+  },
+
+  /**
    * Obtener una propiedad por ID
    */
   getOne: async (id: number) => {
