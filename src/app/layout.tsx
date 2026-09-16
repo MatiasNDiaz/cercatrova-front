@@ -6,6 +6,7 @@ import { AppToaster } from '@/modules/shared/ui/AppToaster';
 import { NavbarSelector } from '@/modules/shared/ui/NavbarSelector';
 import { VisitTracker } from '@/modules/shared/ui/VisitTracker';
 import { PendingNotificationsToast } from '@/modules/shared/ui/PendingNotificationsToast';
+import { GoogleAnalytics } from '@next/third-parties/google'
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -47,6 +48,7 @@ export default function RootLayout({
               <FooterSelector/>
           </AuthProvider>
           <AppToaster />
+          <GoogleAnalytics gaId="G-KXKV7B10N8" />
       </body>
     </html>
   );
