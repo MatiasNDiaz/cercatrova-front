@@ -14,7 +14,10 @@ export const metadata: Metadata = {
   description: 'Tu aliado en cada inversión inmobiliaria en Córdoba',
   icons: {
     // Añadimos ?v=1 al final para romper la caché
-    icon: '/icon.png?v=1', 
+    icon: '/icon.png?v=1',
+  },
+  verification: {
+    google: 'ePQ05yBBJTRyTcRWngcF-c1PpgQ2InTGi9brb6Osq7A',
   },
 };
 
