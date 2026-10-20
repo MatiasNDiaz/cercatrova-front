@@ -1,7 +1,9 @@
 // ✅ Server Component puro — sin "use client", sin async issues
+import { Suspense } from 'react';
 import { PropertySlider } from '@/modules/landing/components/Slider';
 import FeaturedProperties from '@/modules/landing/components/Featuredproperties';
-import CercaReels from '@/modules/landing/components/CercaReels';
+import CercaReels, { CercaReelsSkeleton } from '@/modules/landing/components/CercaReels';
+import LinktreeBand from '@/modules/landing/components/LinktreeBand';
 import PublicarPropiedad from '@/modules/landing/components/PublicarPropiedad';
 import Servicios from '@/modules/landing/components/Servicios';
 import Confianza from '@/modules/landing/components/Confianza';
@@ -58,10 +60,17 @@ export const revalidate = 300;
 export default function LandingPage() {
   return (
     <main id="inicio" className="min-h-screen">
-      {/* "Cerca-Reels" va justo debajo del Linktree, que vive dentro del
-          hero: por eso entra por el slot del slider. Si no hay ningún video
-          vigente, `CercaReels` no renderiza nada. */}
-      <PropertySlider afterLinktree={<CercaReels />} />
+      {/* "Cerca-Reels" va justo debajo del hero (donde antes estaba el
+          Linktree): por eso entra por el slot del slider. `Suspense` muestra
+          el skeleton de 3 columnas mientras llegan las publicaciones; si no
+          hay ninguna, la sección no se renderiza. */}
+      <PropertySlider
+        afterHero={
+          <Suspense fallback={<CercaReelsSkeleton />}>
+            <CercaReels />
+          </Suspense>
+        }
+      />
       <FeaturedProperties />
       <PublicarPropiedad />
       <Servicios />
@@ -69,6 +78,10 @@ export default function LandingPage() {
       <Resenas />
       <Nosotros />
       <RealEstateFAQ />
+      {/* Linktree: antes iba debajo del hero. Acá cierra la página antes del
+          footer — fondo blanco entre el verde menta de las preguntas
+          frecuentes y el verde profundo del footer. */}
+      <LinktreeBand />
     </main>
   );
 }

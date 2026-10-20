@@ -53,15 +53,6 @@ export const postsService = {
     return data;
   },
 
-  /**
-   * La publicación con video más reciente (sección "Cerca-Reels" de la
-   * landing), o `null` si no hay ninguna vigente.
-   */
-  getLatestWithVideo: async (): Promise<Post | null> => {
-    const { data } = await api.get<{ post: Post | null }>('/posts/latest-video');
-    return data?.post ?? null;
-  },
-
   /** Crear. Multipart: `data` = { description, media } + archivos en `images`. */
   create: async (description: string, media: PostMediaSlot[], newImages: File[]): Promise<Post> => {
     const { data } = await api.post('/posts', mediaFormData({ description, media }, newImages), MULTIPART);

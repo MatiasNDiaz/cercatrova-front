@@ -9,7 +9,6 @@ import { ArrowRight, ChevronLeft, ChevronRight, GraduationCap, LayoutDashboard, 
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import { Role } from '@/modules/shared/types/api';
 import { CtaButton } from './CtaButton';
-import LinktreeBand from './LinktreeBand';
 
 import 'swiper/css';
 import 'swiper/css/effect-fade';
@@ -82,13 +81,15 @@ const slides = [
 ];
 
 /**
- * `afterLinktree`: contenido que va justo debajo de la franja del Linktree y
- * antes de la de estudiantes. Es un slot (y no un import directo) porque lo que
- * va ahí — "Cerca-Reels" — es un Server Component que pide datos, y este
- * componente es cliente: la landing lo renderiza en el servidor y lo pasa ya
- * resuelto.
+ * `afterHero`: contenido que va justo debajo del hero y antes de la franja de
+ * estudiantes ("Cerca-Reels"). Es un slot (y no un import directo) porque esa
+ * sección es un Server Component que pide datos, y este componente es
+ * cliente: la landing la renderiza en el servidor y la pasa ya resuelta.
+ *
+ * El Linktree, que antes iba en este lugar, ahora se monta en la landing
+ * debajo de Preguntas frecuentes.
  */
-export const PropertySlider = ({ afterLinktree }: { afterLinktree?: React.ReactNode } = {}) => {
+export const PropertySlider = ({ afterHero }: { afterHero?: React.ReactNode } = {}) => {
   const { user, isLoading } = useAuth();
   const [active, setActive] = useState(0);
 
@@ -273,10 +274,7 @@ export const PropertySlider = ({ afterLinktree }: { afterLinktree?: React.ReactN
         `}</style>
       </section>
 
-      {/* Entre el Hero y la franja de estudiantes, tal como se pidió. */}
-      <LinktreeBand />
-
-      {afterLinktree}
+      {afterHero}
 
       <EstudiantesBand />
     </>
