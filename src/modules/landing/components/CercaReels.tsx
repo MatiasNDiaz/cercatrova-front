@@ -48,6 +48,12 @@ export default async function CercaReels() {
       description: post.description,
       date: fechaCorta(post.createdAt),
       mediaCount: media.length,
+      // Proporción real del medio (ancho/alto), para que la card tome su forma
+      // en vez de recortarlo o rellenarlo con franjas negras. Las imágenes de
+      // antes de `post_media` no tienen dimensiones: se asume 4:5 (feed).
+      ratio: first.width && first.height ? first.width / first.height : isVideo ? 9 / 16 : 4 / 5,
+      likes: post.likesCount ?? 0,
+      comments: post.commentsCount ?? 0,
     };
   });
 
@@ -74,11 +80,15 @@ export default async function CercaReels() {
 /** Mismo marco y encabezado para la sección real y para su skeleton. */
 function ReelsSection({ children }: { children: React.ReactNode }) {
   return (
-    <section id="cerca-reels" className="overflow-hidden bg-white py-24 md:py-28">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+    // Fondo con halos verde menta muy suaves (mismos tokens que el resto de la
+    // landing): la sección deja de ser un bloque blanco plano.
+    <section id="cerca-reels" className="relative overflow-hidden bg-white py-24 md:py-28">
+      <div aria-hidden className="pointer-events-none absolute -top-32 -left-40 h-112 w-112 rounded-full bg-surface-mint/70 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -right-40 -bottom-40 h-120 w-120 rounded-full bg-brand-100/60 blur-3xl" />
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading
           eyebrow="Reels de Cercatrova"
-          title="Cerca-Reels"
+          title={<>Cerca-<span className="text-brand-700">Reels</span></>}
           subtitle="Recorridos, novedades y oportunidades: lo último que compartimos, en formato corto."
         />
         {children}
