@@ -182,7 +182,9 @@ export default function PropertiesCatalog({ initialItems, initialTotal }: Props)
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: 'easeOut', delay: 0.1 }}
-            className="mb-6 flex items-center justify-between gap-4"
+            // `mb-10` (antes `mb-6`): deja lugar a las etiquetas promocionales
+            // de la primera fila, que asoman por encima de su tarjeta.
+            className="mb-10 flex items-center justify-between gap-4"
           >
             <p className="text-sm font-medium text-ink-800">
               {loading ? (
@@ -248,10 +250,14 @@ export default function PropertiesCatalog({ initialItems, initialTotal }: Props)
                 initial="hidden"
                 animate="show"
                 exit="exit"
+                // Separación vertical amplia (`gap-y-10` / `gap-10`): las
+                // etiquetas promocionales asoman ~30px por ENCIMA de su
+                // tarjeta (ver `.promo-badge-corner` en globals.css) y con el
+                // gap anterior se metían en la tarjeta de arriba.
                 className={
                   viewMode === 'grid'
-                    ? 'grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-                    : 'flex flex-col gap-5'
+                    ? 'grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                    : 'flex flex-col gap-10'
                 }
               >
                 {items.map((prop) => (
@@ -326,7 +332,8 @@ export default function PropertiesCatalog({ initialItems, initialTotal }: Props)
 function SkeletonGrid({ viewMode }: { viewMode: ViewMode }) {
   if (viewMode === 'list') {
     return (
-      <div className="flex flex-col gap-5">
+      // Mismos gaps que la grilla real, para que no salte al terminar de cargar.
+      <div className="flex flex-col gap-10">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="h-52 animate-pulse rounded-2xl border border-ink-100 bg-white/80 sm:h-56" />
         ))}
@@ -334,7 +341,7 @@ function SkeletonGrid({ viewMode }: { viewMode: ViewMode }) {
     );
   }
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {Array.from({ length: 8 }).map((_, i) => (
         <div key={i} className="h-96 animate-pulse rounded-2xl border border-ink-100 bg-white/80" />
       ))}

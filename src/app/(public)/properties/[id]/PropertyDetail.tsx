@@ -1071,7 +1071,9 @@ function SimilarProperties({
           Propiedades <span className="text-brand-700">similares</span>
         </h2>
       </div>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {/* `gap-y-10`: las etiquetas promocionales asoman por encima de su
+          tarjeta (ver `.promo-badge-corner` en globals.css). */}
+      <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((p) => (
           <PropertyCard key={p.id} property={p} />
         ))}

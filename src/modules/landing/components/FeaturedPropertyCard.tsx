@@ -44,12 +44,26 @@ export function FeaturedPropertyCard({ property }: { property: Property }) {
   const promo = getPromoBadge(property);
 
   return (
+    // ⚠️ SIN `overflow-hidden` en la raíz (y con `relative`): la etiqueta
+    // promocional asoma por fuera de la esquina. Las esquinas de la foto las
+    // redondea la propia foto (11px = 12px del `rounded-xl` menos 1px de borde).
     <Link
       href={`/properties/${id}`}
-      className="group flex h-full flex-col overflow-hidden rounded-xl border border-ink-200/70 bg-white shadow-[0_2px_10px_-2px_rgba(10,12,11,0.08)] transition-all duration-400 hover:-translate-y-1.5 hover:border-brand-700/40 hover:shadow-[0_28px_55px_-18px_rgba(6,57,35,0.4)]"
+      className="group relative flex h-full flex-col rounded-xl border border-ink-200/70 bg-white shadow-[0_2px_10px_-2px_rgba(10,12,11,0.08)] transition-all duration-400 hover:-translate-y-1.5 hover:border-brand-700/40 hover:shadow-[0_28px_55px_-18px_rgba(6,57,35,0.4)]"
     >
+      {/* ── Etiqueta promocional — misma regla que el catálogo
+          (`getPromoBadge`), así una propiedad lleva la misma etiqueta en la
+          landing y en `/properties`. Montada sobre la esquina, fuera del
+          contenedor de la foto que la recortaría. `right-17` deja libre la
+          esquina de la valoración. ── */}
+      {promo && (
+        <div className="promo-badge-corner right-17">
+          <PropertyBadge type={promo} />
+        </div>
+      )}
+
       {/* ── IMAGEN ── */}
-      <div className="relative h-64 w-full shrink-0 overflow-hidden">
+      <div className="relative h-64 w-full shrink-0 overflow-hidden rounded-t-[11px]">
         {/* ⚠️ SIN `quality` explícito (default 75) — se REVIRTIÓ el `quality={95}`
             que tenía, y por medición, no por gusto.
 
@@ -80,17 +94,10 @@ export function FeaturedPropertyCard({ property }: { property: Property }) {
         />
         <div className="absolute inset-0 bg-linear-to-t from-ink-950/80 via-ink-950/10 to-transparent" />
 
-        {/* Etiqueta promocional (si tiene) arriba de la operación — misma
-            regla que el catálogo (`getPromoBadge`), así una propiedad lleva la
-            misma etiqueta en la landing y en `/properties`. `right-17` deja
-            libre la esquina de la valoración. */}
-        <div className="promo-badge-slot pointer-events-none absolute top-4 right-17 left-4 flex flex-col items-start gap-2.5">
-          {promo && <PropertyBadge type={promo} />}
-          {/* Operación */}
-          <span className="rounded-md bg-brand-700 px-3 py-1.5 text-[10px] font-bold tracking-[0.14em] text-white uppercase shadow-md">
-            {operationType}
-          </span>
-        </div>
+        {/* Operación */}
+        <span className="absolute top-4 left-4 rounded-md bg-brand-700 px-3 py-1.5 text-[10px] font-bold tracking-[0.14em] text-white uppercase shadow-md">
+          {operationType}
+        </span>
 
         {/* Valoración */}
         {rating && (

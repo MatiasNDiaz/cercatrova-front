@@ -41,10 +41,15 @@ export const PropertyCard = ({ property }: { property: Property }) => {
   const promo = getPromoBadge(property);
 
   return (
-    <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-ink-100 bg-white shadow-[0_1px_2px_rgba(10,12,11,0.04),0_10px_28px_-14px_rgba(10,12,11,0.12)] transition-all duration-500 ease-out hover:-translate-y-2 hover:border-brand-600/50 hover:shadow-[0_36px_70px_-20px_rgba(6,57,35,0.28)]">
+    // ⚠️ SIN `overflow-hidden` en la raíz: la etiqueta promocional asoma por
+    // fuera de la esquina y quedaría recortada. Lo que la raíz recortaba (las
+    // esquinas de la foto y la barra inferior) ahora lo recorta cada pieza:
+    // la foto con su propio `rounded-t-[11px]` (12px del `rounded-xl` menos
+    // 1px de borde) y la barra con un contenedor redondeado abajo.
+    <div className="group relative flex h-full flex-col rounded-xl border border-ink-100 bg-white shadow-[0_1px_2px_rgba(10,12,11,0.04),0_10px_28px_-14px_rgba(10,12,11,0.12)] transition-all duration-500 ease-out hover:-translate-y-2 hover:border-brand-600/50 hover:shadow-[0_36px_70px_-20px_rgba(6,57,35,0.28)]">
       <Link href={`/properties/${id}`} className="flex h-full flex-col">
         {/* ── IMAGEN ── */}
-        <div className="relative h-60 w-full shrink-0 overflow-hidden">
+        <div className="relative h-60 w-full shrink-0 overflow-hidden rounded-t-[11px]">
           {/* ⚠️ SIN `quality` explícito (default 75) — ver la nota extensa en
               `FeaturedPropertyCard.tsx`: a partir de q=85 Next deja de
               redimensionar y sirve el original en JPEG, que en una tarjeta de
@@ -59,18 +64,10 @@ export const PropertyCard = ({ property }: { property: Property }) => {
           />
           <div className="absolute inset-0 bg-linear-to-t from-ink-950/80 via-ink-950/10 to-transparent" />
 
-          {/* Esquina superior izquierda: etiqueta promocional (si tiene) y,
-              debajo, la operación. Sin etiqueta, la operación queda en el
-              mismo lugar de siempre (top-4 left-4).
-              `right-17` (68px) reserva el ancho del favorito (42px + margen)
-              para que la etiqueta nunca se le meta abajo. */}
-          <div className="promo-badge-slot pointer-events-none absolute top-4 right-17 left-4 flex flex-col items-start gap-2.5">
-            {promo && <PropertyBadge type={promo} />}
-            {/* Operación — color propio según venta/alquiler/temporal */}
-            <span className={`${BADGE_BASE} ${operationBadgeColor(operationType)}`}>
-              {operationType}
-            </span>
-          </div>
+          {/* Operación — color propio según venta/alquiler/temporal */}
+          <span className={`absolute top-4 left-4 ${BADGE_BASE} ${operationBadgeColor(operationType)}`}>
+            {operationType}
+          </span>
 
           {/* Precio */}
           <div className="absolute bottom-4 left-5">
@@ -144,16 +141,31 @@ export const PropertyCard = ({ property }: { property: Property }) => {
         </div>
       </Link>
 
+      {/* ── Etiqueta promocional — montada sobre la esquina superior
+          izquierda, asomando por fuera de la tarjeta (ver
+          `.promo-badge-corner` en globals.css). FUERA del contenedor de la
+          foto, que la recortaría. `right-17` (68px) reserva el ancho del
+          favorito para que nunca se le meta abajo. ── */}
+      {promo && (
+        <div className="promo-badge-corner right-17">
+          <PropertyBadge type={promo} />
+        </div>
+      )}
+
       {/* ── Favorito (FUERA del Link) ── */}
       <div className="absolute top-3.5 right-4 z-10">
         <FavoriteButton propertyId={id} variant="card" />
       </div>
 
-      {/* Barra de gradiente de marca que crece en hover */}
-      <div
-        className="pointer-events-none absolute bottom-0 left-0 h-1 w-0 transition-all duration-500 ease-out group-hover:w-full"
-        style={{ background: 'var(--gradient-brand)' }}
-      />
+      {/* Barra de gradiente de marca que crece en hover. El contenedor
+          redondeado abajo hace el recorte que antes hacía el `overflow-hidden`
+          de la raíz, para que la barra siga la curva de las esquinas. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3 overflow-hidden rounded-b-[11px]">
+        <div
+          className="absolute bottom-0 left-0 h-1 w-0 transition-all duration-500 ease-out group-hover:w-full"
+          style={{ background: 'var(--gradient-brand)' }}
+        />
+      </div>
     </div>
   );
 };

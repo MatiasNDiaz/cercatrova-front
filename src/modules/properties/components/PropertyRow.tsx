@@ -47,9 +47,14 @@ export function PropertyRow({ property }: { property: Property }) {
   );
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl border border-ink-100 bg-white shadow-[0_1px_2px_rgba(10,12,11,0.04),0_10px_28px_-14px_rgba(10,12,11,0.12)] transition-all duration-500 ease-out hover:-translate-y-1.5 hover:border-brand-600/50 hover:shadow-[0_32px_65px_-18px_rgba(6,57,35,0.25)] sm:flex-row">
+    // ⚠️ SIN `overflow-hidden` en la raíz: la etiqueta promocional asoma por
+    // fuera de la esquina. Las esquinas de la foto las redondea la propia foto
+    // (11px = 12px del `rounded-xl` menos 1px de borde): arriba en mobile,
+    // arriba y abajo a la izquierda desde `sm`, donde la foto es la columna
+    // izquierda de la fila.
+    <div className="group relative flex flex-col rounded-xl border border-ink-100 bg-white shadow-[0_1px_2px_rgba(10,12,11,0.04),0_10px_28px_-14px_rgba(10,12,11,0.12)] transition-all duration-500 ease-out hover:-translate-y-1.5 hover:border-brand-600/50 hover:shadow-[0_32px_65px_-18px_rgba(6,57,35,0.25)] sm:flex-row">
       {/* ── IMAGEN ── */}
-      <Link href={`/properties/${id}`} className="relative h-52 w-full shrink-0 overflow-hidden sm:h-auto sm:w-72">
+      <Link href={`/properties/${id}`} className="relative h-52 w-full shrink-0 overflow-hidden rounded-t-[11px] sm:h-auto sm:w-72 sm:rounded-tr-none sm:rounded-bl-[11px]">
         {/* ⚠️ SIN `quality` explícito (default 75) — ver la nota extensa en
             `FeaturedPropertyCard.tsx`. `object-cover` se mantiene: la vista
             lista depende del recorte uniforme para que la columna de imagen no
@@ -61,17 +66,21 @@ export function PropertyRow({ property }: { property: Property }) {
           sizes="(max-width: 640px) 100vw, 288px"
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
         />
-        {/* Etiqueta promocional (si tiene) arriba de la operación — ver
-            `PropertyCard`. En mobile el favorito cae sobre la foto y se le
-            reserva el ancho (`right-17`); desde `sm` el favorito pasa a la
-            columna de contenido y la etiqueta puede usar toda la foto. */}
-        <div className="promo-badge-slot pointer-events-none absolute top-4 right-17 left-4 flex flex-col items-start gap-2.5 sm:right-4">
-          {promo && <PropertyBadge type={promo} />}
-          <span className={`${BADGE_BASE} ${operationBadgeColor(operationType)}`}>
-            {operationType}
-          </span>
-        </div>
+        <span className={`absolute top-4 left-4 ${BADGE_BASE} ${operationBadgeColor(operationType)}`}>
+          {operationType}
+        </span>
       </Link>
+
+      {/* ── Etiqueta promocional — montada sobre la esquina superior
+          izquierda, asomando por fuera (ver `PropertyCard`). En mobile el
+          favorito cae sobre la foto y se le reserva el ancho (`right-17`);
+          desde `sm` el favorito pasa a la columna de contenido y la etiqueta
+          tiene lugar de sobra. ── */}
+      {promo && (
+        <div className="promo-badge-corner right-17 sm:right-4">
+          <PropertyBadge type={promo} />
+        </div>
+      )}
 
       {/* ── CONTENIDO ── */}
       <Link href={`/properties/${id}`} className="flex min-w-0 flex-1 flex-col justify-center gap-2.5 p-6">

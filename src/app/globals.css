@@ -415,8 +415,8 @@ body {
 /* ═══════════════════════════════════════════════════════════════════════════
    ETIQUETAS PROMOCIONALES FLOTANTES — `PropertyBadge.tsx`
    ───────────────────────────────────────────────────────────────────────────
-   Destacada / Visitas disponibles / Ingreso reciente / Oportunidad, sobre la
-   foto de las tarjetas. Los colores de acá (dorado, azul, coral y los dos
+   Destacada / Visitas disponibles / Ingreso reciente / Oportunidad, montadas
+   sobre la esquina superior izquierda de las tarjetas. Los colores de acá (dorado, azul, coral y los dos
    verdes) son EXCLUSIVOS de estas etiquetas: no se suben a `@theme` para no
    ofrecerlos como paleta general del sitio.
 
@@ -435,19 +435,43 @@ body {
    etiqueta no se anima en bucle: solo transiciona en el hover de la tarjeta.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Contenedor de la esquina superior izquierda de la foto (etiqueta + badge de
-   operación). `container-type` permite compactar la etiqueta según el ANCHO
-   REAL de la tarjeta, no del viewport: en una grilla de 2 columnas a 640px la
-   tarjeta es más angosta que en una de 1 columna a 400px. */
-.promo-badge-slot {
+/* Ancla de la etiqueta: MONTADA SOBRE LA ESQUINA superior izquierda de la
+   tarjeta, asomando hacia arriba y hacia afuera — como un sello pegado al
+   borde, no un chip dentro de la foto.
+
+   Por eso va como hija directa de la tarjeta y FUERA del contenedor de la
+   imagen (que recorta con `overflow-hidden`), y las tres tarjetas que la usan
+   ya no llevan `overflow-hidden` en la raíz: el redondeo de la foto lo hace el
+   propio contenedor de la imagen.
+
+   Geometría: con 40px de alto y `top: -25px`, poco más de la mitad queda
+   afuera y el borde inferior cae a 15px del borde de la tarjeta, justo arriba
+   del badge de operación (que sigue en su lugar de siempre, `top-4` = 16px).
+   Al flotar, la etiqueta solo se aleja de él, nunca lo pisa.
+
+   Lo que asoma por arriba invade el espacio entre filas: las grillas que
+   muestran estas tarjetas tienen `gap-y-10` (40px) para que no se meta en la
+   tarjeta de arriba ni en la barra de herramientas del catálogo.
+
+   `container-type` permite compactar la etiqueta según el ANCHO REAL de la
+   tarjeta, no del viewport: en una grilla de 2 columnas a 640px la tarjeta es
+   más angosta que en una de 1 columna a 400px. El ancho lo acotan `left` (acá)
+   y `right` (en cada tarjeta, para reservar el lugar del favorito). */
+.promo-badge-corner {
+  position: absolute;
+  top: -25px;
+  left: -12px;
+  z-index: 20;
+  pointer-events: none;
   container-type: inline-size;
 }
 
 .promo-badge {
-  --pb-from: #087f70;
-  --pb-to: #14594d;
-  --pb-edge: rgba(255, 255, 255, 0.22);
-  --pb-glow: 8, 127, 112;
+  --pb-from: #18c2a5;
+  --pb-to: #0a8f7c;
+  --pb-edge: rgba(255, 255, 255, 0.3);
+  --pb-glow: 24, 194, 165;
+  --pb-text-shadow: rgba(0, 60, 50, 0.4);
   --pb-delay: 0s;
 
   position: relative;
@@ -459,35 +483,44 @@ body {
 
 /* Mismo lenguaje, distinto color. Gradiente siempre de claro (arriba-izq.) a
    oscuro (abajo-der.), como si la luz viniera del mismo lado en las cuatro.
+   Tonos VIVOS a pedido (dorado, turquesa, azul cielo y coral encendidos): la
+   etiqueta tiene que verse de lejos, sobre cualquier foto.
    El `--pb-delay` desfasa la flotación por variante: misma animación, pero las
-   etiquetas de una grilla no suben y bajan todas al unísono. */
+   etiquetas de una grilla no suben y bajan todas al unísono.
+   `--pb-text-shadow` es una sombra de texto del mismo tono, más oscura: con
+   fondos tan claros (sobre todo el dorado) es lo que mantiene legible el
+   blanco sin tener que oscurecer el color. */
 .promo-badge--featured {
-  --pb-from: #d9a72e;
-  --pb-to: #a87513;
-  --pb-edge: #a87513;
-  --pb-glow: 217, 167, 46;
+  --pb-from: #ffc93c;
+  --pb-to: #e39a0f;
+  --pb-edge: #d08a0c;
+  --pb-glow: 255, 185, 30;
+  --pb-text-shadow: rgba(120, 70, 0, 0.55);
   --pb-delay: 0s;
 }
 .promo-badge--visits {
-  --pb-from: #087f70;
-  --pb-to: #14594d;
-  --pb-edge: rgba(255, 255, 255, 0.22);
-  --pb-glow: 8, 127, 112;
-  --pb-delay: -0.9s;
+  --pb-from: #18c2a5;
+  --pb-to: #0a8f7c;
+  --pb-edge: rgba(255, 255, 255, 0.3);
+  --pb-glow: 24, 194, 165;
+  --pb-text-shadow: rgba(0, 60, 50, 0.4);
+  --pb-delay: -0.85s;
 }
 .promo-badge--new {
-  --pb-from: #1689d4;
-  --pb-to: #116ba8;
-  --pb-edge: rgba(255, 255, 255, 0.25);
-  --pb-glow: 22, 137, 212;
-  --pb-delay: -1.8s;
+  --pb-from: #33aeff;
+  --pb-to: #1677e0;
+  --pb-edge: rgba(255, 255, 255, 0.32);
+  --pb-glow: 51, 174, 255;
+  --pb-text-shadow: rgba(0, 50, 110, 0.4);
+  --pb-delay: -1.7s;
 }
 .promo-badge--opportunity {
-  --pb-from: #d94d36;
-  --pb-to: #b63827;
-  --pb-edge: rgba(255, 255, 255, 0.2);
-  --pb-glow: 217, 77, 54;
-  --pb-delay: -2.7s;
+  --pb-from: #ff6b4a;
+  --pb-to: #e8432b;
+  --pb-edge: rgba(255, 255, 255, 0.3);
+  --pb-glow: 255, 107, 74;
+  --pb-text-shadow: rgba(120, 20, 0, 0.4);
+  --pb-delay: -2.55s;
 }
 
 /* Sombra de contacto: mancha del color de la etiqueta, desenfocada, apenas
@@ -496,14 +529,14 @@ body {
   content: '';
   position: absolute;
   z-index: -1;
-  left: 14%;
-  right: 14%;
-  bottom: -5px;
-  height: 10px;
+  left: 12%;
+  right: 12%;
+  bottom: -7px;
+  height: 12px;
   border-radius: 50%;
-  background: rgba(var(--pb-glow), 0.55);
-  filter: blur(6px);
-  animation: promo-badge-shadow 3.6s ease-in-out infinite;
+  background: rgba(var(--pb-glow), 0.7);
+  filter: blur(7px);
+  animation: promo-badge-shadow 3.4s ease-in-out infinite;
   animation-delay: var(--pb-delay);
 }
 
@@ -512,28 +545,29 @@ body {
   isolation: isolate;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   min-width: 0;
   max-width: 100%;
-  height: 36px;
-  padding: 0 13px 0 5px;
+  height: 40px;
+  padding: 0 16px 0 5px;
   border: 1px solid var(--pb-edge);
-  border-radius: 12px;
+  border-radius: 13px;
   background: linear-gradient(135deg, var(--pb-from) 0%, var(--pb-to) 100%);
   color: #fff;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 800;
   letter-spacing: 0.08em;
   line-height: 1;
   text-transform: uppercase;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 1px 2px var(--pb-text-shadow);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.38),     /* canto superior iluminado */
-    inset 0 -1px 0 rgba(0, 0, 0, 0.14),          /* canto inferior: relieve  */
-    0 1px 2px rgba(10, 12, 11, 0.18),            /* apoyo cercano            */
-    0 8px 18px -8px rgba(var(--pb-glow), 0.6);   /* halo de color difuso     */
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),      /* canto superior iluminado */
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),          /* canto inferior: relieve  */
+    0 2px 4px rgba(10, 12, 11, 0.2),             /* apoyo cercano            */
+    0 10px 22px -8px rgba(var(--pb-glow), 0.8),  /* halo de color difuso     */
+    0 0 18px -4px rgba(var(--pb-glow), 0.5);     /* resplandor alrededor     */
   transition: box-shadow var(--dur-base) var(--ease-out-soft);
-  animation: promo-badge-float 3.6s ease-in-out infinite;
+  animation: promo-badge-float 3.4s ease-in-out infinite;
   animation-delay: var(--pb-delay);
   will-change: transform;
 }
@@ -561,15 +595,15 @@ body {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.22);
 }
 .promo-badge__icon svg {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
 }
 
 .promo-badge__label {
@@ -584,49 +618,59 @@ body {
    sigue igual — solo cambia el `box-shadow`, no el `transform`. */
 .group:hover .promo-badge__body {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.42),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.14),
-    0 2px 4px rgba(10, 12, 11, 0.2),
-    0 14px 26px -10px rgba(var(--pb-glow), 0.72);
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 3px 6px rgba(10, 12, 11, 0.22),
+    0 16px 30px -10px rgba(var(--pb-glow), 0.9),
+    0 0 24px -4px rgba(var(--pb-glow), 0.6);
 }
 
+/* Recorrido de 6px (antes 3): la flotación se nota a simple vista, pero sigue
+   siendo un vaivén lento, sin rebote ni escalado. */
 @keyframes promo-badge-float {
   0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-3px); }
+  50%      { transform: translateY(-6px); }
 }
 
-/* Mientras la etiqueta sube, su sombra sobre la foto se achica y se aclara. */
+/* Mientras la etiqueta sube, su sombra sobre la foto se achica y se aclara.
+   Más contraste que antes, acompañando el recorrido más largo. */
 @keyframes promo-badge-shadow {
-  0%, 100% { transform: scaleX(1);    opacity: 0.6; }
-  50%      { transform: scaleX(0.88); opacity: 0.35; }
+  0%, 100% { transform: scaleX(1);   opacity: 0.7; }
+  50%      { transform: scaleX(0.8); opacity: 0.3; }
 }
 
-/* Mobile: más chica en proporción, para no tapar media foto. */
+/* Mobile: algo más chica en proporción, para no tapar media foto. Sube un
+   poco menos (`top: -20px`) para que, con 35px de alto, el borde inferior
+   siga cayendo arriba del badge de operación. */
 @media (max-width: 640px) {
+  .promo-badge-corner {
+    top: -20px;
+    left: -10px;
+  }
   .promo-badge__body {
-    gap: 7px;
-    height: 32px;
-    padding: 0 11px 0 4px;
-    border-radius: 10px;
-    font-size: 10.5px;
+    gap: 8px;
+    height: 35px;
+    padding: 0 13px 0 4px;
+    border-radius: 11px;
+    font-size: 11px;
   }
   .promo-badge__icon {
-    width: 23px;
-    height: 23px;
+    width: 26px;
+    height: 26px;
   }
   .promo-badge__icon svg {
-    width: 12px;
-    height: 12px;
+    width: 13px;
+    height: 13px;
   }
 }
 
-/* Tarjeta angosta (grilla de 2 columnas apenas pasado `sm`, por ejemplo):
-   se ajusta tipografía y padding antes de llegar a cortar el texto con "…". */
-@container (max-width: 13.5rem) {
+/* Tarjeta angosta (grilla de 2 o 4 columnas en su ancho mínimo): se ajusta
+   tipografía y padding antes de llegar a cortar el texto con "…". */
+@container (max-width: 15rem) {
   .promo-badge__body {
-    gap: 6px;
-    padding-right: 10px;
-    font-size: 10px;
+    gap: 7px;
+    padding-right: 12px;
+    font-size: 11px;
     letter-spacing: 0.05em;
   }
 }

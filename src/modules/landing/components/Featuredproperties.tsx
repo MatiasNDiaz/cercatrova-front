@@ -50,7 +50,9 @@ export default async function FeaturedProperties() {
             No hay propiedades disponibles en este momento.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 xl:grid-cols-4">
+          // `gap-y-10`: las etiquetas promocionales asoman por encima de su
+          // tarjeta (ver `.promo-badge-corner` en globals.css).
+          <div className="grid grid-cols-1 gap-x-7 gap-y-10 sm:grid-cols-2 xl:grid-cols-4">
             {featured.map((property, i) => (
               <Reveal key={property.id} delay={i * 0.08} className="h-full">
                 <FeaturedPropertyCard property={property} />

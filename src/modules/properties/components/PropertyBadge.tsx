@@ -2,7 +2,9 @@ import { Star, CalendarCheck, Sparkles, Tag, type LucideIcon } from 'lucide-reac
 import type { PropertyBadgeType } from '../lib/promoBadges';
 
 /**
- * Etiqueta promocional flotante que va SOBRE LA FOTO de una tarjeta.
+ * Etiqueta promocional flotante, montada sobre la esquina superior izquierda
+ * de una tarjeta (la posición la da `.promo-badge-corner`, que pone cada
+ * tarjeta alrededor de este componente).
  *
  * Sin `'use client'` y sin hooks a propósito: la usan tanto tarjetas cliente
  * (`PropertyCard`, `PropertyRow`) como la de la landing, que es Server
