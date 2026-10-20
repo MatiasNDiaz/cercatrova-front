@@ -6,6 +6,8 @@ import { SectionHeading } from './SectionHeading';
 import { Reveal } from './Reveal';
 import { FeaturedPropertyCard } from './FeaturedPropertyCard';
 import { CtaButton } from './CtaButton';
+import { getPromoBadgeContext } from '@/modules/properties/lib/promoBadges.server';
+import { guaranteedPromoBadge } from '@/modules/properties/lib/promoBadges';
 
 const HOW_MANY = 4;
 
@@ -26,13 +28,12 @@ const HOW_MANY = 4;
  */
 export default async function FeaturedProperties() {
   // Si el backend no está disponible (ej. durante el build) se renderiza el
-  // estado vacío en vez de romper el prerender de la landing.
-  let featured: Property[] = [];
-  try {
-    featured = await propertiesService.getFeatured(HOW_MANY);
-  } catch {
-    featured = [];
-  }
+  // estado vacío en vez de romper el prerender de la landing. El contexto de
+  // etiquetas nunca lanza (sin backend devuelve uno vacío).
+  const [featured, promoCtx] = await Promise.all([
+    propertiesService.getFeatured(HOW_MANY).catch((): Property[] => []),
+    getPromoBadgeContext(),
+  ]);
 
   return (
     <section id="propiedades" className="bg-white py-24 md:py-28">
@@ -55,7 +56,10 @@ export default async function FeaturedProperties() {
           <div className="grid grid-cols-1 gap-x-7 gap-y-10 sm:grid-cols-2 xl:grid-cols-4">
             {featured.map((property, i) => (
               <Reveal key={property.id} delay={i * 0.08} className="h-full">
-                <FeaturedPropertyCard property={property} />
+                {/* En esta sección TODAS llevan etiqueta (puede repetirse):
+                    la del catálogo si la propiedad está entre las 10 más
+                    recientes, y si no, la regla base — ver `guaranteedPromoBadge`. */}
+                <FeaturedPropertyCard property={property} promo={guaranteedPromoBadge(promoCtx, property)} />
               </Reveal>
             ))}
           </div>
@@ -68,7 +72,7 @@ export default async function FeaturedProperties() {
               variant="primary"
               icon={<ArrowRight size={18} className="transition-transform duration-300 group-hover/cta:translate-x-1" />}
             >
-              Ver todas las propiedades
+              Ver Propiedades Especiales
             </CtaButton>
           </div>
         </Reveal>

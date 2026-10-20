@@ -11,10 +11,17 @@ import { CatalogFilterBar } from '@/modules/properties/components/CatalogFilterB
 import { FiltersModal } from '@/modules/properties/components/FiltersModal';
 import { ErrorState } from '@/modules/shared/ui/ErrorState';
 import { Property } from '@/modules/properties/interfaces/propertyInterface';
+import type { PromoBadgeContext } from '@/modules/properties/lib/promoBadges';
 
 interface Props {
   initialItems: Property[];
   initialTotal: number;
+  /**
+   * Etiquetas promocionales por id (solo las 10 más recientes del catálogo).
+   * Las calcula el servidor una vez; como van por id y no por posición, siguen
+   * valiendo después de cambiar de página, filtro, orden o vista.
+   */
+  promoBadges?: PromoBadgeContext['badges'];
 }
 
 type ViewMode = 'grid' | 'list';
@@ -39,7 +46,7 @@ const gridItem = {
   show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const } },
 };
 
-export default function PropertiesCatalog({ initialItems, initialTotal }: Props) {
+export default function PropertiesCatalog({ initialItems, initialTotal, promoBadges = {} }: Props) {
   const { filters, setFilters } = usePropertyFilters();
   const [items, setItems] = useState<Property[]>(initialItems);
   const [total, setTotal] = useState(initialTotal);
@@ -263,9 +270,9 @@ export default function PropertiesCatalog({ initialItems, initialTotal }: Props)
                 {items.map((prop) => (
                   <motion.div key={prop.id} variants={gridItem}>
                     {viewMode === 'grid' ? (
-                      <PropertyCard property={prop} />
+                      <PropertyCard property={prop} promo={promoBadges[prop.id]} />
                     ) : (
-                      <PropertyRow property={prop} />
+                      <PropertyRow property={prop} promo={promoBadges[prop.id]} />
                     )}
                   </motion.div>
                 ))}

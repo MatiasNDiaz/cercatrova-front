@@ -288,11 +288,43 @@ export interface PostAuthor {
   role: 'user' | 'admin';
 }
 
+/** Un medio (imagen o video) de una publicación. Ordenado por `order`. */
+export interface PostMedia {
+  id: number;
+  postId: number;
+  type: 'image' | 'video';
+  /** URL https de Cloudinary del archivo original. */
+  url: string;
+  publicId: string;
+  order: number;
+  /** Solo videos: fotograma inicial (JPG) para el `poster` del reproductor. */
+  posterUrl: string | null;
+  /** Dimensiones reales; null en las imágenes de publicaciones anteriores a los medios. */
+  width: number | null;
+  height: number | null;
+  /** Solo videos, en segundos. */
+  duration: number | null;
+  createdAt: string;
+}
+
 export interface Post {
   id: number;
   description: string;
+  /**
+   * PORTADA: URL del primer medio (o el fotograma inicial si es un video).
+   * Siempre presente — sirve de miniatura en el panel y de imagen OpenGraph.
+   */
   imageUrl: string;
-  imagePublicId: string;
+  /** ⚠️ Legado (anterior a `media`). Null en las publicaciones nuevas. */
+  imagePublicId: string | null;
+  /**
+   * Imágenes y videos en el orden de la galería. Las publicaciones viejas
+   * también lo traen: la migración `AddPostMedia` copió su imagen como medio #0.
+   *
+   * Opcional a propósito: un backend sin esa migración no lo manda. La UI usa
+   * `postMediaList(post)`, que en ese caso cae a la portada (`imageUrl`).
+   */
+  media?: PostMedia[];
   likesCount: number;
   createdAt: string;
   agent: PostAuthor;

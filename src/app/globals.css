@@ -522,6 +522,16 @@ body {
   --pb-text-shadow: rgba(120, 20, 0, 0.4);
   --pb-delay: -2.55s;
 }
+/* VISTA POR X PERSONAS — violeta profundo, con un poco de azul para que se
+   lea "elegante" y no se confunda con el fucsia del badge de "temporal". */
+.promo-badge--views {
+  --pb-from: #8b6cf0;
+  --pb-to: #5b34c9;
+  --pb-edge: rgba(255, 255, 255, 0.3);
+  --pb-glow: 124, 92, 232;
+  --pb-text-shadow: rgba(40, 10, 110, 0.45);
+  --pb-delay: -1.25s;
+}
 
 /* Sombra de contacto: mancha del color de la etiqueta, desenfocada, apenas
    por debajo. Va DETRÁS del cuerpo (`z-index: -1` dentro del `isolation`). */
@@ -611,6 +621,24 @@ body {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* Dos renglones (VISTA POR X PERSONAS + "En los últimos 7 días"). Entra en
+   los mismos 40px de alto: no cambia la geometría de la esquina. */
+.promo-badge__label--stack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.promo-badge__label--stack > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.promo-badge__sub {
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  opacity: 0.88;
 }
 
 /* Hover de la tarjeta (todas llevan la clase `group`): la etiqueta gana un

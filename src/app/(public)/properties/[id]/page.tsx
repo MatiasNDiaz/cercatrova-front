@@ -5,6 +5,7 @@ import { propertiesService } from '@/modules/properties/services/properties.serv
 import { getErrorStatus } from '@/modules/shared/lib/apiError';
 import { formatPriceInline } from '@/modules/shared/lib/money';
 import PropertyDetail, { type PropertyFull } from './PropertyDetail';
+import { getPromoBadgeContext } from '@/modules/properties/lib/promoBadges.server';
 
 interface PageProps {
   // En Next.js 15 `params` es una Promise: hay que await-earla antes de leer
@@ -111,11 +112,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function PropertyDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const property = await getProperty(Number(id));
+  // El contexto de etiquetas (para "Propiedades similares") va en paralelo,
+  // está cacheado y nunca lanza.
+  const [property, promoCtx] = await Promise.all([
+    getProperty(Number(id)),
+    getPromoBadgeContext(),
+  ]);
 
   // Red de seguridad: `generateMetadata` ya cortó antes de llegar acá. Se deja
   // porque es lo que le dice a TypeScript que abajo `property` no es null.
   if (!property) notFound();
 
-  return <PropertyDetail property={property} />;
+  return <PropertyDetail property={property} promoBadges={promoCtx.badges} />;
 }

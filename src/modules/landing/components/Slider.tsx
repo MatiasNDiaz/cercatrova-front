@@ -81,7 +81,14 @@ const slides = [
   },
 ];
 
-export const PropertySlider = () => {
+/**
+ * `afterLinktree`: contenido que va justo debajo de la franja del Linktree y
+ * antes de la de estudiantes. Es un slot (y no un import directo) porque lo que
+ * va ahí — "Cerca-Reels" — es un Server Component que pide datos, y este
+ * componente es cliente: la landing lo renderiza en el servidor y lo pasa ya
+ * resuelto.
+ */
+export const PropertySlider = ({ afterLinktree }: { afterLinktree?: React.ReactNode } = {}) => {
   const { user, isLoading } = useAuth();
   const [active, setActive] = useState(0);
 
@@ -268,6 +275,8 @@ export const PropertySlider = () => {
 
       {/* Entre el Hero y la franja de estudiantes, tal como se pidió. */}
       <LinktreeBand />
+
+      {afterLinktree}
 
       <EstudiantesBand />
     </>

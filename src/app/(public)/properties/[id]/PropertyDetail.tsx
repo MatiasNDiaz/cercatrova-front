@@ -25,6 +25,7 @@ import { AmpliarHint } from '@/modules/shared/ui/AmpliarHint';
 import { whatsappLink } from '@/modules/shared/lib/contact';
 import { priceParts, formatExpensas } from '@/modules/shared/lib/money';
 import { PropertyCard } from '@/modules/properties/components/PropertyCard';
+import type { PromoBadgeContext } from '@/modules/properties/lib/promoBadges';
 import { propertiesService } from '@/modules/properties/services/properties.service';
 import { Property } from '@/modules/properties/interfaces/propertyInterface';
 import { OperationType } from '@/modules/properties/interfaces/operation-type';
@@ -1039,9 +1040,11 @@ function CommentsAndRatings({
 
 // ── PROPIEDADES SIMILARES ──────────────────────────────────────────────────────
 function SimilarProperties({
-  currentId, operationType, typeOfPropertyId,
+  currentId, operationType, typeOfPropertyId, promoBadges,
 }: {
   currentId: number; operationType: string; typeOfPropertyId?: number;
+  /** Etiquetas promocionales por id — las mismas que en el catálogo. */
+  promoBadges: PromoBadgeContext['badges'];
 }) {
   const [items, setItems] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1075,7 +1078,7 @@ function SimilarProperties({
           tarjeta (ver `.promo-badge-corner` en globals.css). */}
       <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((p) => (
-          <PropertyCard key={p.id} property={p} />
+          <PropertyCard key={p.id} property={p} promo={promoBadges[p.id]} />
         ))}
       </div>
     </section>
@@ -1083,7 +1086,14 @@ function SimilarProperties({
 }
 
 // ── COMPONENTE PRINCIPAL ──────────────────────────────────────────────────────
-export default function PropertyDetail({ property }: { property: PropertyFull }) {
+export default function PropertyDetail({
+  property,
+  promoBadges = {},
+}: {
+  property: PropertyFull;
+  /** Para las tarjetas de "Propiedades similares" (lo calcula `page.tsx`). */
+  promoBadges?: PromoBadgeContext['badges'];
+}) {
   const {
     title, description, direccion, localidad, barrio, zone,
     rooms, bathrooms, garage, patio, aptoMascotas, property_deed, tractoAbreviado, boleto,
@@ -1725,6 +1735,7 @@ export default function PropertyDetail({ property }: { property: PropertyFull })
           currentId={property.id}
           operationType={operationType}
           typeOfPropertyId={typeOfProperty?.id}
+          promoBadges={promoBadges}
         />
       </div>
     </main>

@@ -6,7 +6,7 @@ import { Bed, Toilet, Maximize, Hourglass, MapPin, ArrowRight, Star } from 'luci
 import { Property, PropertyImage } from '../interfaces/propertyInterface';
 import { FavoriteButton } from '@/modules/shared/ui/Favoritebutton';
 import { BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor } from '../lib/badgeStyles';
-import { getPromoBadge } from '../lib/promoBadges';
+import type { PromoBadge } from '../lib/promoBadges';
 import { PropertyBadge } from './PropertyBadge';
 import { priceParts } from '@/modules/shared/lib/money';
 
@@ -22,7 +22,18 @@ import { priceParts } from '@/modules/shared/lib/money';
  * (la Landing lo omite a propósito) y no muestra badge de rating, porque el
  * endpoint del catálogo (`GET /properties/filter`) no devuelve `ratingAverage`.
  */
-export const PropertyCard = ({ property }: { property: Property }) => {
+export const PropertyCard = ({
+  property,
+  promo = null,
+}: {
+  property: Property;
+  /**
+   * Etiqueta promocional (solo las 10 más recientes la tienen). La decide el
+   * servidor (`getPromoBadgeContext`) y llega por props: la tarjeta no sabe en
+   * qué puesto del ranking está. Sin ella, la tarjeta se ve como siempre.
+   */
+  promo?: PromoBadge | null;
+}) => {
   const {
     id, title, price, currency, rooms, bathrooms, supTotal, antiquity,
     localidad, barrio, images, typeOfProperty, operationType, ratingAverage,
@@ -37,8 +48,6 @@ export const PropertyCard = ({ property }: { property: Property }) => {
 
   const rating =
     typeof ratingAverage === 'number' && ratingAverage > 0 ? ratingAverage : null;
-
-  const promo = getPromoBadge(property);
 
   return (
     // ⚠️ SIN `overflow-hidden` en la raíz: la etiqueta promocional asoma por
@@ -148,7 +157,7 @@ export const PropertyCard = ({ property }: { property: Property }) => {
           favorito para que nunca se le meta abajo. ── */}
       {promo && (
         <div className="promo-badge-corner right-17">
-          <PropertyBadge type={promo} />
+          <PropertyBadge badge={promo} />
         </div>
       )}
 

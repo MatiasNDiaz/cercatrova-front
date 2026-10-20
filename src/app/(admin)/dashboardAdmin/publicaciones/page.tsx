@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   Megaphone, Plus, Heart, MessageCircle, Trash2, Loader2,
-  ChevronDown, Clock, CalendarClock, ArrowUpDown,
+  ChevronDown, Clock, CalendarClock, ArrowUpDown, Pencil, Film, Images,
 } from 'lucide-react';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import { postsService } from '@/modules/posts/services/posts.service';
@@ -72,7 +72,7 @@ export default function PublicacionesAdminPage() {
   const handleDelete = (post: Post) => {
     confirmDialog({
       title: '¿Eliminar publicación?',
-      message: 'Se eliminan también sus likes, sus comentarios y la imagen. No se puede deshacer.',
+      message: 'Se eliminan también sus likes, sus comentarios, sus imágenes y sus videos. No se puede deshacer.',
       confirmLabel: 'Sí, eliminar',
       cancelLabel: 'Cancelar',
       variant: 'danger',
@@ -151,13 +151,22 @@ export default function PublicacionesAdminPage() {
           {visible.map((post) => {
             const left = daysLeft(post.createdAt);
             const isOpen = expanded === post.id;
+            const videos = post.media?.filter((m) => m.type === 'video').length ?? 0;
+            const images = post.media?.filter((m) => m.type === 'image').length ?? 1;
 
             return (
               <ListReveal.Item as="li" key={post.id} className={`${CARD} overflow-hidden`}>
                 <div className="flex flex-col gap-4 p-5 sm:flex-row">
-                  {/* Miniatura */}
+                  {/* Miniatura — `imageUrl` es la portada (si el primer medio es
+                      un video, su fotograma inicial: no se descarga el video). */}
                   <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl bg-gray-100 sm:h-32 sm:w-44">
                     <Image src={post.imageUrl} alt="" fill className="object-cover" sizes="176px" />
+                    {(videos > 0 || images > 1) && (
+                      <span className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-md bg-black/70 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-sm">
+                        {videos > 0 && <><Film size={11} />{videos}</>}
+                        {images > 0 && <><Images size={11} className={videos > 0 ? 'ml-1' : ''} />{images}</>}
+                      </span>
+                    )}
                   </div>
 
                   {/* Datos */}
@@ -190,6 +199,12 @@ export default function PublicacionesAdminPage() {
 
                   {/* Acciones */}
                   <div className="flex shrink-0 flex-row gap-2 sm:flex-col">
+                    <Link
+                      href={`/dashboardAdmin/publicaciones/${post.id}`}
+                      className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 transition-all hover:border-[#0b7a4b]/40 hover:text-[#0b7a4b] sm:flex-none"
+                    >
+                      <Pencil size={14} />Editar
+                    </Link>
                     <button
                       type="button"
                       onClick={() => setExpanded(isOpen ? null : post.id)}

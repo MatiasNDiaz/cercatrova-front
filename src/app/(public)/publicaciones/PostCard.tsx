@@ -14,6 +14,7 @@ import { postsService } from '@/modules/posts/services/posts.service';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { loginUrlWithReturn, currentPathWithQuery } from '@/modules/shared/lib/returnTo';
 import type { Post, PostComment } from '@/modules/shared/types/api';
+import { PostMediaGallery } from '@/modules/posts/components/PostMediaGallery';
 import { fechaConHora, fechaCortaConHora } from '@/modules/shared/lib/fecha';
 
 /**
@@ -194,19 +195,11 @@ export function PostCard({ post }: { post: Post }) {
         </div>
       </div>
 
-      {/* ── IMAGEN ──
+      {/* ── MEDIOS (imágenes y videos) ──
           `object-contain` sobre fondo oscuro: la imagen viene diseñada por
-          fuera (Canva) con texto adentro, recortarla perdería información. */}
-      <div className="relative w-full bg-ink-950">
-        <Image
-          src={post.imageUrl}
-          alt={post.description.slice(0, 80)}
-          width={1080}
-          height={1080}
-          sizes="(max-width: 1024px) 100vw, 640px"
-          className="max-h-[42rem] w-full object-contain"
-        />
-      </div>
+          fuera (Canva) con texto adentro, recortarla perdería información.
+          Con un solo medio se ve igual que la imagen única de antes. */}
+      <PostMediaGallery post={post} />
 
       {/* ── ACCIONES ── */}
       <div className="flex items-center gap-2 border-b border-ink-100 px-5 py-3">

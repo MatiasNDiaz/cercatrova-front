@@ -8,7 +8,7 @@ import { Property } from '../interfaces/propertyInterface';
 import { FavoriteButton } from '@/modules/shared/ui/Favoritebutton';
 import { whatsappLink } from '@/modules/shared/lib/contact';
 import { BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor } from '../lib/badgeStyles';
-import { getPromoBadge } from '../lib/promoBadges';
+import type { PromoBadge } from '../lib/promoBadges';
 import { PropertyBadge } from './PropertyBadge';
 import { priceParts, formatExpensas } from '@/modules/shared/lib/money';
 
@@ -23,7 +23,14 @@ import { priceParts, formatExpensas } from '@/modules/shared/lib/money';
  *    versión anterior tenía un ícono de corazón decorativo, sin `onClick` ni
  *    `propertyId`, que daba la impresión de que favoritos andaba en esta vista.
  */
-export function PropertyRow({ property }: { property: Property }) {
+export function PropertyRow({
+  property,
+  promo = null,
+}: {
+  property: Property;
+  /** Etiqueta promocional, decidida en el servidor — ver `PropertyCard`. */
+  promo?: PromoBadge | null;
+}) {
   const {
     id, title, price, currency, rooms, bathrooms, supTotal, supCubierta, antiquity,
     localidad, barrio, description, images, typeOfProperty, operationType, ratingAverage,
@@ -39,8 +46,6 @@ export function PropertyRow({ property }: { property: Property }) {
     images?.find((img) => img.isCover)?.url ||
     images?.[0]?.url ||
     '/placeholder-house.jpg';
-
-  const promo = getPromoBadge(property);
 
   const wa = whatsappLink(
     `¡Hola! Estoy interesado en la propiedad "${title}" (ID: ${id}). ¿Podrían darme más información?`
@@ -78,7 +83,7 @@ export function PropertyRow({ property }: { property: Property }) {
           tiene lugar de sobra. ── */}
       {promo && (
         <div className="promo-badge-corner right-17 sm:right-4">
-          <PropertyBadge type={promo} />
+          <PropertyBadge badge={promo} />
         </div>
       )}
 

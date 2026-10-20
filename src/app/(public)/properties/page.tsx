@@ -1,5 +1,6 @@
 import { propertiesService } from '@/modules/properties/services/properties.service';
-import PropertiesCatalog from './Propertiescatalog'; 
+import PropertiesCatalog from './Propertiescatalog';
+import { getPromoBadgeContext } from '@/modules/properties/lib/promoBadges.server';
 
 interface PageProps {
   // En Next.js 15 searchParams es una Promise: hay que await-earla antes de
@@ -14,11 +15,16 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
   // El spread va primero para que page/limit queden como números; antes iba
   // último y pisaba ambos con el string crudo de la URL (equivalente en la
   // query string final, pero al revés de lo que el código parecía hacer).
-  const response = await propertiesService.getFilteredProperties({
-    ...params,
-    page: Number(params.page) || 1,
-    limit: Number(params.limit) || 12,
-  });
+  // El contexto de etiquetas (las 10 más recientes + visitas reales) va en
+  // paralelo y nunca lanza: si falla, el catálogo sale igual, sin etiquetas.
+  const [response, promoCtx] = await Promise.all([
+    propertiesService.getFilteredProperties({
+      ...params,
+      page: Number(params.page) || 1,
+      limit: Number(params.limit) || 12,
+    }),
+    getPromoBadgeContext(),
+  ]);
 
   const initialItems = response?.data || [];
   const initialTotal = response?.meta?.totalItems || 0;
@@ -31,6 +37,7 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
       <PropertiesCatalog
         initialItems={initialItems}
         initialTotal={initialTotal}
+        promoBadges={promoCtx.badges}
       />
     </main>
   );

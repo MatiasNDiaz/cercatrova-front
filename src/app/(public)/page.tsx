@@ -1,6 +1,7 @@
 // ✅ Server Component puro — sin "use client", sin async issues
 import { PropertySlider } from '@/modules/landing/components/Slider';
 import FeaturedProperties from '@/modules/landing/components/Featuredproperties';
+import CercaReels from '@/modules/landing/components/CercaReels';
 import PublicarPropiedad from '@/modules/landing/components/PublicarPropiedad';
 import Servicios from '@/modules/landing/components/Servicios';
 import Confianza from '@/modules/landing/components/Confianza';
@@ -57,7 +58,10 @@ export const revalidate = 300;
 export default function LandingPage() {
   return (
     <main id="inicio" className="min-h-screen">
-      <PropertySlider />
+      {/* "Cerca-Reels" va justo debajo del Linktree, que vive dentro del
+          hero: por eso entra por el slot del slider. Si no hay ningún video
+          vigente, `CercaReels` no renderiza nada. */}
+      <PropertySlider afterLinktree={<CercaReels />} />
       <FeaturedProperties />
       <PublicarPropiedad />
       <Servicios />

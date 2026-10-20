@@ -3,8 +3,9 @@ import Link from 'next/link';
 import { Bed, Toilet, Maximize, MapPin, Star, ArrowRight } from 'lucide-react';
 import { Property } from '@/modules/shared/types/api';
 import { priceParts } from '@/modules/shared/lib/money';
-import { getPromoBadge } from '@/modules/properties/lib/promoBadges';
+import type { PromoBadge } from '@/modules/properties/lib/promoBadges';
 import { PropertyBadge } from '@/modules/properties/components/PropertyBadge';
+import { BADGE_BASE, operationBadgeColor } from '@/modules/properties/lib/badgeStyles';
 
 /**
  * Tarjeta de propiedad para la sección "Destacadas" de la landing.
@@ -24,7 +25,17 @@ import { PropertyBadge } from '@/modules/properties/components/PropertyBadge';
  *    fondo sin depender solo de la sombra.
  */
 
-export function FeaturedPropertyCard({ property }: { property: Property }) {
+export function FeaturedPropertyCard({
+  property,
+  promo,
+}: {
+  property: Property;
+  /**
+   * Etiqueta promocional — en esta sección TODAS las tarjetas llevan una (ver
+   * `guaranteedPromoBadge`). La decide `FeaturedProperties` en el servidor.
+   */
+  promo: PromoBadge;
+}) {
   const {
     id, title, price, currency, rooms, bathrooms, supTotal,
     localidad, barrio, images, typeOfProperty, operationType, ratingAverage,
@@ -41,8 +52,6 @@ export function FeaturedPropertyCard({ property }: { property: Property }) {
   const rating =
     typeof ratingAverage === 'number' && ratingAverage > 0 ? ratingAverage : null;
 
-  const promo = getPromoBadge(property);
-
   return (
     // ⚠️ SIN `overflow-hidden` en la raíz (y con `relative`): la etiqueta
     // promocional asoma por fuera de la esquina. Las esquinas de la foto las
@@ -56,11 +65,9 @@ export function FeaturedPropertyCard({ property }: { property: Property }) {
           landing y en `/properties`. Montada sobre la esquina, fuera del
           contenedor de la foto que la recortaría. `right-17` deja libre la
           esquina de la valoración. ── */}
-      {promo && (
-        <div className="promo-badge-corner right-17">
-          <PropertyBadge type={promo} />
-        </div>
-      )}
+      <div className="promo-badge-corner right-17">
+        <PropertyBadge badge={promo} />
+      </div>
 
       {/* ── IMAGEN ── */}
       <div className="relative h-64 w-full shrink-0 overflow-hidden rounded-t-[11px]">
@@ -94,8 +101,10 @@ export function FeaturedPropertyCard({ property }: { property: Property }) {
         />
         <div className="absolute inset-0 bg-linear-to-t from-ink-950/80 via-ink-950/10 to-transparent" />
 
-        {/* Operación */}
-        <span className="absolute top-4 left-4 rounded-md bg-brand-700 px-3 py-1.5 text-[10px] font-bold tracking-[0.14em] text-white uppercase shadow-md">
+        {/* Operación — mismos colores que en el catálogo (venta cálido,
+            alquiler frío, temporal violeta). Antes acá era verde de marca
+            para todas, y desde la landing no se distinguía venta de alquiler. */}
+        <span className={`absolute top-4 left-4 ${BADGE_BASE} ${operationBadgeColor(operationType)}`}>
           {operationType}
         </span>
 
