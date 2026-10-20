@@ -53,8 +53,8 @@ export default async function PublicacionesPage() {
           Publicaciones
         </h2>
         <p className="mt-4 text-base leading-relaxed text-ink-600">
-          Oportunidades y propiedades destacadas. Dejanos tu comentario o
-          consultanos por la que te interese.
+          Videos, oportunidades y propiedades destacadas. Tocá cualquiera para
+          verla completa, dejanos tu comentario o consultanos por la que te interese.
         </p>
       </div>
 
