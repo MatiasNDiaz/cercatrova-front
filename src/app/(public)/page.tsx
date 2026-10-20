@@ -60,15 +60,18 @@ export const revalidate = 300;
 export default function LandingPage() {
   return (
     <main id="inicio" className="min-h-screen">
-      {/* "Cerca-Reels" va justo debajo del hero (donde antes estaba el
-          Linktree): por eso entra por el slot del slider. `Suspense` muestra
-          el skeleton de 3 columnas mientras llegan las publicaciones; si no
-          hay ninguna, la sección no se renderiza. */}
+      {/* Debajo del hero: el Linktree y, justo debajo, "Cerca-Reels". Entran
+          por el slot del slider porque el hero vive dentro de él. `Suspense`
+          muestra el skeleton de 3 columnas mientras llegan las publicaciones;
+          si no hay ninguna, la sección de reels no se renderiza. */}
       <PropertySlider
         afterHero={
-          <Suspense fallback={<CercaReelsSkeleton />}>
-            <CercaReels />
-          </Suspense>
+          <>
+            <LinktreeBand />
+            <Suspense fallback={<CercaReelsSkeleton />}>
+              <CercaReels />
+            </Suspense>
+          </>
         }
       />
       <FeaturedProperties />
@@ -78,10 +81,6 @@ export default function LandingPage() {
       <Resenas />
       <Nosotros />
       <RealEstateFAQ />
-      {/* Linktree: antes iba debajo del hero. Acá cierra la página antes del
-          footer — fondo blanco entre el verde menta de las preguntas
-          frecuentes y el verde profundo del footer. */}
-      <LinktreeBand />
     </main>
   );
 }

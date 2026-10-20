@@ -64,13 +64,30 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
   const resumen = post.description.slice(0, 160);
 
+  // Si la publicación arranca con un video, se declara también el video: las
+  // redes que lo soportan (Facebook, WhatsApp en algunos casos) lo muestran en
+  // la vista previa; las que no, usan la imagen — `imageUrl` es la portada,
+  // que para un video es su fotograma inicial.
+  const first = post.media?.[0];
+  const video = first?.type === 'video' ? first : null;
+
   return {
     title: `${resumen.slice(0, 60)}… | Cerca Trova`,
     description: resumen,
     openGraph: {
       title: 'Publicación de Cerca Trova',
       description: resumen,
+      siteName: 'Cerca Trova',
       images: [{ url: post.imageUrl }],
+      ...(video
+        ? {
+            videos: [{
+              url: video.url,
+              type: video.url.endsWith('.webm') ? 'video/webm' : 'video/mp4',
+              ...(video.width && video.height ? { width: video.width, height: video.height } : {}),
+            }],
+          }
+        : {}),
       type: 'article' as const,
     },
   };

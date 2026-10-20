@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, Play, Pause, Images, Volume2, VolumeX, RotateCcw, RotateCw,
   Maximize, Heart, MessageCircle, ArrowUpRight,
 } from 'lucide-react';
+import { CopyPostLinkButton } from '@/modules/posts/components/CopyPostLinkButton';
 
 /** Una card del carrusel — ya resuelta en el servidor (`CercaReels`). */
 export interface ReelItem {
@@ -328,10 +329,16 @@ function ReelCard({
         <p className="mt-1.5 text-[11px] font-medium tracking-wide text-white/70">{item.date}</p>
       </div>
 
-      {/* Click: la central lleva a Publicaciones (capa debajo de los
+      {/* Click: la central abre ESA publicación (capa debajo de los
           controles); una lateral pasa al centro. */}
       {isActive ? (
-        <Link href="/publicaciones" aria-label={`Ver en Publicaciones: ${alt}`} className="absolute inset-0 z-10" />
+        <>
+          <Link href={`/publicaciones/${item.id}`} aria-label={`Ver publicación: ${alt}`} className="absolute inset-0 z-10" />
+          {/* Copiar el enlace directo, arriba a la derecha (encima del link). */}
+          <div className="absolute top-3 right-3 z-20">
+            <CopyPostLinkButton postId={item.id} variant="overlay" />
+          </div>
+        </>
       ) : (
         <button
           type="button"

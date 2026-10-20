@@ -15,6 +15,7 @@ import type { Post } from '@/modules/shared/types/api';
 import { DashboardPage, DashboardHeader, CARD, ListReveal } from '@/modules/shared/ui/DashboardPage';
 import { ListToolbar, ListSearch, ListSelect, NoMatches } from '@/modules/shared/ui/ListToolbar';
 import { CommentModeration } from './CommentModeration';
+import { CopyPostLinkButton } from '@/modules/posts/components/CopyPostLinkButton';
 
 type SortBy = 'recientes' | 'antiguas' | 'vencen' | 'likes' | 'comentarios';
 
@@ -198,7 +199,9 @@ export default function PublicacionesAdminPage() {
                   </div>
 
                   {/* Acciones */}
-                  <div className="flex shrink-0 flex-row gap-2 sm:flex-col">
+                  <div className="flex shrink-0 flex-row flex-wrap gap-2 sm:flex-col">
+                    {/* Enlace directo a la publicación, para mandárselo a clientes. */}
+                    <CopyPostLinkButton postId={post.id} withLabel />
                     <Link
                       href={`/dashboardAdmin/publicaciones/${post.id}`}
                       className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 transition-all hover:border-[#0b7a4b]/40 hover:text-[#0b7a4b] sm:flex-none"

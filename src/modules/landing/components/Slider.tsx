@@ -82,12 +82,10 @@ const slides = [
 
 /**
  * `afterHero`: contenido que va justo debajo del hero y antes de la franja de
- * estudiantes ("Cerca-Reels"). Es un slot (y no un import directo) porque esa
- * sección es un Server Component que pide datos, y este componente es
- * cliente: la landing la renderiza en el servidor y la pasa ya resuelta.
- *
- * El Linktree, que antes iba en este lugar, ahora se monta en la landing
- * debajo de Preguntas frecuentes.
+ * estudiantes (el Linktree y "Cerca-Reels"). Es un slot (y no un import
+ * directo) porque los reels son un Server Component que pide datos, y este
+ * componente es cliente: la landing los renderiza en el servidor y los pasa
+ * ya resueltos.
  */
 export const PropertySlider = ({ afterHero }: { afterHero?: React.ReactNode } = {}) => {
   const { user, isLoading } = useAuth();

@@ -15,6 +15,7 @@ import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { loginUrlWithReturn, currentPathWithQuery } from '@/modules/shared/lib/returnTo';
 import type { Post, PostComment } from '@/modules/shared/types/api';
 import { PostMediaGallery } from '@/modules/posts/components/PostMediaGallery';
+import { CopyPostLinkButton } from '@/modules/posts/components/CopyPostLinkButton';
 import { fechaConHora, fechaCortaConHora } from '@/modules/shared/lib/fecha';
 
 /**
@@ -193,6 +194,10 @@ export function PostCard({ post }: { post: Post }) {
             {fechaConHora(post.createdAt)}
           </Link>
         </div>
+
+        {/* Enlace directo a ESTA publicación, arriba a la derecha: para que el
+            admin/agente lo copie y se lo mande a sus clientes. */}
+        <CopyPostLinkButton postId={post.id} withLabel className="ml-auto" />
       </div>
 
       {/* ── MEDIOS (imágenes y videos) ──

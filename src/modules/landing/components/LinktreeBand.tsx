@@ -6,11 +6,9 @@ import { Reveal } from './Reveal';
 /**
  * Franja de Linktree (tanda de contenido §4).
  *
- * Se monta en la landing (`(public)/page.tsx`) debajo de Preguntas frecuentes,
- * cerrando la página antes del footer. Antes iba entre el hero y la franja de
- * estudiantes; ese lugar ahora es de "Cerca-Reels". Sigue siendo una franja
- * BAJA y clara: queda entre el verde menta de las preguntas frecuentes y el
- * verde profundo del footer, como respiro entre los dos.
+ * Se monta en la landing (`(public)/page.tsx`, por el slot `afterHero` del
+ * slider) justo debajo del hero y arriba de "Cerca-Reels". Es a propósito una
+ * franja BAJA y clara: hace de respiro entre el hero oscuro y los reels.
  *
  * El link abre en pestaña nueva. `rel="noopener noreferrer"` no es opcional con
  * `target="_blank"`: sin `noopener`, la página destino recibe `window.opener` y

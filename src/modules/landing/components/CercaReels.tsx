@@ -12,9 +12,9 @@ import { ReelsCarousel, ReelsCarouselSkeleton, type ReelItem } from './ReelsCaro
 /**
  * "Cerca-Reels" — carrusel de las publicaciones (imágenes y videos).
  *
- * Va entre el hero y "Vida universitaria", donde antes estaba el Linktree
- * (que pasó debajo de Preguntas frecuentes). Lo monta `Slider.tsx` por el slot
- * `afterHero`, envuelto en un `<Suspense>` con `CercaReelsSkeleton`.
+ * Va justo debajo del Linktree (que a su vez va debajo del hero) y antes de
+ * "Vida universitaria". Lo monta la landing por el slot `afterHero` del
+ * slider, envuelto en un `<Suspense>` con `CercaReelsSkeleton`.
  *
  * Datos: el MISMO `GET /posts` del feed de Publicaciones (`postsService.getAll`),
  * de más reciente a más antigua. Una card por publicación con su PRIMER medio
