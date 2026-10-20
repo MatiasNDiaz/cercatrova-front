@@ -6,6 +6,8 @@ import { Bed, Toilet, Maximize, Hourglass, MapPin, ArrowRight, Star } from 'luci
 import { Property, PropertyImage } from '../interfaces/propertyInterface';
 import { FavoriteButton } from '@/modules/shared/ui/Favoritebutton';
 import { BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor } from '../lib/badgeStyles';
+import { getPromoBadge } from '../lib/promoBadges';
+import { PropertyBadge } from './PropertyBadge';
 import { priceParts } from '@/modules/shared/lib/money';
 
 /**
@@ -36,6 +38,8 @@ export const PropertyCard = ({ property }: { property: Property }) => {
   const rating =
     typeof ratingAverage === 'number' && ratingAverage > 0 ? ratingAverage : null;
 
+  const promo = getPromoBadge(property);
+
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-ink-100 bg-white shadow-[0_1px_2px_rgba(10,12,11,0.04),0_10px_28px_-14px_rgba(10,12,11,0.12)] transition-all duration-500 ease-out hover:-translate-y-2 hover:border-brand-600/50 hover:shadow-[0_36px_70px_-20px_rgba(6,57,35,0.28)]">
       <Link href={`/properties/${id}`} className="flex h-full flex-col">
@@ -55,10 +59,18 @@ export const PropertyCard = ({ property }: { property: Property }) => {
           />
           <div className="absolute inset-0 bg-linear-to-t from-ink-950/80 via-ink-950/10 to-transparent" />
 
-          {/* Operación — color propio según venta/alquiler/temporal */}
-          <span className={`absolute top-4 left-4 ${BADGE_BASE} ${operationBadgeColor(operationType)}`}>
-            {operationType}
-          </span>
+          {/* Esquina superior izquierda: etiqueta promocional (si tiene) y,
+              debajo, la operación. Sin etiqueta, la operación queda en el
+              mismo lugar de siempre (top-4 left-4).
+              `right-17` (68px) reserva el ancho del favorito (42px + margen)
+              para que la etiqueta nunca se le meta abajo. */}
+          <div className="promo-badge-slot pointer-events-none absolute top-4 right-17 left-4 flex flex-col items-start gap-2.5">
+            {promo && <PropertyBadge type={promo} />}
+            {/* Operación — color propio según venta/alquiler/temporal */}
+            <span className={`${BADGE_BASE} ${operationBadgeColor(operationType)}`}>
+              {operationType}
+            </span>
+          </div>
 
           {/* Precio */}
           <div className="absolute bottom-4 left-5">

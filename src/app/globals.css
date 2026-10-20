@@ -411,3 +411,232 @@ body {
 .button:not(:hover) {
   animation: floating 3s ease-in-out infinite;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ETIQUETAS PROMOCIONALES FLOTANTES — `PropertyBadge.tsx`
+   ───────────────────────────────────────────────────────────────────────────
+   Destacada / Visitas disponibles / Ingreso reciente / Oportunidad, sobre la
+   foto de las tarjetas. Los colores de acá (dorado, azul, coral y los dos
+   verdes) son EXCLUSIVOS de estas etiquetas: no se suben a `@theme` para no
+   ofrecerlos como paleta general del sitio.
+
+   Estructura (dos capas, a propósito):
+     .promo-badge          → envoltorio QUIETO. Lleva la sombra "de contacto"
+                             (`::after`), la mancha difusa que la etiqueta
+                             proyecta sobre la foto.
+     .promo-badge__body    → la etiqueta en sí. Es la que flota.
+   Separarlas permite que, al subir la etiqueta, la sombra se quede en la foto y
+   se achique y aclare: eso es lo que da la sensación de altura. Si la sombra
+   fuera un `box-shadow` de la misma capa, subiría pegada a ella.
+
+   Rendimiento: la flotación anima SOLO `transform` y la sombra de contacto
+   SOLO `transform` + `opacity` — las dos compositables, sin repintado ni
+   cambios de layout (la tarjeta no cambia de alto). El `box-shadow` de la
+   etiqueta no se anima en bucle: solo transiciona en el hover de la tarjeta.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Contenedor de la esquina superior izquierda de la foto (etiqueta + badge de
+   operación). `container-type` permite compactar la etiqueta según el ANCHO
+   REAL de la tarjeta, no del viewport: en una grilla de 2 columnas a 640px la
+   tarjeta es más angosta que en una de 1 columna a 400px. */
+.promo-badge-slot {
+  container-type: inline-size;
+}
+
+.promo-badge {
+  --pb-from: #087f70;
+  --pb-to: #14594d;
+  --pb-edge: rgba(255, 255, 255, 0.22);
+  --pb-glow: 8, 127, 112;
+  --pb-delay: 0s;
+
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  max-width: 100%;
+  pointer-events: none; /* nunca se come el click que abre la propiedad */
+}
+
+/* Mismo lenguaje, distinto color. Gradiente siempre de claro (arriba-izq.) a
+   oscuro (abajo-der.), como si la luz viniera del mismo lado en las cuatro.
+   El `--pb-delay` desfasa la flotación por variante: misma animación, pero las
+   etiquetas de una grilla no suben y bajan todas al unísono. */
+.promo-badge--featured {
+  --pb-from: #d9a72e;
+  --pb-to: #a87513;
+  --pb-edge: #a87513;
+  --pb-glow: 217, 167, 46;
+  --pb-delay: 0s;
+}
+.promo-badge--visits {
+  --pb-from: #087f70;
+  --pb-to: #14594d;
+  --pb-edge: rgba(255, 255, 255, 0.22);
+  --pb-glow: 8, 127, 112;
+  --pb-delay: -0.9s;
+}
+.promo-badge--new {
+  --pb-from: #1689d4;
+  --pb-to: #116ba8;
+  --pb-edge: rgba(255, 255, 255, 0.25);
+  --pb-glow: 22, 137, 212;
+  --pb-delay: -1.8s;
+}
+.promo-badge--opportunity {
+  --pb-from: #d94d36;
+  --pb-to: #b63827;
+  --pb-edge: rgba(255, 255, 255, 0.2);
+  --pb-glow: 217, 77, 54;
+  --pb-delay: -2.7s;
+}
+
+/* Sombra de contacto: mancha del color de la etiqueta, desenfocada, apenas
+   por debajo. Va DETRÁS del cuerpo (`z-index: -1` dentro del `isolation`). */
+.promo-badge::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 14%;
+  right: 14%;
+  bottom: -5px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(var(--pb-glow), 0.55);
+  filter: blur(6px);
+  animation: promo-badge-shadow 3.6s ease-in-out infinite;
+  animation-delay: var(--pb-delay);
+}
+
+.promo-badge__body {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  height: 36px;
+  padding: 0 13px 0 5px;
+  border: 1px solid var(--pb-edge);
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--pb-from) 0%, var(--pb-to) 100%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),     /* canto superior iluminado */
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14),          /* canto inferior: relieve  */
+    0 1px 2px rgba(10, 12, 11, 0.18),            /* apoyo cercano            */
+    0 8px 18px -8px rgba(var(--pb-glow), 0.6);   /* halo de color difuso     */
+  transition: box-shadow var(--dur-base) var(--ease-out-soft);
+  animation: promo-badge-float 3.6s ease-in-out infinite;
+  animation-delay: var(--pb-delay);
+  will-change: transform;
+}
+
+/* Brillo interior: un velo blanco en la mitad superior, como luz sobre una
+   superficie levemente curva. Queda DEBAJO del texto (z-index -1 dentro del
+   `isolation` del cuerpo) para no lavar las letras. */
+.promo-badge__body::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.06) 48%,
+    rgba(255, 255, 255, 0) 56%
+  );
+  pointer-events: none;
+}
+
+.promo-badge__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+.promo-badge__icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.promo-badge__label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Hover de la tarjeta (todas llevan la clase `group`): la etiqueta gana un
+   poco de sombra, como si se acercara. Independiente de la flotación, que
+   sigue igual — solo cambia el `box-shadow`, no el `transform`. */
+.group:hover .promo-badge__body {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14),
+    0 2px 4px rgba(10, 12, 11, 0.2),
+    0 14px 26px -10px rgba(var(--pb-glow), 0.72);
+}
+
+@keyframes promo-badge-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+/* Mientras la etiqueta sube, su sombra sobre la foto se achica y se aclara. */
+@keyframes promo-badge-shadow {
+  0%, 100% { transform: scaleX(1);    opacity: 0.6; }
+  50%      { transform: scaleX(0.88); opacity: 0.35; }
+}
+
+/* Mobile: más chica en proporción, para no tapar media foto. */
+@media (max-width: 640px) {
+  .promo-badge__body {
+    gap: 7px;
+    height: 32px;
+    padding: 0 11px 0 4px;
+    border-radius: 10px;
+    font-size: 10.5px;
+  }
+  .promo-badge__icon {
+    width: 23px;
+    height: 23px;
+  }
+  .promo-badge__icon svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+/* Tarjeta angosta (grilla de 2 columnas apenas pasado `sm`, por ejemplo):
+   se ajusta tipografía y padding antes de llegar a cortar el texto con "…". */
+@container (max-width: 13.5rem) {
+  .promo-badge__body {
+    gap: 6px;
+    padding-right: 10px;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
+}
+
+/* Movimiento reducido: la etiqueta queda quieta del todo (no solo acelerada
+   a 0.01ms como en la regla global). Ningún componente espera un
+   `animationend` de estas animaciones, así que `none` es seguro acá. */
+@media (prefers-reduced-motion: reduce) {
+  .promo-badge::after,
+  .promo-badge__body {
+    animation: none !important;
+  }
+}

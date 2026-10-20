@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { Bed, Toilet, Maximize, MapPin, Star, ArrowRight } from 'lucide-react';
 import { Property } from '@/modules/shared/types/api';
 import { priceParts } from '@/modules/shared/lib/money';
+import { getPromoBadge } from '@/modules/properties/lib/promoBadges';
+import { PropertyBadge } from '@/modules/properties/components/PropertyBadge';
 
 /**
  * Tarjeta de propiedad para la sección "Destacadas" de la landing.
@@ -38,6 +40,8 @@ export function FeaturedPropertyCard({ property }: { property: Property }) {
 
   const rating =
     typeof ratingAverage === 'number' && ratingAverage > 0 ? ratingAverage : null;
+
+  const promo = getPromoBadge(property);
 
   return (
     <Link
@@ -76,10 +80,17 @@ export function FeaturedPropertyCard({ property }: { property: Property }) {
         />
         <div className="absolute inset-0 bg-linear-to-t from-ink-950/80 via-ink-950/10 to-transparent" />
 
-        {/* Operación */}
-        <span className="absolute top-4 left-4 rounded-md bg-brand-700 px-3 py-1.5 text-[10px] font-bold tracking-[0.14em] text-white uppercase shadow-md">
-          {operationType}
-        </span>
+        {/* Etiqueta promocional (si tiene) arriba de la operación — misma
+            regla que el catálogo (`getPromoBadge`), así una propiedad lleva la
+            misma etiqueta en la landing y en `/properties`. `right-17` deja
+            libre la esquina de la valoración. */}
+        <div className="promo-badge-slot pointer-events-none absolute top-4 right-17 left-4 flex flex-col items-start gap-2.5">
+          {promo && <PropertyBadge type={promo} />}
+          {/* Operación */}
+          <span className="rounded-md bg-brand-700 px-3 py-1.5 text-[10px] font-bold tracking-[0.14em] text-white uppercase shadow-md">
+            {operationType}
+          </span>
+        </div>
 
         {/* Valoración */}
         {rating && (

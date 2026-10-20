@@ -8,6 +8,8 @@ import { Property } from '../interfaces/propertyInterface';
 import { FavoriteButton } from '@/modules/shared/ui/Favoritebutton';
 import { whatsappLink } from '@/modules/shared/lib/contact';
 import { BADGE_BASE, operationBadgeColor, propertyTypeBadgeColor } from '../lib/badgeStyles';
+import { getPromoBadge } from '../lib/promoBadges';
+import { PropertyBadge } from './PropertyBadge';
 import { priceParts, formatExpensas } from '@/modules/shared/lib/money';
 
 /**
@@ -38,6 +40,8 @@ export function PropertyRow({ property }: { property: Property }) {
     images?.[0]?.url ||
     '/placeholder-house.jpg';
 
+  const promo = getPromoBadge(property);
+
   const wa = whatsappLink(
     `¡Hola! Estoy interesado en la propiedad "${title}" (ID: ${id}). ¿Podrían darme más información?`
   );
@@ -57,9 +61,16 @@ export function PropertyRow({ property }: { property: Property }) {
           sizes="(max-width: 640px) 100vw, 288px"
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
         />
-        <span className={`absolute top-4 left-4 ${BADGE_BASE} ${operationBadgeColor(operationType)}`}>
-          {operationType}
-        </span>
+        {/* Etiqueta promocional (si tiene) arriba de la operación — ver
+            `PropertyCard`. En mobile el favorito cae sobre la foto y se le
+            reserva el ancho (`right-17`); desde `sm` el favorito pasa a la
+            columna de contenido y la etiqueta puede usar toda la foto. */}
+        <div className="promo-badge-slot pointer-events-none absolute top-4 right-17 left-4 flex flex-col items-start gap-2.5 sm:right-4">
+          {promo && <PropertyBadge type={promo} />}
+          <span className={`${BADGE_BASE} ${operationBadgeColor(operationType)}`}>
+            {operationType}
+          </span>
+        </div>
       </Link>
 
       {/* ── CONTENIDO ── */}
