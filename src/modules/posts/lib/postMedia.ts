@@ -43,22 +43,44 @@ export interface UploadedVideo {
   duration: number | null;
 }
 
-const VIDEO_MIME: Record<string, string> = { mp4: 'video/mp4', webm: 'video/webm' };
+/**
+ * Extensiones que se reconocen como VIDEO (aunque no todas se acepten): sirve
+ * para que un `.mov` reciba el aviso "formato no compatible" y no el de "no es
+ * una imagen".
+ */
+const KNOWN_VIDEO_EXT = ['mp4', 'webm', 'mov', 'm4v', '3gp', 'avi', 'mkv'];
 
-export const isVideoFile = (file: File) => file.type.startsWith('video/');
+const extOf = (file: File) => file.name.split('.').pop()?.toLowerCase() ?? '';
 
 /**
- * Valida un video ANTES de subirlo. No alcanza con la extensión ni con el
- * MIME por separado (los dos los pone el sistema operativo y se pueden
- * renombrar): se exigen los dos y que coincidan. De todos modos es solo la
- * primera barrera — Cloudinary rechaza otro formato por la firma, y el backend
- * verifica formato y peso reales antes de asociar el video.
+ * ⚠️ No alcanza con `file.type`: en Windows, un video bajado de WhatsApp Web
+ * (u otro sistema sin la asociación de la extensión) llega con `type === ''`.
+ * Antes eso lo clasificaba como imagen y el formulario lo rechazaba.
+ */
+export const isVideoFile = (file: File) =>
+  file.type.startsWith('video/') || KNOWN_VIDEO_EXT.includes(extOf(file));
+
+/** Tipos MIME que no dicen nada: el sistema no supo identificar el archivo. */
+const GENERIC_MIME = ['', 'application/octet-stream'];
+
+/**
+ * Valida un video ANTES de subirlo — primera barrera, para avisar rápido.
+ *
+ * Manda la EXTENSIÓN (MP4/WebM). El MIME se usa solo para rechazar algo que
+ * claramente no es video: se acepta vacío o genérico (WhatsApp Web en Windows
+ * los manda así) y cualquier `video/*`. Antes se exigía que coincidiera
+ * exactamente con la extensión, y eso rechazaba videos válidos.
+ *
+ * La verificación REAL no está acá: Cloudinary rechaza otro formato por la
+ * firma (`allowed_formats`), y el backend comprueba formato y peso del archivo
+ * subido antes de asociarlo a la publicación.
  */
 export function validateVideoFile(file: File, limits: PostMediaLimits = DEFAULT_POST_MEDIA_LIMITS): string | null {
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  const ext = extOf(file);
   const formatos = limits.videoFormats.map((f) => f.toUpperCase()).join(' o ');
+  const mimeOk = GENERIC_MIME.includes(file.type) || file.type.startsWith('video/');
 
-  if (!limits.videoFormats.includes(ext) || VIDEO_MIME[ext] !== file.type) {
+  if (!limits.videoFormats.includes(ext) || !mimeOk) {
     return `"${file.name}" no es un video compatible. Usá ${formatos}.`;
   }
   if (file.size > limits.maxVideoBytes) {

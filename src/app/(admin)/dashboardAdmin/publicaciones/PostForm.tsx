@@ -333,7 +333,14 @@ export default function PostForm({ postId }: { postId?: number }) {
                 <input
                   type="file"
                   multiple
-                  accept={`image/*,${limits.videoFormats.map((f) => `video/${f}`).join(',')}`}
+                  // Por MIME y también por EXTENSIÓN: si el sistema no tiene
+                  // asociado `.mp4` (pasa con videos de WhatsApp Web en
+                  // Windows), un `accept` solo por MIME los ocultaba del selector.
+                  accept={[
+                    'image/*',
+                    ...limits.videoFormats.map((f) => `video/${f}`),
+                    ...limits.videoFormats.map((f) => `.${f}`),
+                  ].join(',')}
                   className="hidden"
                   onChange={(e) => { addFiles(e.target.files ?? []); e.target.value = ''; }}
                 />
