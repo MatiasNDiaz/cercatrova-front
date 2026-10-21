@@ -6,6 +6,7 @@ import { AppToaster } from '@/modules/shared/ui/AppToaster';
 import { NavbarSelector } from '@/modules/shared/ui/NavbarSelector';
 import { VisitTracker } from '@/modules/shared/ui/VisitTracker';
 import { PendingNotificationsToast } from '@/modules/shared/ui/PendingNotificationsToast';
+import { UpdateNotice } from '@/modules/shared/ui/UpdateNotice';
 import { GoogleAnalytics } from '@next/third-parties/google'
 import "./globals.css";
 
@@ -51,6 +52,10 @@ export default function RootLayout({
               <FooterSelector/>
           </AuthProvider>
           <AppToaster />
+          {/* Aviso fijo (abajo a la izquierda) de la actualización
+              "comentar y dar me gusta sin iniciar sesión". En todas las
+              páginas; la ✕ lo cierra hasta la próxima carga. */}
+          <UpdateNotice />
           <GoogleAnalytics gaId="G-KXKV7B10N8" />
       </body>
     </html>

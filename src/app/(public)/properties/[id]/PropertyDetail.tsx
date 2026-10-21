@@ -8,7 +8,7 @@ import {
   FileCheck, Hourglass, MapPin, Home, ChevronLeft,
   ChevronRight, User, Calendar, CheckCircle2, XCircle,
   Building2, Navigation, MessageCircle, Send, Pencil,
-  Trash2, LogIn, MessageCircleMore, ShieldCheck, Landmark, Eye, EyeOff,
+  Trash2, MessageCircleMore, ShieldCheck, Landmark, Eye, EyeOff,
   PawPrint, Receipt, Phone,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -33,7 +33,8 @@ import {
   BADGE_BASE, operationBadgeSoft, propertyTypeBadgeSoft, statusBadgeColor, statusDotColor,
 } from '@/modules/properties/lib/badgeStyles';
 import { Reveal } from '@/modules/landing/components/Reveal';
-import { loginUrlWithReturn, currentPathWithQuery } from '@/modules/shared/lib/returnTo';
+import { authorNameOf, isGuestComment, COMMENT_MAX } from '@/modules/shared/lib/interaction';
+import { GuestNameField } from '@/modules/shared/ui/GuestNameField';
 
 // ── INTERFACES ────────────────────────────────────────────────────────────────
 interface PropertyImage { id: number; url: string; isCover?: boolean; }
@@ -70,13 +71,21 @@ interface Comment {
   created_at: string;
   /** Moderación del admin: los usuarios comunes no lo reciben del backend. */
   isHidden?: boolean;
-  user?: { id?: number; name: string; surname: string; photo?: string };
+  /** `null` = comentario de un visitante sin sesión. */
+  userId?: number | null;
+  user?: { id?: number; name: string; surname: string; photo?: string } | null;
+  /** Visitantes: nombre que dejaron (opcional). El backend agrega además el nombre a mostrar. */
+  guestName?: string | null;
+  authorName?: string;
+  isAnonymous?: boolean;
 }
 
 interface Rating {
   id: number;
   score: number;
-  user?: { id?: number; name: string; photo?: string };
+  /** `null` = calificación de un visitante sin sesión. */
+  userId?: number | null;
+  user?: { id?: number; name: string; photo?: string } | null;
 }
 
 /**
@@ -656,11 +665,37 @@ function CommentsAndRatings({
   const [editMessage, setEditMessage] = useState('');
   const [submittingEdit, setSubmittingEdit] = useState(false);
 
-  const myRating = ratings.find((r) => r.user?.id === user?.id);
-  const [selectedScore, setSelectedScore] = useState<number>(myRating?.score ?? 0);
+  // Sin sesión: nombre opcional del visitante + honeypot anti-bots.
+  const [guestName, setGuestName] = useState('');
+  const [honeypot, setHoneypot] = useState('');
+
+  /**
+   * Mi calificación — con o sin sesión. La da `GET /ratings/:id/mine`, que la
+   * busca por la cuenta (logueado) o por la cookie anónima del visitante. Antes
+   * se buscaba en la lista por `user.id`, y eso no sirve para un visitante.
+   */
+  const [myScore, setMyScore] = useState<number | null>(null);
+  const [selectedScore, setSelectedScore] = useState<number>(0);
   const [submittingRating, setSubmittingRating] = useState(false);
 
-  // ── FETCH INICIAL ──
+  const applyRatings = useCallback((ratingsData: Rating[]) => {
+    setRatings(ratingsData);
+    const avg = ratingsData.length
+      ? Number((ratingsData.reduce((acc, r) => acc + r.score, 0) / ratingsData.length).toFixed(2))
+      : 0;
+    setRatingAverage(avg);
+    setTimeout(() => onRatingsChange(ratingsData, avg), 0);
+  }, [onRatingsChange]);
+
+  const loadMyScore = useCallback(async () => {
+    try {
+      const { data } = await api.get<{ score: number | null }>(`/ratings/${propertyId}/mine`);
+      setMyScore(data.score);
+      if (data.score) setSelectedScore(data.score);
+    } catch {}
+  }, [propertyId]);
+
+  // ── FETCH INICIAL ── (y de nuevo si cambia la sesión: login/logout)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -670,54 +705,37 @@ function CommentsAndRatings({
         ]);
         setComments(commentsRes.data);
         const ratingsData: Rating[] = ratingsRes.data;
-        setRatings(ratingsData);
-        if (ratingsData.length) {
-          const sum = ratingsData.reduce((acc, r) => acc + r.score, 0);
-          const avg = Number((sum / ratingsData.length).toFixed(2));
-          setRatingAverage(avg);
-          setTimeout(() => onRatingsChange(ratingsData, avg), 0);
-        }
+        if (ratingsData.length) applyRatings(ratingsData);
+        else setRatings([]);
       } catch {}
     };
     fetchData();
-  }, [propertyId, onRatingsChange]);
+    loadMyScore();
+  }, [propertyId, applyRatings, loadMyScore, user?.id]);
 
-  // Sincroniza selectedScore cuando llegan los ratings frescos
-  useEffect(() => {
-    const my = ratings.find((r) => r.user?.id === user?.id);
-    if (my) setSelectedScore(my.score);
-  }, [ratings, user]);
-
-  // ── PROMEDIO LOCAL ──
-  const recalcAverage = (updated: Rating[]) => {
-    if (!updated.length) {
-      setRatingAverage(0);
-      setTimeout(() => onRatingsChange(updated, 0), 0);
-      return;
-    }
-    const sum = updated.reduce((acc, r) => acc + r.score, 0);
-    const avg = Number((sum / updated.length).toFixed(2));
-    setRatingAverage(avg);
-    setTimeout(() => onRatingsChange(updated, avg), 0);
-  };
-
-  // ── SUBMIT COMENTARIO ──
+  // ── SUBMIT COMENTARIO ── (con o sin sesión)
   const handleCommentSubmit = async () => {
     if (!newMessage.trim()) return;
     setSubmittingComment(true);
     try {
       const { data: created } = await api.post<Comment>(
         `/properties/${propertyId}/comments`,
-        { message: newMessage.trim() }
-      );
-      setComments((prev) => [
         {
-          ...created,
-          created_at: created.created_at ?? new Date().toISOString(),
-          user: { name: user!.name, surname: '', photo: user!.photo ?? undefined, id: user!.id },
+          message: newMessage.trim(),
+          // Sin sesión: nombre opcional + honeypot (solo si traen algo).
+          ...(!user && guestName.trim() ? { guestName: guestName.trim() } : {}),
+          ...(!user && honeypot ? { website: honeypot } : {}),
         },
-        ...prev,
-      ]);
+      );
+      // El backend devuelve el comentario ya en su forma pública (con el
+      // usuario o con el nombre del visitante). Un id 0 es el "éxito" falso
+      // del honeypot: no se agrega a la lista.
+      if (created?.id) {
+        setComments((prev) => [
+          { ...created, created_at: created.created_at ?? new Date().toISOString() },
+          ...prev,
+        ]);
+      }
       setNewMessage('');
       toast.success('Comentario publicado');
     } catch (error) {
@@ -778,21 +796,18 @@ function CommentsAndRatings({
     }
   };
 
-  // ── SUBMIT RATING ──
+  // ── SUBMIT RATING ── (con o sin sesión; volver a calificar actualiza)
   const handleRatingSubmit = async () => {
     if (!selectedScore) return;
     setSubmittingRating(true);
     try {
       await api.post(`/ratings/${propertyId}`, { score: selectedScore });
-      setRatings((prev) => {
-        const exists = prev.find((r) => r.user?.id === user!.id);
-        const updated = exists
-          ? prev.map((r) => r.user?.id === user!.id ? { ...r, score: selectedScore } : r)
-          : [...prev, { id: Date.now(), score: selectedScore, user: { name: user!.name, id: user!.id } }];
-        recalcAverage(updated);
-        return updated;
-      });
-      toast.success(myRating ? 'Valoración actualizada' : 'Valoración enviada');
+      // Se vuelve a pedir la lista: así el promedio incluye bien la
+      // calificación nueva o la actualizada, sea de una cuenta o de un visitante.
+      const { data: fresh } = await api.get<Rating[]>(`/ratings/${propertyId}`);
+      applyRatings(fresh);
+      toast.success(myScore ? 'Valoración actualizada' : 'Valoración enviada');
+      setMyScore(selectedScore);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -847,8 +862,8 @@ function CommentsAndRatings({
                       <User size={14} className="text-brand-700" />
                     )}
                   </div>
-                  <span className="text-sm font-medium text-ink-700">{r.user?.name || 'Anónimo'}</span>
-                  {r.user?.id === user?.id && (
+                  <span className="text-sm font-medium text-ink-700">{r.user?.name || 'Visitante'}</span>
+                  {user && r.userId === user.id && (
                     <span className="rounded-full bg-brand-700/10 px-2 py-0.5 text-[10px] font-bold tracking-wider text-brand-700 uppercase">
                       Tu valoración
                     </span>
@@ -861,32 +876,28 @@ function CommentsAndRatings({
         )}
 
         {user?.role === 'admin' ? (
-          /* Valorar es exclusivo de usuarios comunes: `POST /ratings/:id` lleva
-             `@Roles(Role.USER)`, así que al admin le devolvería 403. Se le
+          /* El admin sigue sin poder valorar (el backend responde 403): se le
              muestra el motivo en vez de un formulario que no puede usar. */
           <p className="rounded-2xl border border-dashed border-ink-200 p-4 text-center text-sm text-ink-500">
             Las valoraciones son de los usuarios: desde una cuenta de administrador no se puede valorar.
           </p>
-        ) : user ? (
+        ) : (
+          /* Abierto a todos: con sesión queda en la cuenta; sin sesión, el
+             backend lo ata a la cookie del visitante (y si vuelve a calificar,
+             actualiza la anterior). */
           <div className="rounded-2xl border border-brand-700/10 bg-brand-700/5 p-5">
             <p className="mb-3 text-sm font-bold text-ink-700">
-              {myRating ? '✏️ Modificar tu valoración' : '⭐ Valorá esta propiedad'}
+              {myScore ? '✏️ Modificar tu valoración' : '⭐ Valorá esta propiedad'}
             </p>
             <div className="flex flex-wrap items-center gap-4">
               <StarPicker value={selectedScore} onChange={setSelectedScore} />
               <button onClick={handleRatingSubmit} disabled={!selectedScore || submittingRating}
                 className="cursor-pointer rounded-xl px-5 py-2 text-sm font-bold text-white transition-all duration-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
                 style={{ background: 'var(--gradient-brand)' }}>
-                {submittingRating ? 'Enviando...' : myRating ? 'Actualizar' : 'Enviar valoración'}
+                {submittingRating ? 'Enviando...' : myScore ? 'Actualizar' : 'Enviar valoración'}
               </button>
             </div>
           </div>
-        ) : (
-          <Link href={loginUrlWithReturn(currentPathWithQuery() ?? `/properties/${propertyId}`)}
-            className="group flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink-200 p-4 text-sm text-ink-500 transition-all duration-300 hover:border-brand-700 hover:text-brand-700">
-            <LogIn size={16} className="transition-transform group-hover:scale-110" />
-            Iniciá sesión para valorar esta propiedad
-          </Link>
         )}
       </div>
 
@@ -902,39 +913,42 @@ function CommentsAndRatings({
           </span>
         </h2>
 
-        {user ? (
-          <div className="mb-8 flex gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-700/10">
-              {user.photo ? (
-                <Image src={user.photo} alt={user.name} width={40} height={40} className="rounded-full object-cover" />
-              ) : (
-                <User size={18} className="text-brand-700" />
-              )}
-            </div>
-            <div className="flex flex-1 flex-col gap-2">
-              <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Escribí tu comentario sobre esta propiedad..."
-                maxLength={500} rows={3}
-                className="w-full resize-none rounded-2xl border border-ink-200 bg-surface-mint px-4 py-3 text-sm text-ink-700 transition-all duration-200 placeholder:text-ink-500 focus:border-brand-700 focus:bg-white focus:outline-none"
+        {/* Caja de comentario — para todos. Sin sesión suma el nombre
+            opcional (y el honeypot invisible). */}
+        <div className="mb-8 flex gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-700/10">
+            {user?.photo ? (
+              <Image src={user.photo} alt={user.name} width={40} height={40} className="rounded-full object-cover" />
+            ) : (
+              <User size={18} className="text-brand-700" />
+            )}
+          </div>
+          <div className="relative flex flex-1 flex-col gap-2">
+            {!user && (
+              <GuestNameField
+                name={guestName}
+                onNameChange={setGuestName}
+                honeypot={honeypot}
+                onHoneypotChange={setHoneypot}
               />
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-ink-500">{newMessage.length}/500</span>
-                <button onClick={handleCommentSubmit} disabled={!newMessage.trim() || submittingComment}
-                  className="flex cursor-pointer items-center gap-2 rounded-xl px-5 py-2 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-                  style={{ background: 'var(--gradient-brand)' }}>
-                  <Send size={14} />
-                  {submittingComment ? 'Publicando...' : 'Publicar'}
-                </button>
-              </div>
+            )}
+            <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Escribí tu comentario sobre esta propiedad..."
+              aria-label="Tu comentario"
+              maxLength={COMMENT_MAX} rows={3}
+              className="w-full resize-none rounded-2xl border border-ink-200 bg-surface-mint px-4 py-3 text-sm text-ink-700 transition-all duration-200 placeholder:text-ink-500 focus:border-brand-700 focus:bg-white focus:outline-none"
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-ink-500">{newMessage.length}/{COMMENT_MAX}</span>
+              <button onClick={handleCommentSubmit} disabled={!newMessage.trim() || submittingComment}
+                className="flex cursor-pointer items-center gap-2 rounded-xl px-5 py-2 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                style={{ background: 'var(--gradient-brand)' }}>
+                <Send size={14} />
+                {submittingComment ? 'Publicando...' : 'Publicar'}
+              </button>
             </div>
           </div>
-        ) : (
-          <Link href={loginUrlWithReturn(currentPathWithQuery() ?? `/properties/${propertyId}`)}
-            className="group mb-8 flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink-200 p-4 text-sm text-ink-500 transition-all duration-300 hover:border-brand-700 hover:text-brand-700">
-            <LogIn size={16} className="transition-transform group-hover:scale-110" />
-            Iniciá sesión para dejar un comentario
-          </Link>
-        )}
+        </div>
 
         {comments.length === 0 ? (
           <div className="flex flex-col items-center py-10 text-center text-ink-500">
@@ -945,13 +959,16 @@ function CommentsAndRatings({
         ) : (
           <div className="flex flex-col gap-5">
             {comments.map((comment) => {
-              const isOwner = comment.user?.id === user?.id;
+              // Dueño = usuario registrado autor. Un comentario anónimo no
+              // tiene dueño con sesión: solo el admin lo puede ocultar o borrar.
+              const isOwner = !!user && comment.userId === user.id;
               const isAdmin = user?.role === 'admin';
+              const isGuest = isGuestComment(comment);
               return (
                 <div key={comment.id} className="group/comment flex gap-4">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-700/10">
                     {comment.user?.photo ? (
-                      <Image src={comment.user.photo} alt={comment.user.name} width={40} height={40} className="rounded-full object-cover" />
+                      <Image src={comment.user.photo} alt={authorNameOf(comment)} width={40} height={40} className="rounded-full object-cover" />
                     ) : (
                       <User size={18} className="text-brand-700" />
                     )}
@@ -961,9 +978,12 @@ function CommentsAndRatings({
                   <div className={`flex-1 rounded-2xl px-5 py-4 ${comment.isHidden ? 'border border-amber-200 bg-amber-50' : 'bg-surface-mint'}`}>
                     <div className="mb-1 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-ink-800">
-                          {comment.user?.name ? `${comment.user.name} ${comment.user.surname || ''}` : 'Usuario'}
-                        </span>
+                        <span className="text-sm font-bold text-ink-800">{authorNameOf(comment)}</span>
+                        {isGuest && (
+                          <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-bold tracking-wider text-ink-500 uppercase">
+                            Visitante
+                          </span>
+                        )}
                         {isOwner && (
                           <span className="rounded-full bg-brand-700/10 px-2 py-0.5 text-[10px] font-bold tracking-wider text-brand-700 uppercase">
                             Tú
@@ -1005,7 +1025,7 @@ function CommentsAndRatings({
                       <div className="mt-2 flex flex-col gap-2">
                         <textarea aria-label="comentario" value={editMessage}
                           onChange={(e) => setEditMessage(e.target.value)}
-                          maxLength={500} rows={3}
+                          maxLength={COMMENT_MAX} rows={3}
                           className="w-full resize-none rounded-xl border border-ink-200 bg-white px-3 py-2 text-sm text-ink-700 transition-all focus:border-brand-700 focus:outline-none"
                         />
                         <div className="flex justify-end gap-2">

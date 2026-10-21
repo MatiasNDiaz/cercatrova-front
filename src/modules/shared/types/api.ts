@@ -184,10 +184,24 @@ export interface Property {
 export interface Rating {
   id: number;
   score: number;
-  userId: number;
+  /** `null` = calificación de un visitante sin sesión. */
+  userId: number | null;
   propertyId: number;
-  user: { id: number } | User; // parcial al crear, completo al actualizar
-  property: { id: number } | Property;
+  user: { id: number } | User | null; // parcial al crear, completo al actualizar; null si es anónima
+  property?: { id: number } | Property;
+}
+
+/**
+ * Campos que el backend agrega a todo comentario público (propiedades y
+ * publicaciones) desde que los visitantes sin sesión pueden comentar.
+ */
+export interface PublicCommentFields {
+  /** Nombre que dejó el visitante (opcional). */
+  guestName?: string | null;
+  /** Nombre a mostrar: el del usuario, el del visitante o "Visitante". */
+  authorName?: string;
+  /** `true` si lo escribió un visitante sin sesión. */
+  isAnonymous?: boolean;
 }
 
 export interface Favorite {
@@ -197,13 +211,14 @@ export interface Favorite {
   property: Property;
 }
 
-export interface Comment {
+export interface Comment extends PublicCommentFields {
   id: number;
   message: string;
   created_at: string;
-  userId: number;
+  /** `null` = comentario de un visitante sin sesión. */
+  userId: number | null;
   propertyId: number;
-  user: User | Pick<User, 'id' | 'name' | 'surname' | 'photo'>;
+  user: User | Pick<User, 'id' | 'name' | 'surname' | 'photo'> | null;
   property?: Property; // solo en POST
 }
 
@@ -334,15 +349,16 @@ export interface Post {
   commentsCount?: number;
 }
 
-export interface PostComment {
+export interface PostComment extends PublicCommentFields {
   id: number;
   content: string;
   isHidden: boolean;
   createdAt: string;
   postId: number;
-  userId: number;
+  /** `null` = comentario de un visitante sin sesión. */
+  userId: number | null;
   parentCommentId: number | null;
-  user: PostAuthor;
+  user: PostAuthor | null;
   /** Respuestas anidadas (un solo nivel). Solo en el listado de comentarios. */
   replies?: PostComment[];
 }

@@ -10,6 +10,7 @@ import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import { postsService } from '@/modules/posts/services/posts.service';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import type { PostComment } from '@/modules/shared/types/api';
+import { authorNameOf, isGuestComment } from '@/modules/shared/lib/interaction';
 
 /**
  * Moderación de los comentarios de una publicación (vista admin).
@@ -207,24 +208,31 @@ export function CommentModeration({ postId }: { postId: number }) {
 
 function CommentHeader({ comment }: { comment: PostComment }) {
   const isAdmin = comment.user?.role === 'admin';
+  // Comentarios de visitantes sin sesión: sin usuario, con el nombre que
+  // dejaron (o "Visitante"). Solo el admin los puede ocultar o eliminar.
+  const isGuest = isGuestComment(comment);
+  const name = authorNameOf(comment);
   return (
     <div className="flex flex-wrap items-center gap-2">
       {comment.user?.photo ? (
         <Image
           src={comment.user.photo}
-          alt={comment.user.name}
+          alt={name}
           width={26}
           height={26}
           className="h-6.5 w-6.5 shrink-0 rounded-full object-cover"
         />
       ) : (
         <span className="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-full bg-[#0b7a4b]/10 text-[10px] font-bold text-[#0b7a4b]">
-          {comment.user?.name?.[0]?.toUpperCase() ?? '?'}
+          {name[0]?.toUpperCase() ?? '?'}
         </span>
       )}
-      <span className="text-sm font-bold text-gray-800">
-        {comment.user?.name} {comment.user?.surname ?? ''}
-      </span>
+      <span className="text-sm font-bold text-gray-800">{name}</span>
+      {isGuest && (
+        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[9px] font-bold tracking-wider text-gray-500 uppercase">
+          Visitante
+        </span>
+      )}
       {isAdmin && (
         <span className="inline-flex items-center gap-1 rounded-full bg-[#0b7a4b] px-2 py-0.5 text-[9px] font-black tracking-wider text-white uppercase">
           <Shield size={8} />Admin

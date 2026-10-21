@@ -34,6 +34,19 @@ function mediaFormData(data: Record<string, unknown>, newImages: File[]) {
  */
 const MULTIPART = { headers: { 'Content-Type': undefined }, timeout: 120_000 };
 
+/** Campos del formulario de comentario de un visitante sin sesión. */
+export interface GuestFields {
+  guestName?: string;
+  /** Honeypot anti-bots (campo oculto). Vacío en un envío humano. */
+  website?: string;
+}
+
+/** Solo se mandan los campos con contenido (el backend rechaza campos desconocidos, no vacíos). */
+const guestBody = (g?: GuestFields) => ({
+  ...(g?.guestName?.trim() ? { guestName: g.guestName.trim() } : {}),
+  ...(g?.website ? { website: g.website } : {}),
+});
+
 /**
  * Cliente de la API de Publicaciones.
  *
@@ -128,16 +141,22 @@ export const postsService = {
     return Array.isArray(data) ? data : [];
   },
 
-  addComment: async (postId: number, content: string): Promise<PostComment> => {
-    const { data } = await api.post(`/posts/${postId}/comments`, { content });
+  /**
+   * Comentar — con o sin sesión. `guest` solo aplica sin sesión: nombre
+   * opcional del visitante y el honeypot (`website`) del formulario.
+   */
+  addComment: async (postId: number, content: string, guest?: GuestFields): Promise<PostComment> => {
+    const { data } = await api.post(`/posts/${postId}/comments`, { content, ...guestBody(guest) });
+    return data;
+  },
+
+  /** Responder un comentario — abierto a usuarios logueados y a visitantes. */
+  replyComment: async (commentId: number, content: string, guest?: GuestFields): Promise<PostComment> => {
+    const { data } = await api.post(`/posts/comments/${commentId}/reply`, { content, ...guestBody(guest) });
     return data;
   },
 
   // ── Solo admin ──
-  replyComment: async (commentId: number, content: string): Promise<PostComment> => {
-    const { data } = await api.post(`/posts/comments/${commentId}/reply`, { content });
-    return data;
-  },
 
   toggleHideComment: async (
     commentId: number,

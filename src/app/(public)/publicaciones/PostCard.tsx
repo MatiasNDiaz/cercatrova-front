@@ -3,16 +3,16 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
-  Heart, MessageCircle, Send, Loader2, Shield, LogIn, ChevronDown,
-  CornerDownRight, X, Share2, Check, EyeOff,
+  Heart, MessageCircle, Send, Loader2, Shield, ChevronDown,
+  CornerDownRight, X, Share2, Check, EyeOff, UserRound,
 } from 'lucide-react';
 import { useAuth } from '@/modules/shared/context/AuthContext';
 import { postsService } from '@/modules/posts/services/posts.service';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
-import { loginUrlWithReturn, currentPathWithQuery } from '@/modules/shared/lib/returnTo';
+import { authorNameOf, isGuestComment, COMMENT_MAX } from '@/modules/shared/lib/interaction';
+import { GuestNameField } from '@/modules/shared/ui/GuestNameField';
 import type { Post, PostComment } from '@/modules/shared/types/api';
 import { PostMediaGallery } from '@/modules/posts/components/PostMediaGallery';
 import { CopyPostLinkButton } from '@/modules/posts/components/CopyPostLinkButton';
@@ -21,12 +21,18 @@ import { fechaConHora, fechaCortaConHora } from '@/modules/shared/lib/fecha';
 /**
  * Tarjeta de una publicación en el feed público.
  *
- * Sin sesión, like y comentario NO fallan en silencio: redirigen a /login con
- * un aviso (requisito de la Fase 4).
+ * "Me gusta", comentar y responder están abiertos a TODOS, con o sin sesión.
+ * Con sesión todo queda en la cuenta, como antes; sin sesión, el backend lo
+ * ata a la cookie anónima del visitante (no hay que mandar nada extra) y el
+ * comentario lleva el nombre opcional que deje (o "Visitante").
  */
 export function PostCard({ post }: { post: Post }) {
   const { user } = useAuth();
-  const router = useRouter();
+
+  // Solo sin sesión: nombre opcional del visitante + honeypot anti-bots.
+  const [guestName, setGuestName] = useState('');
+  const [honeypot, setHoneypot] = useState('');
+  const guest = user ? undefined : { guestName, website: honeypot };
 
   const [liked, setLiked] = useState(post.likedByMe);
   const [likesCount, setLikesCount] = useState(post.likesCount);
@@ -79,13 +85,7 @@ export function PostCard({ post }: { post: Post }) {
     }
   };
 
-  const requireLogin = (accion: string) => {
-    toast.info(`Iniciá sesión para ${accion}.`);
-    router.push(loginUrlWithReturn(currentPathWithQuery() ?? '/publicaciones'));
-  };
-
   const handleLike = async () => {
-    if (!user) return requireLogin('dar me gusta');
     if (liking) return;
 
     // Optimista: se revierte si el backend falla.
@@ -126,12 +126,11 @@ export function PostCard({ post }: { post: Post }) {
   };
 
   const handleComment = async () => {
-    if (!user) return requireLogin('comentar');
     if (!newComment.trim()) return;
 
     setSending(true);
     try {
-      await postsService.addComment(post.id, newComment.trim());
+      await postsService.addComment(post.id, newComment.trim(), guest);
       setNewComment('');
       await loadComments();
       toast.success('Comentario publicado ✓');
@@ -143,20 +142,18 @@ export function PostCard({ post }: { post: Post }) {
   };
 
   const openReply = (commentId: number) => {
-    if (!user) return requireLogin('responder');
     setReplyingTo((prev) => (prev === commentId ? null : commentId));
     setReplyText('');
   };
 
   const handleReply = async (commentId: number) => {
-    if (!user) return requireLogin('responder');
     if (!replyText.trim()) return;
 
     setSendingReply(true);
     try {
       // El backend cuelga la respuesta del comentario RAÍZ aunque se responda
       // a otra respuesta: la conversación se mantiene en un solo nivel.
-      await postsService.replyComment(commentId, replyText.trim());
+      await postsService.replyComment(commentId, replyText.trim(), guest);
       setReplyText('');
       setReplyingTo(null);
       await loadComments();
@@ -250,14 +247,24 @@ export function PostCard({ post }: { post: Post }) {
       {/* ── COMENTARIOS ── */}
       {showComments && (
         <div className="border-t border-ink-100 bg-surface px-5 py-4">
-          {/* Caja de nuevo comentario */}
-          {user ? (
-            <div className="mb-4 flex items-start gap-2">
+          {/* Caja de nuevo comentario — para todos. Sin sesión suma el nombre
+              opcional (y el honeypot invisible). */}
+          <div className="relative mb-4 flex flex-col gap-2">
+            {!user && (
+              <GuestNameField
+                name={guestName}
+                onNameChange={setGuestName}
+                honeypot={honeypot}
+                onHoneypotChange={setHoneypot}
+              />
+            )}
+            <div className="flex items-start gap-2">
               <textarea
                 rows={2}
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value.slice(0, 500))}
+                onChange={(e) => setNewComment(e.target.value.slice(0, COMMENT_MAX))}
                 placeholder="Escribí un comentario…"
+                aria-label="Tu comentario"
                 className="flex-1 resize-none rounded-2xl border border-ink-200 bg-white px-4 py-2.5 text-sm text-ink-700 placeholder:text-ink-500 focus:border-brand-700 focus:outline-none"
               />
               <button
@@ -270,15 +277,7 @@ export function PostCard({ post }: { post: Post }) {
                 {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
               </button>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => requireLogin('comentar')}
-              className="mb-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink-200 py-3.5 text-sm font-semibold text-ink-600 transition-all duration-300 hover:border-brand-700 hover:text-brand-700"
-            >
-              <LogIn size={16} />Iniciá sesión para comentar
-            </button>
-          )}
+          </div>
 
           {loadingComments ? (
             <p className="flex items-center gap-2 py-3 text-sm text-ink-500">
@@ -303,14 +302,25 @@ export function PostCard({ post }: { post: Post }) {
                   )}
 
                   {/* Input de respuesta inline */}
+                  {replyingTo === comment.id && !user && (
+                    <div className="relative mt-2 ml-4 border-l-2 border-brand-700/30 pl-4">
+                      <GuestNameField
+                        compact
+                        name={guestName}
+                        onNameChange={setGuestName}
+                        honeypot={honeypot}
+                        onHoneypotChange={setHoneypot}
+                      />
+                    </div>
+                  )}
                   {replyingTo === comment.id && (
                     <div className="mt-2 ml-4 flex items-start gap-2 border-l-2 border-brand-700/30 pl-4">
                       <textarea
                         autoFocus
                         rows={2}
                         value={replyText}
-                        onChange={(e) => setReplyText(e.target.value.slice(0, 500))}
-                        placeholder={`Respondiendo a ${comment.user?.name ?? 'este comentario'}…`}
+                        onChange={(e) => setReplyText(e.target.value.slice(0, COMMENT_MAX))}
+                        placeholder={`Respondiendo a ${authorNameOf(comment)}…`}
                         className="flex-1 resize-none rounded-2xl border border-ink-200 bg-white px-4 py-2.5 text-sm text-ink-700 placeholder:text-ink-500 focus:border-brand-700 focus:outline-none"
                       />
                       <button
@@ -352,6 +362,8 @@ function CommentBubble({
   comment: PostComment; isReply?: boolean; onReply?: () => void;
 }) {
   const isAdmin = comment.user?.role === 'admin';
+  const isGuest = isGuestComment(comment);
+  const name = authorNameOf(comment);
 
   /**
    * Un comentario oculto sólo llega hasta acá si quien mira es ADMIN: el
@@ -378,19 +390,22 @@ function CommentBubble({
         {comment.user?.photo ? (
           <Image
             src={comment.user.photo}
-            alt={comment.user.name}
+            alt={name}
             width={26}
             height={26}
             className="h-6.5 w-6.5 shrink-0 rounded-full object-cover"
           />
         ) : (
           <span className="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-full bg-brand-700/10 text-[10px] font-bold text-brand-700">
-            {comment.user?.name?.[0]?.toUpperCase() ?? '?'}
+            {isGuest ? <UserRound size={13} /> : name[0]?.toUpperCase()}
           </span>
         )}
-        <span className="text-sm font-bold text-ink-900">
-          {comment.user?.name} {comment.user?.surname ?? ''}
-        </span>
+        <span className="text-sm font-bold text-ink-900">{name}</span>
+        {isGuest && (
+          <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[9px] font-bold tracking-wider text-ink-500 uppercase">
+            Visitante
+          </span>
+        )}
         {isAdmin && (
           <span className="inline-flex items-center gap-1 rounded-full bg-brand-700 px-2 py-0.5 text-[9px] font-black tracking-wider text-white uppercase">
             <Shield size={8} />{isReply ? 'Respuesta del equipo' : 'Admin'}
@@ -415,8 +430,8 @@ function CommentBubble({
         </p>
       )}
 
-      {/* Responder está disponible para cualquier usuario logueado (si no hay
-          sesión, el handler del padre redirige a /login). */}
+      {/* Responder está disponible para todos: usuarios logueados y
+          visitantes sin sesión. */}
       {onReply && (
         <button
           type="button"
