@@ -41,4 +41,14 @@ export const authService = {
     await api.post('/auth/logout');
   },
 
+  /**
+   * Borra la cookie de sesión de este navegador SIN pedir sesión válida
+   * (`POST /auth/clear-session`). La cookie es httpOnly: el frontend no puede
+   * borrarla por su cuenta. Es la salida de emergencia de las pantallas de
+   * error ("Volver a iniciar sesión") cuando la sesión quedó en un estado raro.
+   */
+  async clearSession(): Promise<void> {
+    await api.post('/auth/clear-session');
+  },
+
 };

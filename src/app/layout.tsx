@@ -7,6 +7,7 @@ import { NavbarSelector } from '@/modules/shared/ui/NavbarSelector';
 import { VisitTracker } from '@/modules/shared/ui/VisitTracker';
 import { PendingNotificationsToast } from '@/modules/shared/ui/PendingNotificationsToast';
 import { UpdateNotice } from '@/modules/shared/ui/UpdateNotice';
+import { ChunkReloadGuard } from '@/modules/shared/ui/ChunkReloadGuard';
 import { GoogleAnalytics } from '@next/third-parties/google'
 import "./globals.css";
 
@@ -56,6 +57,8 @@ export default function RootLayout({
               "comentar y dar me gusta sin iniciar sesión". En todas las
               páginas; la ✕ lo cierra hasta la próxima carga. */}
           <UpdateNotice />
+          {/* Chunks viejos después de un deploy → recarga UNA vez (no renderiza nada). */}
+          <ChunkReloadGuard />
           <GoogleAnalytics gaId="G-KXKV7B10N8" />
       </body>
     </html>

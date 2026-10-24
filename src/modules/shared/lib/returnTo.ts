@@ -70,6 +70,18 @@ export function loginUrlFromHere(fallback = '/'): string {
 }
 
 /**
+ * Parámetro con el que se llega al login cuando la sesión anterior venció o
+ * fue revocada: el formulario muestra "Tu sesión expiró, volvé a iniciar
+ * sesión" en vez de un login pelado sin explicación.
+ */
+export const EXPIRED_PARAM = 'expired';
+
+/** Agrega `expired=1` a una URL de login (con o sin query previa). */
+export function withExpiredFlag(url: string): string {
+  return `${url}${url.includes('?') ? '&' : '?'}${EXPIRED_PARAM}=1`;
+}
+
+/**
  * Lee el `callbackUrl` que hay en la URL actual, ya validado.
  *
  * Devuelve `null` en el servidor y también cuando el valor no es una ruta

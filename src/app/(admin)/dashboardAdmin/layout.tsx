@@ -1,7 +1,8 @@
 'use client';
 
 import { useAuth } from '@/modules/shared/context/AuthContext';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { SessionGate } from '@/modules/shared/ui/SessionGate';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
@@ -12,7 +13,6 @@ import {
 import api from '@/modules/shared/lib/axios';
 import { DashboardShell } from '@/modules/shared/ui/DashboardShell';
 import { NotifCountBadge } from '@/modules/shared/ui/notifIndicators';
-import { loginUrlFromHere } from '@/modules/shared/lib/returnTo';
 
 // ── Tipos ─────────────────────────────────────────────
 // `AdminNotification` y `getNotifType` viven en `notificaciones/notifShared`:
@@ -395,35 +395,18 @@ function Sidebar() {
 
 // ── Layout ────────────────────────────────────────────
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    // `loginUrlFromHere` conserva la pantalla exacta del panel (incluido su
-    // query string) para volver ahí después del login, en vez de `/login` pelado.
-    if (!isLoading && !user) { router.push(loginUrlFromHere()); return; }
-    if (!isLoading && user && user.role !== 'admin') router.push('/dashboard');
-  }, [user, isLoading, router]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-4 border-[#0b7a4b]/10 border-t-[#0b7a4b] animate-spin" />
-          <p className="text-sm text-gray-500 font-medium">Cargando panel de administración...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user || user.role !== 'admin') return null;
-
+  // `SessionGate` reemplaza al `if (!user) return null` que dejaba la pantalla
+  // EN BLANCO cuando la sesión guardada ya no servía (o el backend no
+  // respondía). Ahora cada estado tiene pantalla y salida — ver SessionGate.
+  //
   // `DashboardShell` aporta el chrome (sidebar fijo ≥lg, cajón + barra
   // superior por debajo) y el padding lateral. El ancho del contenido lo sigue
   // decidiendo `DashboardPage` según sea listado o formulario.
   return (
-    <DashboardShell sidebar={<Sidebar />} label="Panel Admin">
-      {children}
-    </DashboardShell>
+    <SessionGate requireRole="admin" loadingLabel="Cargando panel de administración...">
+      <DashboardShell sidebar={<Sidebar />} label="Panel Admin">
+        {children}
+      </DashboardShell>
+    </SessionGate>
   );
 }

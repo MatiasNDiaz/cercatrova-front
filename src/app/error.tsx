@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AlertTriangle, RotateCw, ArrowRight } from 'lucide-react';
 import { CtaButton } from '@/modules/landing/components/CtaButton';
 import { StatusScreen } from '@/modules/shared/ui/StatusScreen';
+import { isChunkLoadError, reloadOnceForChunkError } from '@/modules/shared/lib/chunkRecovery';
 
 /**
  * Pantalla de error global — convención de Next.js (`app/error.tsx`).
@@ -33,6 +34,8 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
+    // Chunk viejo de un deploy anterior: recargar una vez trae la versión nueva.
+    if (isChunkLoadError(error) && reloadOnceForChunkError()) return;
     // El `digest` es el identificador que Next genera para correlacionar este
     // error con el stack real del servidor (que a propósito NO se expone al
     // cliente). Queda en consola para poder rastrearlo en los logs.

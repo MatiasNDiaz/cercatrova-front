@@ -1,14 +1,14 @@
 'use client';
 
 import { useAuth } from '@/modules/shared/context/AuthContext';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { SessionGate } from '@/modules/shared/ui/SessionGate';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { confirmDialog } from '@/modules/shared/ui/ConfirmDialog';
 import { DashboardShell } from '@/modules/shared/ui/DashboardShell';
 import { NotifCountBadge } from '@/modules/shared/ui/notifIndicators';
 import api from '@/modules/shared/lib/axios';
-import { loginUrlFromHere } from '@/modules/shared/lib/returnTo';
 // Mismo clasificador que la pantalla de notificaciones — ver el docstring de
 // `notifShared.ts` para por qué NO puede haber una segunda copia acá.
 import { contarSinLeer, type UserNotification } from './notificaciones/notifShared';
@@ -360,36 +360,18 @@ function Sidebar() {
 
 // ── LAYOUT PRINCIPAL ──────────────────────────────────────────────────────────
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isLoading && !user) {
-      // `loginUrlFromHere` y no `/login` pelado: así el visitante que entró por
-      // un link directo a una pantalla del dashboard vuelve a ESA pantalla al
-      // loguearse. Es el mismo mecanismo que usan favoritos/comentarios/rating.
-      router.push(loginUrlFromHere());
-    }
-  }, [user, isLoading, router]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-4 border-[#0b7a4b]/10 border-t-[#0b7a4b] animate-spin" />
-          <p className="text-sm text-gray-500 font-medium">Cargando tu espacio...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
+  // `SessionGate` reemplaza al `if (!user) return null` que dejaba la pantalla
+  // en blanco; manda al login conservando la pantalla actual (`callbackUrl`),
+  // con "Tu sesión expiró" si corresponde, o muestra "No pudimos conectar" si
+  // el backend no respondió. Ver SessionGate.
+  //
   // Igual que el panel admin: `DashboardShell` pone el chrome y el padding;
   // el ancho del contenido lo decide `DashboardPage`.
   return (
-    <DashboardShell sidebar={<Sidebar />} label="Mi cuenta">
-      {children}
-    </DashboardShell>
+    <SessionGate loadingLabel="Cargando tu espacio...">
+      <DashboardShell sidebar={<Sidebar />} label="Mi cuenta">
+        {children}
+      </DashboardShell>
+    </SessionGate>
   );
 }

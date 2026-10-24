@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Heart, X } from 'lucide-react';
 
@@ -17,14 +18,19 @@ import { Heart, X } from 'lucide-react';
  *
  * `z-50`: por encima del contenido, pero DEBAJO del menú lateral de celulares
  * (z-60/70) y de los modales (z-100 en adelante), para no taparlos.
+ *
+ * No se muestra en los paneles (`/dashboard`, `/dashboardAdmin`): ahí no
+ * aplica y, abajo a la izquierda, tapaba el botón "Cerrar sesión" del menú.
  */
 export function UpdateNotice() {
   const [open, setOpen] = useState(true);
   const reduce = useReducedMotion();
+  const pathname = usePathname();
+  const inPanel = pathname?.startsWith('/dashboard') ?? false;
 
   return (
     <AnimatePresence>
-      {open && (
+      {open && !inPanel && (
         <motion.div
           role="status"
           aria-live="polite"

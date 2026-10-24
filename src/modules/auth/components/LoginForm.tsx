@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '@/modules/auth/hooks/useAuth';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
-import { withCurrentReturn } from '@/modules/shared/lib/returnTo';
+import { withCurrentReturn, EXPIRED_PARAM } from '@/modules/shared/lib/returnTo';
 import { loginSchema, type LoginFormValues } from '@/modules/auth/schemas/auth.schemas';
 import { AuthShell } from './AuthShell';
 import { AuthField, authInput } from './AuthField';
@@ -40,6 +40,16 @@ export function LoginForm() {
    */
   const [registerHref, setRegisterHref] = useState('/register');
   useEffect(() => setRegisterHref(withCurrentReturn('/register')), []);
+
+  /**
+   * `?expired=1`: la sesión anterior venció o fue revocada (por ejemplo, se
+   * cerró sesión desde otro dispositivo). Se explica en vez de mostrar un login
+   * pelado. Se lee en un efecto por el mismo motivo que `registerHref`.
+   */
+  const [sessionExpired, setSessionExpired] = useState(false);
+  useEffect(() => {
+    setSessionExpired(new URLSearchParams(window.location.search).get(EXPIRED_PARAM) === '1');
+  }, []);
 
   const {
     register,
@@ -73,6 +83,11 @@ export function LoginForm() {
       subtitle="Ingresá tus datos para continuar"
     >
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5" noValidate>
+        {sessionExpired && (
+          <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+            Tu sesión expiró, volvé a iniciar sesión.
+          </p>
+        )}
 
         <AuthField label="Email" icon={Mail} error={errors.email?.message} htmlFor="login-email">
           <input
