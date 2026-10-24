@@ -333,7 +333,7 @@ export function TrafficChart({
             <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip
               labelFormatter={fmtDia}
-              formatter={(v, name) => [fmt(Number(v ?? 0)), name === 'visitas' ? 'Visitas' : 'Únicos']}
+              formatter={(v, name) => [fmt(Number(v ?? 0)), name === 'visitas' ? 'Páginas vistas' : 'Personas']}
               contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 12 }}
             />
             <Area type="monotone" dataKey="visitas" stroke="#0b7a4b" strokeWidth={2} fill="url(#gradVisitas)" />
@@ -344,10 +344,10 @@ export function TrafficChart({
 
       <div className="flex items-center gap-5 px-1 text-xs text-gray-500">
         <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-4 rounded bg-[#0b7a4b]" /> Visitas totales
+          <span className="h-0.5 w-4 rounded bg-[#0b7a4b]" /> Páginas vistas
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-4 rounded bg-[#5cc98f]" /> Visitantes únicos
+          <span className="h-0.5 w-4 rounded bg-[#5cc98f]" /> Personas
         </span>
       </div>
     </div>

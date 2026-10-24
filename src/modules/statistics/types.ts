@@ -137,3 +137,21 @@ export interface StatisticsOverview {
   tiempo: AverageTime;
   inventario: OwnInventory;
 }
+
+// ── Tarjeta de visitantes (`GET /statistics/visitors?range=`) ─────────────────
+export interface VisitorsPeriodSummary {
+  uniqueVisitors: number;
+  pageViews: number;
+  /** Páginas vistas ÷ personas, con un decimal. null si no hubo visitantes. */
+  pagesPerVisitor: number | null;
+}
+
+export interface VisitorsSummary extends VisitorsPeriodSummary {
+  range: StatsRange;
+  /** "Hoy" / "Últimos 7 días" / "Últimos 30 días". */
+  period: { label: string; from: string; to: string };
+  /** Período anterior equivalente ("ayer a esta hora", "los 7 días anteriores"…). */
+  previous: VisitorsPeriodSummary & { label: string; from: string; to: string };
+  /** Variación % entera; null si el período anterior fue 0. */
+  change: { uniqueVisitors: number | null; pageViews: number | null };
+}

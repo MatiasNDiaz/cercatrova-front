@@ -13,13 +13,14 @@ import { toast } from 'sonner';
 import api from '@/modules/shared/lib/axios';
 import { getErrorMessage } from '@/modules/shared/lib/apiError';
 import { useUrlFilter } from '@/modules/shared/hooks/useUrlFilter';
-import { BarChart3, Loader2, RefreshCw, Users, Eye,
+import { BarChart3, Loader2, RefreshCw, Users,
   Timer, Building2, ClipboardList, Search, AlertCircle
 } from 'lucide-react';
 import {
   ChartCard, PieStat, BarStat, PropertyRankStat, TrafficChart, NoData, fmt
 } from '@/modules/statistics/components/charts';
 import { RANGE_LABELS, type StatisticsOverview, type StatsRange } from '@/modules/statistics/types';
+import { VisitorsCard } from '@/modules/statistics/components/VisitorsCard';
 
 import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
 import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
@@ -141,9 +142,15 @@ function Contenido({ data }: { data: StatisticsOverview }) {
   return (
     <div className="flex flex-col gap-6">
 
+      {/* ── Visitantes ──
+          Reemplaza al KPI "Visitas 1.287 — 414 únicos": el dato principal
+          pasa a ser cuántas PERSONAS entraron, con su propio selector de
+          período, la comparación con el anterior y un ⓘ que explica cada
+          número. */}
+      <VisitorsCard range={data.range} />
+
       {/* ── KPIs ── */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
-        <Kpi icon={Eye}           label="Visitas"            value={fmt(trafico.totalVisitas)}     hint={`${fmt(trafico.visitantesUnicos)} únicos`} />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
         <Kpi icon={Timer}         label="Tiempo promedio"    value={mmss(tiempo.promedioSegundos)} hint={`${fmt(tiempo.muestras)} mediciones`} />
         <Kpi icon={Search}        label="Búsquedas"          value={fmt(busquedas.totalBusquedas)} hint={rangoLabel} />
         <Kpi icon={Users}         label="Registros"          value={fmt(registros.total)}          hint={rangoLabel} />
@@ -350,7 +357,7 @@ function Contenido({ data }: { data: StatisticsOverview }) {
 
       <ChartCard
         title="Visitas por día"
-        subtitle={`${fmt(trafico.totalVisitas)} visitas de ${fmt(trafico.visitantesUnicos)} visitantes únicos en ${rangoLabel}. No se cuentan las visitas del admin.`}
+        subtitle={`${fmt(trafico.totalVisitas)} páginas vistas de ${fmt(trafico.visitantesUnicos)} personas en ${rangoLabel}. No cuentan el equipo de Cerca Trova, los bots ni las recargas de la misma página dentro de los 30 minutos.`}
       >
         <TrafficChart data={trafico.porDia} />
       </ChartCard>
