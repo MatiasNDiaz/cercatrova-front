@@ -5,6 +5,7 @@ import { decodeJwt } from 'jose';
 // definición de "ruta interna segura" tienen que ser UNA sola en todo el
 // proyecto. Son funciones puras, así que corren igual en el runtime del edge.
 import { RETURN_PARAM, EXPIRED_PARAM, isSafeReturnPath } from '@/modules/shared/lib/returnTo';
+import { CLIENT_IP_HEADER, PROXY_SECRET_HEADER } from '@/modules/shared/lib/proxyHeaders';
 
 /**
  * Lee el `exp` de la cookie (sin verificar la firma: eso lo hace el backend en
@@ -24,9 +25,35 @@ function tokenState(token: string): 'ok' | 'expired' | 'malformed' {
   }
 }
 
+/**
+ * `/api/*` (proxy hacia Railway, ver rewrites en next.config): le agrega al
+ * request la IP real del visitante, firmada con `PROXY_SHARED_SECRET`, para
+ * que el rate limit del backend cuente por visitante. Ver `proxyHeaders.ts`.
+ *
+ * En Vercel `X-Forwarded-For` lo escribe la propia plataforma con la IP del
+ * visitante (pisa lo que mande el navegador), así que es confiable acá.
+ */
+function forwardClientIp(request: NextRequest) {
+  const secret = process.env.PROXY_SHARED_SECRET;
+  if (!secret) return NextResponse.next();
+
+  const headers = new Headers(request.headers);
+  // Lo que mande el navegador con estos nombres no se reenvía nunca.
+  headers.delete(CLIENT_IP_HEADER);
+  headers.delete(PROXY_SECRET_HEADER);
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  if (ip) {
+    headers.set(CLIENT_IP_HEADER, ip);
+    headers.set(PROXY_SECRET_HEADER, secret);
+  }
+  return NextResponse.next({ request: { headers } });
+}
+
 export function middleware(request: NextRequest) {
-  let token = request.cookies.get('access_token')?.value;
   const { pathname } = request.nextUrl;
+  if (pathname.startsWith('/api/')) return forwardClientIp(request);
+
+  let token = request.cookies.get('access_token')?.value;
 
   /**
    * Cookie VENCIDA o CORRUPTA → se trata como si no hubiera sesión y se borra.
@@ -117,6 +144,7 @@ export const config = {
     '/dashboardAdmin/:path*',
     '/publicar/:path*',
     '/login',
-    '/register'
+    '/register',
+    '/api/:path*',
   ],
 };

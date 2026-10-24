@@ -1,6 +1,7 @@
 import axios, { isAxiosError } from 'axios';
 import { emitUnauthorized } from './authEvents';
 import { API_URL } from './env';
+import { PROXY_SECRET_HEADER } from './proxyHeaders';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -19,6 +20,13 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Solo en el SERVIDOR (páginas renderizadas en Vercel): se identifica ante el
+// backend como "el front", para que estas requests —que son de todos los
+// visitantes a la vez— no consuman el rate limit por IP. El secreto es una
+// variable sin `NEXT_PUBLIC_`: en el navegador vale `undefined`. Ver proxyHeaders.ts.
+const serverProxySecret = typeof window === 'undefined' ? process.env.PROXY_SHARED_SECRET : undefined;
+if (serverProxySecret) api.defaults.headers.common[PROXY_SECRET_HEADER] = serverProxySecret;
 
 // ── Interceptor de respuesta ──────────────────────────────────────────────────
 // 401 → sesión inválida/expirada: se limpia la sesión y se redirige a /login
