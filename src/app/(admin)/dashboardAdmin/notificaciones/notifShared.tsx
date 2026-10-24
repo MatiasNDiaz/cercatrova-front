@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { NotificationType } from '@/modules/shared/types/api';
 import { PulseDot } from '@/modules/shared/ui/notifIndicators';
+import { PropertyThumbLink } from '@/modules/shared/ui/PropertyThumbLink';
+import { propertyHref, type PropertyLinkTarget } from '@/modules/shared/lib/propertyAnchors';
 
 /**
  * Piezas compartidas de las notificaciones del admin.
@@ -26,6 +28,21 @@ export interface AdminNotification {
   /** Campo real del backend. Ver `NotificationType` en shared/types/api. */
   type?: NotificationType;
   createdAt: string;
+  /** Comentario / valoración puntual (null en las notificaciones viejas). */
+  commentId?: number | null;
+  ratingId?: number | null;
+  /** Datos de la propiedad para la miniatura (ver `PropertyThumbLink`). */
+  propertyTitle?: string | null;
+  propertyImage?: string | null;
+  /** false = la propiedad ya no existe o fue dada de baja. */
+  propertyAvailable?: boolean | null;
+}
+
+/** A dónde lleva la miniatura: sección de comentarios / valoraciones o el inicio. */
+function propertyTarget(n: AdminNotification, type: NotifType): PropertyLinkTarget {
+  if (type === 'comentario') return { kind: 'comentario', id: n.commentId };
+  if (type === 'valoracion') return { kind: 'valoracion', id: n.ratingId };
+  return null;
 }
 
 /**
@@ -195,10 +212,18 @@ export function NotifItem({
 
   const avatarColor   = personName ? getAvatarColor(personName) : '';
   const avatarInitial = personName ? personName.charAt(0).toUpperCase() : '';
+  const hasThumb = n.propertyId != null;
+  const markRead = () => {
+    if (!n.read) { onRead(n.id); window.dispatchEvent(new Event('notif-updated')); }
+  };
 
   return (
     // `relative` por el punto titilante de la esquina — antes no hacía falta.
-    <div className={`group relative flex items-start gap-4 rounded-xl border px-5 py-4 transition-all duration-200 ${
+    // Con miniatura: en celular va DEBAJO del texto a ancho completo; desde
+    // `sm` va a la derecha (y `sm:pr-9` deja lugar al punto de la esquina).
+    <div className={`group relative flex flex-col gap-3 rounded-xl border px-5 py-4 transition-all duration-200 sm:flex-row sm:items-center sm:gap-4 ${
+      hasThumb ? 'sm:pr-9' : ''
+    } ${
       n.read ? 'border-gray-100 bg-white' : 'border-[#0b7a4b]/20 bg-white shadow-sm'
     }`}>
       {/* Punto verde titilante = "sin leer", en la esquina de la tarjeta.
@@ -208,73 +233,78 @@ export function NotifItem({
           Mismo indicador que el de "conectado como" del navbar. */}
       {!n.read && <PulseDot className="absolute top-3 right-3" />}
 
-      {personName ? (
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${avatarColor}`}>
-          <span className="text-sm font-bold text-white uppercase">{avatarInitial}</span>
-        </div>
-      ) : (
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${cfg.bg} ${cfg.border}`}>
-          {cfg.icon}
-        </div>
-      )}
-
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-3">
-          {/* `pr-4` reserva el espacio del punto de la esquina para que un
-              título largo no le pase por debajo. */}
-          <div className="flex flex-wrap items-center gap-2 pr-4">
-            <p className={`text-sm font-semibold ${n.read ? 'text-gray-600' : 'text-gray-900'}`}>{n.title}</p>
-            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold text-gray-500 ${cfg.bg} ${cfg.border}`}>
-              {cfg.label}
-            </span>
-            {!n.read && (
-              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${prio.bg} ${prio.border} ${prio.color}`}>
-                {prio.label}
-              </span>
-            )}
+      <div className="flex min-w-0 flex-1 items-start gap-4">
+        {personName ? (
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${avatarColor}`}>
+            <span className="text-sm font-bold text-white uppercase">{avatarInitial}</span>
           </div>
-        </div>
+        ) : (
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${cfg.bg} ${cfg.border}`}>
+            {cfg.icon}
+          </div>
+        )}
 
-        {personName && <p className="mt-1 text-xs font-bold text-gray-800">{personName}</p>}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            {/* `pr-4` reserva el espacio del punto de la esquina para que un
+                título largo no le pase por debajo. */}
+            <div className="flex flex-wrap items-center gap-2 pr-4">
+              <p className={`text-sm font-semibold ${n.read ? 'text-gray-600' : 'text-gray-900'}`}>{n.title}</p>
+              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold text-gray-500 ${cfg.bg} ${cfg.border}`}>
+                {cfg.label}
+              </span>
+              {!n.read && (
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${prio.bg} ${prio.border} ${prio.color}`}>
+                  {prio.label}
+                </span>
+              )}
+            </div>
+          </div>
 
-        <p className={`mt-0.5 text-xs leading-relaxed ${n.read ? 'text-gray-500' : 'text-gray-600'}`}>
-          {n.message}
-        </p>
+          {personName && <p className="mt-1 text-xs font-bold text-gray-800">{personName}</p>}
 
-        <div className="mt-3 flex items-center justify-between">
-          <span className="flex items-center gap-1 text-[11px] text-gray-500">
-            <Clock size={10} /> {timeAgo(n.createdAt)}
-          </span>
-          <div className="flex items-center gap-3">
-            {n.relatedUserId && (
-              <Link
-                href={`/dashboardAdmin/usuarios/${n.relatedUserId}`}
-                onClick={() => { if (!n.read) { onRead(n.id); window.dispatchEvent(new Event('notif-updated')); } }}
-                className="flex items-center gap-1 text-[11px] font-semibold text-[#0b7a4b] transition-colors hover:text-[#0f8c58]"
-              >
-                <Eye size={11} /> Ver usuario
-              </Link>
-            )}
-            {n.propertyId && (
-              <Link
-                href={`/properties/${n.propertyId}`}
-                onClick={() => { if (!n.read) { onRead(n.id); window.dispatchEvent(new Event('notif-updated')); } }}
-                className="flex items-center gap-1 text-[11px] font-semibold text-[#0b7a4b] transition-colors hover:text-[#0f8c58]"
-              >
-                <Eye size={11} /> Ver propiedad
-              </Link>
-            )}
-            {!n.read && (
-              <button
-                onClick={() => { onRead(n.id); window.dispatchEvent(new Event('notif-updated')); }}
-                className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 opacity-0 transition-all group-hover:opacity-100 hover:text-[#0b7a4b]"
-              >
-                <Check size={11} /> Leída
-              </button>
-            )}
+          <p className={`mt-0.5 text-xs leading-relaxed ${n.read ? 'text-gray-500' : 'text-gray-600'}`}>
+            {n.message}
+          </p>
+
+          <div className="mt-3 flex items-center justify-between">
+            <span className="flex items-center gap-1 text-[11px] text-gray-500">
+              <Clock size={10} /> {timeAgo(n.createdAt)}
+            </span>
+            <div className="flex items-center gap-3">
+              {n.relatedUserId && (
+                <Link
+                  href={`/dashboardAdmin/usuarios/${n.relatedUserId}`}
+                  onClick={markRead}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-[#0b7a4b] transition-colors hover:text-[#0f8c58]"
+                >
+                  <Eye size={11} /> Ver usuario
+                </Link>
+              )}
+              {/* "Ver propiedad" ya no es un link de texto: es la miniatura. */}
+              {!n.read && (
+                <button
+                  onClick={markRead}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 opacity-0 transition-all group-hover:opacity-100 hover:text-[#0b7a4b]"
+                >
+                  <Check size={11} /> Leída
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {hasThumb && (
+        <PropertyThumbLink
+          href={propertyHref(n.propertyId!, propertyTarget(n, type))}
+          title={n.propertyTitle ?? null}
+          imageUrl={n.propertyImage ?? null}
+          // `undefined` = backend anterior a este campo: se asume disponible.
+          available={n.propertyAvailable !== false}
+          onNavigate={markRead}
+        />
+      )}
     </div>
   );
 }

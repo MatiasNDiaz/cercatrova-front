@@ -263,6 +263,14 @@ export interface Notification {
   type?: NotificationType;
   relatedUserId: number | null;
   createdAt: string;
+  /** Comentario / valoración puntual (null en las notificaciones viejas). */
+  commentId?: number | null;
+  ratingId?: number | null;
+  /** Datos de la propiedad para la miniatura (null si no apunta a una). */
+  propertyTitle?: string | null;
+  propertyImage?: string | null;
+  /** false = la propiedad ya no existe o fue dada de baja. */
+  propertyAvailable?: boolean | null;
 }
 
 export interface SearchPreference {

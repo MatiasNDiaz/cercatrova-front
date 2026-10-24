@@ -712,3 +712,31 @@ body {
     animation: none !important;
   }
 }
+/* ── Resaltado al llegar desde una notificación ──────────────────────────────
+   `/properties/:id#comentario-123`: el comentario (o la valoración) se pinta
+   de verde suave y se desvanece en 2s. Lo pone/saca `CommentsAndRatings`.
+   Con movimiento reducido igual se ve (la regla global acelera la animación
+   pero el `forwards` deja el estado final: sin fondo), así que ahí se muestra
+   un contorno fijo que no depende de la animación. */
+@keyframes ct-highlight-fade {
+  0%,
+  35% {
+    background-color: rgb(11 122 75 / 0.14);
+    box-shadow: 0 0 0 8px rgb(11 122 75 / 0.14);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+.ct-highlight {
+  animation: ct-highlight-fade 2s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ct-highlight {
+    animation: none;
+    box-shadow: 0 0 0 2px rgb(11 122 75 / 0.35);
+  }
+}

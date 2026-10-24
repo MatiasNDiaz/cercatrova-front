@@ -35,6 +35,9 @@ import {
 import { Reveal } from '@/modules/landing/components/Reveal';
 import { authorNameOf, isGuestComment, COMMENT_MAX } from '@/modules/shared/lib/interaction';
 import { GuestNameField } from '@/modules/shared/ui/GuestNameField';
+import {
+  COMMENTS_SECTION_ID, RATINGS_SECTION_ID, commentAnchorId, ratingAnchorId, parsePropertyHash,
+} from '@/modules/shared/lib/propertyAnchors';
 
 // ── INTERFACES ────────────────────────────────────────────────────────────────
 interface PropertyImage { id: number; url: string; isCover?: boolean; }
@@ -677,6 +680,8 @@ function CommentsAndRatings({
   const [myScore, setMyScore] = useState<number | null>(null);
   const [selectedScore, setSelectedScore] = useState<number>(0);
   const [submittingRating, setSubmittingRating] = useState(false);
+  /** Ya volvieron las listas del cliente (para el scroll a `#comentario-ID`). */
+  const [listsLoaded, setListsLoaded] = useState(false);
 
   const applyRatings = useCallback((ratingsData: Rating[]) => {
     setRatings(ratingsData);
@@ -708,10 +713,37 @@ function CommentsAndRatings({
         if (ratingsData.length) applyRatings(ratingsData);
         else setRatings([]);
       } catch {}
+      setListsLoaded(true);
     };
     fetchData();
     loadMyScore();
   }, [propertyId, applyRatings, loadMyScore, user?.id]);
+
+  // ── LLEGADA DESDE UNA NOTIFICACIÓN ── (`#comentario-123`, `#valoraciones`…)
+  // Scroll suave hasta el comentario / la valoración y resaltado breve. Espera
+  // a que estén las listas: el comentario puede no venir en el render del
+  // servidor (p. ej. uno oculto, que solo ve el admin con su sesión). Si no
+  // aparece (lo borraron), cae a la sección. `scroll-mt-28` en los destinos
+  // compensa la navbar fija. Corre una sola vez por hash.
+  const handledHash = useRef<string | null>(null);
+  useEffect(() => {
+    const hash = window.location.hash;
+    const target = parsePropertyHash(hash);
+    if (!target || handledHash.current === hash) return;
+
+    const item = target.item ? document.getElementById(target.item) : null;
+    if (!item && target.item && !listsLoaded) return; // todavía cargando
+
+    handledHash.current = hash;
+    const el = item ?? document.getElementById(target.section);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: item ? 'center' : 'start' });
+    if (item) {
+      item.classList.remove('ct-highlight');
+      void item.offsetWidth; // reinicia la animación si se repite el mismo hash
+      item.classList.add('ct-highlight');
+    }
+  }, [comments, ratings, listsLoaded]);
 
   // ── SUBMIT COMENTARIO ── (con o sin sesión)
   const handleCommentSubmit = async () => {
@@ -825,7 +857,7 @@ function CommentsAndRatings({
        aplicarse entre ellos — Valoraciones y Comentarios se veían pegados. */
     <div className="flex flex-col gap-8">
       {/* ── VALORACIONES ── */}
-      <div id="valoracion" className={`scroll-mt-28 ${CARD} p-8`}>
+      <div id={RATINGS_SECTION_ID} className={`scroll-mt-28 ${CARD} p-8`}>
         <h2 className="mb-6 flex items-center gap-3 text-lg font-bold text-ink-900">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-500">
             <Star size={18} className="fill-amber-400 text-amber-400" />
@@ -853,7 +885,7 @@ function CommentsAndRatings({
         {ratings.length > 0 && (
           <div className="mb-6 flex flex-col gap-1">
             {ratings.map((r) => (
-              <div key={r.id} className="flex items-center justify-between border-b border-ink-50 py-3 last:border-none">
+              <div key={r.id} id={ratingAnchorId(r.id)} className="flex scroll-mt-28 items-center justify-between rounded-xl border-b border-ink-50 py-3 last:border-none">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-brand-700/10">
                     {r.user?.photo ? (
@@ -902,7 +934,7 @@ function CommentsAndRatings({
       </div>
 
       {/* ── COMENTARIOS ── */}
-      <div id="comentarios" className={`scroll-mt-28 ${CARD} p-8`}>
+      <div id={COMMENTS_SECTION_ID} className={`scroll-mt-28 ${CARD} p-8`}>
         <h2 className="mb-6 flex items-center gap-3 text-lg font-bold text-ink-900">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
             <MessageCircleMore size={18} />
@@ -965,7 +997,7 @@ function CommentsAndRatings({
               const isAdmin = user?.role === 'admin';
               const isGuest = isGuestComment(comment);
               return (
-                <div key={comment.id} className="group/comment flex gap-4">
+                <div key={comment.id} id={commentAnchorId(comment.id)} className="group/comment flex scroll-mt-28 gap-4 rounded-xl">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-700/10">
                     {comment.user?.photo ? (
                       <Image src={comment.user.photo} alt={authorNameOf(comment)} width={40} height={40} className="rounded-full object-cover" />
@@ -1275,7 +1307,7 @@ export default function PropertyDetail({
                 respecto del orden original, por pedido: valoraciones queda
                 arriba (más visible) y la dirección pasa al último. */}
             <motion.div variants={QUICK_LINK_ITEM} className="min-w-0">
-              <a href="#valoracion" onClick={scrollTo('valoracion')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700`}>
+              <a href={`#${RATINGS_SECTION_ID}`} onClick={scrollTo(RATINGS_SECTION_ID)} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700`}>
                 <Star size={16} className="shrink-0 fill-amber-400 text-amber-500 transition-transform duration-300 ease-out group-hover:scale-110" />
                 Ver Valoraciones
               </a>
@@ -1284,7 +1316,7 @@ export default function PropertyDetail({
             <motion.span variants={QUICK_LINK_ITEM} className="hidden text-ink-400 xl:inline" aria-hidden>|</motion.span>
 
             <motion.div variants={QUICK_LINK_ITEM} className="min-w-0">
-              <a href="#comentarios" onClick={scrollTo('comentarios')} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700`}>
+              <a href={`#${COMMENTS_SECTION_ID}`} onClick={scrollTo(COMMENTS_SECTION_ID)} className={`${QUICK_LINK_BASE} text-ink-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700`}>
                 <MessageCircleMore size={16} className="shrink-0 text-blue-600 transition-transform duration-300 ease-out group-hover:scale-110" />
                 Ver Comentarios
               </a>

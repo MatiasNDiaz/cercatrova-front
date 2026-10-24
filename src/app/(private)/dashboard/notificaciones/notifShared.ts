@@ -27,6 +27,11 @@ export interface UserNotification {
   /** Campo real del backend; opcional por las filas previas a la migración. */
   type?: NotificationType;
   createdAt: string;
+  /** Datos de la propiedad para la miniatura (ver `PropertyThumbLink`). */
+  propertyTitle?: string | null;
+  propertyImage?: string | null;
+  /** false = la propiedad ya no existe o fue dada de baja. */
+  propertyAvailable?: boolean | null;
 }
 
 export type NotifType =

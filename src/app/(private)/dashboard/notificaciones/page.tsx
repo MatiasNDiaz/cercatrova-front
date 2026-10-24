@@ -6,14 +6,15 @@ import api from '@/modules/shared/lib/axios';
 import { toast } from 'sonner';
 import {
   BellOff, Check, CheckCheck, Home, TrendingDown,
-  ClipboardList, Clock, ChevronDown, ChevronUp, Eye, Sparkles, Bell, Megaphone, MessageCircle,
+  ClipboardList, Clock, ChevronDown, ChevronUp, Sparkles, Bell, Megaphone, MessageCircle,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useUrlFilter } from '@/modules/shared/hooks/useUrlFilter';
 
 import { DashboardBackLink } from '@/modules/shared/ui/DashboardBackLink';
 import { DashboardPage } from '@/modules/shared/ui/DashboardPage';
 import { PulseDot, NotifCountBadge } from '@/modules/shared/ui/notifIndicators';
+import { PropertyThumbLink } from '@/modules/shared/ui/PropertyThumbLink';
+import { propertyHref } from '@/modules/shared/lib/propertyAnchors';
 
 /**
  * La clasificación (tipos + `getNotifType` + `contarSinLeer`) se mudó a
@@ -84,11 +85,16 @@ function timeAgo(dateStr: string): string {
 // ── ITEM ──────────────────────────────────────────────────────────────────────
 function NotifItem({ n, onRead }: { n: Notification; onRead: (id: number) => void }) {
   const cfg = getConfig(n);
+  const hasThumb = n.propertyId != null;
   return (
     /* `relative` + `overflow-hidden` por la barra de acento lateral: es la
        señal de "sin leer" que además dice DE QUÉ TIPO es, sin tener que leer.
-       Las leídas no la llevan y bajan a fondo/borde neutro. */
-    <div className={`group relative flex items-start gap-4 overflow-hidden rounded-xl border px-5 py-4 pl-6 transition-all duration-200 ${
+       Las leídas no la llevan y bajan a fondo/borde neutro.
+       Con miniatura de la propiedad: debajo del texto en celular, a la
+       derecha desde `sm` (`sm:pr-9` deja lugar al punto de la esquina). */
+    <div className={`group relative flex flex-col gap-3 overflow-hidden rounded-xl border px-5 py-4 pl-6 transition-all duration-200 sm:flex-row sm:items-center sm:gap-4 ${
+      hasThumb ? 'sm:pr-9' : ''
+    } ${
       n.read
         ? 'border-ink-100 bg-white'
         : `bg-white ${cfg.border} shadow-[0_1px_2px_rgba(10,12,11,0.04),0_8px_20px_-14px_rgba(10,12,11,0.18)]`
@@ -105,50 +111,56 @@ function NotifItem({ n, onRead }: { n: Notification; onRead: (id: number) => voi
           lateral — cualquier cosa que asome fuera del borde se recorta. */}
       {!n.read && <PulseDot className="absolute top-3 right-3" />}
 
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${cfg.bg} ${cfg.border}`}>
-        {cfg.icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-3">
-          {/* `pr-4` reserva el lugar del punto de la esquina para que un título
-              largo no le pase por debajo. */}
-          <div className="flex items-center gap-2 flex-wrap pr-4">
-            <p className={`text-sm font-semibold ${n.read ? 'text-gray-600' : 'text-gray-900'}`}>{n.title}</p>
-            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
-              n.read
-                ? 'border-ink-200 bg-ink-50 text-ink-400'
-                : `${cfg.bg} ${cfg.border} ${cfg.text}`
-            }`}>
-              {cfg.label}
+      <div className="flex min-w-0 flex-1 items-start gap-4">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${cfg.bg} ${cfg.border}`}>
+          {cfg.icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            {/* `pr-4` reserva el lugar del punto de la esquina para que un título
+                largo no le pase por debajo. */}
+            <div className="flex items-center gap-2 flex-wrap pr-4">
+              <p className={`text-sm font-semibold ${n.read ? 'text-gray-600' : 'text-gray-900'}`}>{n.title}</p>
+              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                n.read
+                  ? 'border-ink-200 bg-ink-50 text-ink-400'
+                  : `${cfg.bg} ${cfg.border} ${cfg.text}`
+              }`}>
+                {cfg.label}
+              </span>
+            </div>
+          </div>
+          <p className={`text-xs mt-1 leading-relaxed ${n.read ? 'text-gray-400' : 'text-gray-600'}`}>{n.message}</p>
+          <div className="flex items-center justify-between mt-3">
+            <span className="flex items-center gap-1 text-[11px] text-gray-400">
+              <Clock size={10} /> {timeAgo(n.createdAt)}
             </span>
-          </div>
-        </div>
-        <p className={`text-xs mt-1 leading-relaxed ${n.read ? 'text-gray-400' : 'text-gray-600'}`}>{n.message}</p>
-        <div className="flex items-center justify-between mt-3">
-          <span className="flex items-center gap-1 text-[11px] text-gray-400">
-            <Clock size={10} /> {timeAgo(n.createdAt)}
-          </span>
-          <div className="flex items-center gap-3">
-            {n.propertyId && (
-              <Link
-                href={`/properties/${n.propertyId}`}
-                onClick={() => !n.read && onRead(n.id)}
-                className="flex items-center gap-1 text-[11px] font-semibold text-[#0b7a4b] hover:text-[#0f8c58] transition-colors"
-              >
-                <Eye size={11} /> Ver propiedad
-              </Link>
-            )}
-            {!n.read && (
-              <button
-                onClick={() => onRead(n.id)}
-                className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 opacity-0 group-hover:opacity-100 hover:text-[#0b7a4b] transition-all"
-              >
-                <Check size={11} /> Leída
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {/* "Ver propiedad" ya no es un link de texto: es la miniatura. */}
+              {!n.read && (
+                <button
+                  onClick={() => onRead(n.id)}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 opacity-0 group-hover:opacity-100 hover:text-[#0b7a4b] transition-all"
+                >
+                  <Check size={11} /> Leída
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {hasThumb && (
+        <PropertyThumbLink
+          // Las notificaciones del usuario (propiedad nueva, coincidencia,
+          // baja de precio) llevan al inicio del detalle.
+          href={propertyHref(n.propertyId!)}
+          title={n.propertyTitle ?? null}
+          imageUrl={n.propertyImage ?? null}
+          available={n.propertyAvailable !== false}
+          onNavigate={() => !n.read && onRead(n.id)}
+        />
+      )}
     </div>
   );
 }
